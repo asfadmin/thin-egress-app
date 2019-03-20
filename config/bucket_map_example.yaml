@@ -1,0 +1,20 @@
+MAP:
+  RAW:
+    PLATFORM-A:         pa-raw
+    PLATFORM-B:         pb-raw
+  DATA-TYPE-1:
+    PLATFORM-A:         pa-dt1
+    PLATFORM-B:         pb-dt1
+  DATA-TYPE-2:
+    PLATFORM-A:         pa-dt2
+    PLATFORM-B:         pb-dt2
+  DATA-TYPE-3:
+    PLATFORM-A:         pa-dt3
+    PLATFORM-B:         pb-dt3
+  BROWSE:
+    PLATFORM-A:         pa-bro
+    PLATFORM-B:         pb-bro
+
+PUBLIC_BUCKETS:
+  - pa-bro
+  - pb-bro

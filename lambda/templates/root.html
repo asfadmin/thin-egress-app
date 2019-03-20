@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block pagetitle %}
+      {% if title %}
+      {{ title }}
+      {% else %}
+          Egress
+      {% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="logincontrols">
+{% if URS_URL %}
+   <a href="{{ URS_URL }}">Log In</a>
+{% else %}
+    <a href="/{{ STAGE }}/logout">Log Out</a>
+{% endif %}
+
+</div>
+
+{% if profile %}
+    <p>Welcome URS user {{ profile.first_name }} {{ profile.last_name }}.</p>
+{% endif %}
+{% if contentstring %}
+    <p>{{ contentstring }}</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,488 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: "A 'thinner' egress app using lambda."
+
+Parameters:
+
+  LambdaCodeS3Key:
+    Type: String
+    Default: ""
+    Description: "S3 Key of packaged lambda egress code"
+
+  LambdaCodeS3Bucket:
+    Type: String
+    Default: ""
+    Description: "S3 bucket where log processing code for lambda gets placed"
+
+  URSAuthCredsSecretName:
+    Type: String
+    Default: ''
+    AllowedPattern: ""
+    Description: "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'client_id' and 'auth_key'."
+
+  AuthBaseUrl:
+    Type: String
+    AllowedValues:
+      - 'https://urs.earthdata.nasa.gov'
+      - 'https://uat.urs.earthdata.nasa.gov'
+    Default: 'https://urs.earthdata.nasa.gov'
+    Description: "Is the 'AUTH_BASE_URL' env var in the lambda"
+
+  Loglevel:
+    Type: String
+    AllowedValues:
+      - 'DEBUG'
+      - 'INFO'
+      - 'WARNING'
+      - 'ERROR'
+      - 'CRITICAL'
+    Default: 'DEBUG'
+    Description: "Python loglevel."
+
+  BuildVersion:
+    Type: String
+    Default: 'NOBUILD'
+    Description: "Build number, mainly used in logs."
+
+  Maturity:
+    Type: String
+    AllowedValues:
+      - 'DEV'
+      - 'INT'
+      - 'TEST'
+      - 'PROD'
+    Default: 'DEV'
+    Description: "Maturity of deployment"
+
+  BucketnamePrefix:
+    Type: String
+    Default: 'prfx-d-'
+    Description: "All data buckets should have names prefixed with this. Must be compatible with S3 naming conventions (lower case only, etc)"
+
+  SessionTTL:
+    Type: Number
+    Default: 168
+    Description: "Time to live for auth session, in hours. 168 is a week."
+
+  SessionStore:
+    Type: String
+    AllowedValues:
+      - "DB"
+      - "S3"
+    Default: "DB"
+    Description: "DB for storing sessions in dynamoDB, S3 for storing sessions in S3."
+
+  StageName:
+    Type: String
+    Default: 'DEV'
+    Description: "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on"
+
+  ConfigBucket:
+    Type: String
+    Default: 'egress-config-bucket'
+    Description: 'This is the bucket where config files can be found'
+
+  BucketMapFile:
+    Type: String
+    Default: 'bucket_map.yaml'
+    Description: "Path and file of bucketmap file's location in the ConfigBucket"
+
+  UseReverseBucketMap:
+    Type: String
+    Default: False
+    AllowedValues:
+      - False
+      - True
+    Description: "Standard bucketmaps are not reverse."
+
+  PublicBucketsFile:
+    Type: String
+    Default: ''
+    Description: "Path and file of public buckets file's location in the ConfigBucket"
+
+  PrivateBucketsFile:
+    Type: String
+    Default: ''
+    Description: "Path and file of private buckets file's location in the ConfigBucket"
+
+  DownloadRoleArn:
+    Type: String
+    Default: ""
+    Description: "ARN for reading of data buckets"
+
+
+Conditions:
+  DBSess: !Equals [ !Ref SessionStore, "DB" ]
+  S3Sess: !Equals [ !Ref SessionStore, "S3" ]
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
+  URSredirectURI:
+    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
+
+Resources:
+
+  EgressLambdaSessionDB:
+    Type: AWS::DynamoDB::Table
+    Condition: DBSess
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+      BillingMode: 'PAY_PER_REQUEST'
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: 'HASH'
+      TableName: !Sub "${AWS::StackName}-egress-session-table"
+      TimeToLiveSpecification:
+        AttributeName: 'expires'
+        Enabled: true
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
+  EgressLambdaSessionS3:
+    Type: "AWS::S3::Bucket"
+    Condition: S3Sess
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-sessions"
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: 30
+            Status: 'Enabled'
+
+  EgressLambdaSessionIamPolicyS3:
+    Type: AWS::IAM::Policy
+    Condition: S3Sess
+    DependsOn:
+      - EgressLambdaSessionS3
+      - EgressLambdaIamRole
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:* # TODO: tighten this up
+            Resource: !Sub "arn:aws:s3:::${AWS::StackName}-sessions/*"
+      PolicyName: !Sub "${AWS::StackName}-EgressLambdaIamPolicyS3"
+      Roles:
+        - !Sub "${AWS::StackName}-EgressLambdaIamRole"
+
+  EgressLambdaSessionIamPolicyDb:
+    Type: AWS::IAM::Policy
+    Condition: DBSess
+    DependsOn:
+      - EgressLambdaSessionDB
+      - EgressLambdaIamRole
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:DeleteItem
+              - dynamodb:GetItem
+              - dynamodb:Query
+              - dynamodb:UpdateItem
+              - dynamodb:DescribeReservedCapacity
+              - dynamodb:ListTagsOfResource
+              - dynamodb:DescribeLimits
+            Resource: "*" # TODO: tighten this up. This was: !GetAtt EgressLambdaSessionDB.Arn, which doesn't work for whatever reason
+
+      PolicyName: !Sub "${AWS::StackName}-EgressLambdaIamPolicyDb"
+      Roles:
+        - !Sub "${AWS::StackName}-EgressLambdaIamRole"
+
+  EgressLambdaIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-EgressLambdaIamRole"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - secretsmanager:GetSecretValue
+                Resource: '*' # Is this S3?
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${ConfigBucket}/*"
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  EgressLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Role: !GetAtt EgressLambdaIamRole.Arn
+      FunctionName: !Sub "${AWS::StackName}-EgressLambda"
+      Environment:
+        Variables:
+          URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
+          AUTH_BASE_URL: !Ref AuthBaseUrl
+          LOGLEVEL: !Ref Loglevel
+          BUILD_VERSION: !Ref BuildVersion
+          MATURITY: !Ref Maturity
+          S3_SIGNATURE_VERSION: 's3v4'
+          BUCKETNAME_PREFIX: !Ref BucketnamePrefix
+          SESSION_TABLE: !Sub "${AWS::StackName}-egress-session-table"
+          SESSION_BUCKET: !Sub "${AWS::StackName}-sessions"
+          SESSION_TTL_HRS: !Ref SessionTTL
+          SESSION_STORE: !Ref SessionStore
+          STAGE_NAME: !Ref StageName
+          CONFIG_BUCKET: !Ref ConfigBucket
+          BUCKET_MAP_FILE: !Ref BucketMapFile
+          USE_REVERSE_BUCKET_MAP: !Ref UseReverseBucketMap
+          PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
+          PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
+          EGRESS_APP_DOWNLOAD_ROLE_ARN: !Ref DownloadRoleArn
+      #Timeout: 600
+      Handler: app.app
+      Runtime: 'python3.7'
+      #MemorySize: 128
+
+  EgressApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${AWS::StackName}-EgressGateway"
+
+  EgressApiResourceLogin:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'login'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressApiResourceLogout:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'logout'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressApiResourceDynamicUrl:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: '{proxy+}'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressApiResourceProfile:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'profile'
+      RestApiId: !Ref EgressApiGateway
+
+
+  EgressAPIrootMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+            # etc
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses: #TODO: this, probably
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+      OperationName: 'root method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !GetAtt EgressApiGateway.RootResourceId
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodLogout:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses: #TODO: this, probably
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 301
+      OperationName: 'root method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourceLogout
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodLogin:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses: #TODO: this, probably
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+            'method.response.header.Location': true
+          StatusCode: 301
+      OperationName: 'login method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourceLogin
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodDynamicUrl:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'ANY'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses: #TODO: this, probably
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+            'method.response.header.Content-Length': true
+            'method.response.header.Content-Type': true
+            'method.response.header.Accept-Ranges': true
+            'method.response.header.ETag': true
+            'method.response.header.Last-Modified': true
+            'method.response.header.Date': true
+          StatusCode: 200
+        # TODO: cull the following appropriately
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+            'method.response.header.Content-Length': true
+            'method.response.header.Content-Type': true
+            'method.response.header.Accept-Ranges': true
+            'method.response.header.ETag': true
+            'method.response.header.Last-Modified': true
+            'method.response.header.Date': true
+            'method.response.header.Location': true
+          StatusCode: 301
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+            'method.response.header.Content-Length': true
+            'method.response.header.Content-Type': true
+            'method.response.header.Accept-Ranges': true
+            'method.response.header.ETag': true
+            'method.response.header.Last-Modified': true
+            'method.response.header.Date': true
+            'method.response.header.Location': true
+          StatusCode: 303
+      OperationName: 'proxy'
+      RequestParameters:
+        'method.request.header.Cookie': true
+        'method.request.header.X-urs-access-token': true
+      ResourceId: !Ref EgressApiResourceDynamicUrl
+      RestApiId: !Ref EgressApiGateway
+
+
+  EgressAPIMethodProfile:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+          - StatusCode: 401
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 'profile view'
+      RequestParameters:
+        'method.request.header.Cookie': true
+        'method.request.header.X-urs-access-token': true
+      ResourceId: !Ref EgressApiResourceProfile
+      RestApiId: !Ref EgressApiGateway
+
+
+  EgressAPIdeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - EgressApiGateway
+      - EgressAPIrootMethod
+    Properties:
+      Description: 'just a deployment for egress app'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn:
+      - EgressApiGateway
+      - EgressAPIdeployment
+    Properties:
+      StageName: !Ref StageName
+      RestApiId: !Ref EgressApiGateway
+      DeploymentId: !Ref EgressAPIdeployment
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt EgressLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${EgressApiGateway}/*"

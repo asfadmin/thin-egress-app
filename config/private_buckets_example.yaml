@@ -1,0 +1,7 @@
+PRIVATE_BUCKETS:
+  this-is-private-bucket: # Suffix of bucket to be considered private
+  - PRIVATE_GROUP_A # Names of groups that should have access to above bucket
+  - private_group_b
+  - AnotherPrivateGroupname
+
+

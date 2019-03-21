@@ -84,7 +84,7 @@ PUBLIC_BUCKETS:
 
 
 ### Cloudformation Parameters
-It's best to look at the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.k
+It's best to look at the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
 
 
@@ -119,26 +119,3 @@ After the Cloudformation has been deployed, we need to add the new endpoint to t
 aws cloudformation --region=us-east-1 describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
 ```
 Add it here: `https://urs.earthdata.nasa.gov/apps/<NAME OF YOUR URS APP>/redirect_uris`
-
-## DEMOING: WEB CONSOLE EDITION:
-* Go to cloudformation console
-* Upload this file: https://github.com/asfadmin/rain-egress-app/blob/bbarton-PR-1854b/egress-lambda/cloudformation/egress-lambda.yaml
-  * Enter **Stack Name** Needs to use S3 bucket compatible characters. Deploy will fail if you use an uppercase letter, for example.
-  * Enter **EgressAppURSAuth**
-  * Change **SessionStore** to "S3", S3 builds faster than DynamoDb
-  * Default values are good for the rest
-  * Click Next Next Create, etc. Wait ~2min
-* The **Outputs** tab will an item called **URSredirectURI**. Add that here: https://urs.earthdata.nasa.gov/apps/egress_download_app/redirect_uris
-* Sign out of URS
-* The **Outputs** tab also has an item called **ApiEndpoint** Go to that URL
-  * There's a link to log in. But not yet.
-  * Demo public data: Add this to the end of the URL: ```OHAI/SA/demopublicdata.txt```
-  * Go back to the ApiEndpoint, add this to the end of the URL: ```OCN/SA/demodata1.txt```
-    * You'll be directed to a URS login, proceed as normal
-
-
-
-  
-  
-  
-  

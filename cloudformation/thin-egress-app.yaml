@@ -17,7 +17,6 @@ Parameters:
   URSAuthCredsSecretName:
     Type: String
     Default: ''
-    AllowedPattern: ""
     Description: "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'client_id' and 'auth_key'."
 
   AuthBaseUrl:
@@ -89,10 +88,10 @@ Parameters:
 
   UseReverseBucketMap:
     Type: String
-    Default: False
+    Default: "False"
     AllowedValues:
-      - False
-      - True
+      - "False"
+      - "True"
     Description: "Standard bucketmaps are not reverse."
 
   PublicBucketsFile:

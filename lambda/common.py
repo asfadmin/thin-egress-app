@@ -80,6 +80,14 @@ def get_log():
         logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
         logging.getLogger('urllib3').setLevel(logging.CRITICAL)
         logging.getLogger('connectionpool').setLevel(logging.CRITICAL)
+    else:
+        logging.getLogger('boto3').setLevel(logging.INFO)
+        logging.getLogger('botocore').setLevel(logging.INFO)
+        logging.getLogger('nose').setLevel(logging.INFO)
+        logging.getLogger('elasticsearch').setLevel(logging.INFO)
+        logging.getLogger('s3transfer').setLevel(logging.INFO)
+        logging.getLogger('urllib3').setLevel(logging.INFO)
+        logging.getLogger('connectionpool').setLevel(logging.INFO)
 
     return logger
 
@@ -140,23 +148,9 @@ def write_s3(bucket, key, data):
     log.debug('getting boto resource')
     s3 = boto3.resource('s3', **params)
     log.debug('got boto s3 resource: '.format(s3))
-    logging.getLogger('boto3').setLevel(logging.INFO)
-    logging.getLogger('botocore').setLevel(logging.INFO)
-    logging.getLogger('nose').setLevel(logging.INFO)
-    logging.getLogger('elasticsearch').setLevel(logging.INFO)
-    logging.getLogger('s3transfer').setLevel(logging.INFO)
-    logging.getLogger('urllib3').setLevel(logging.INFO)
-    logging.getLogger('connectionpool').setLevel(logging.INFO)
     s3object = s3.Object(bucket, key)
     log.debug('got s3 object: {}'.format(s3object))
     s3object.put(Body=data)
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
-    logging.getLogger('botocore').setLevel(logging.CRITICAL)
-    logging.getLogger('nose').setLevel(logging.CRITICAL)
-    logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
-    logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
-    logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-    logging.getLogger('connectionpool').setLevel(logging.CRITICAL)
     log.debug('object put')
     return True
 

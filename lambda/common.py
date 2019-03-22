@@ -371,7 +371,6 @@ def get_profile(user_id, token=None, reuse_old_token=None):
         return False
 
     if reuse_old_token:
-        log.info("Refreshing user_id {0} with new token {1}".format(user_id, token))
         refresh_user_profile(user_id)
     else:
         log.info("Getting profile for {0}".format(user_id))

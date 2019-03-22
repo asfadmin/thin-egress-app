@@ -283,6 +283,8 @@ def get_session_from_s3(user_id, token):
 def store_session(user_id, token, sess):
 
     log.debug('storing session into {} for {}: {}'.format(session_store, user_id, sess))
+    cache_session(user_id, token, sess)
+
     if session_store == 'DB':
         return store_session_in_db(user_id, token, sess)
     elif session_store == 'S3':
@@ -291,7 +293,6 @@ def store_session(user_id, token, sess):
 
 def store_session_in_db(user_id, token, sess):
 
-    cache_session(user_id, token, sess)
     item = {'id': {'S': '{}/{}'.format(user_id, token)},
             'expires': {'N': str(int(time.time()) + sessttl)},
             'session': {'S': json.dumps(sess)}}
@@ -302,8 +303,6 @@ def store_session_in_db(user_id, token, sess):
 
 def store_session_in_s3(user_id, token, user_profile):
 
-    log.debug('writing new userprofile for {}: {}'.format(user_id, user_profile))
-    cache_session(user_id, token, user_profile)
     profile_path = craft_profile_path(user_id, token)
     write_s3(os.getenv('SESSION_BUCKET', None), profile_path, json.dumps(user_profile))
 

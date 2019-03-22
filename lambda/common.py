@@ -137,9 +137,13 @@ def write_s3(bucket, key, data):
     # Swift signature compatability
     if os.getenv('S3_SIGNATURE_VERSION'):
         params['config'] = bc_Config(signature_version=os.getenv('S3_SIGNATURE_VERSION'))
+    log.debug('getting boto resource')
     s3 = boto3.resource('s3', **params)
+    log.debug('got boto s3 resource: '.format(s3))
     s3object = s3.Object(bucket, key)
+    log.debug('got s3 object: {}'.format(s3object))
     s3object.put(Body=data)
+    log.debug('object put')
     return True
 
 
@@ -194,9 +198,10 @@ def cache_session(user_id, token, session):
 
     global active_sessions                                                             #pylint: disable=global-statement
 
+    log.debug('going to cache {}{} session in lambda memory...'.format(user_id, token))
     session_path = craft_profile_path(user_id, token)
     active_sessions[session_path] = {'profile': session, 'timestamp': round(time.time())}
-
+    log.debug('done caching {}{} session in lambda memory...'.format(user_id, token))
 
 def uncache_session(user_id, token):
 
@@ -284,7 +289,7 @@ def store_session(user_id, token, sess):
 
     log.debug('storing session into {} for {}: {}'.format(session_store, user_id, sess))
     cache_session(user_id, token, sess)
-
+    log.debug('{}/{} session cached in lambda memory'.format(user_id, token))
     if session_store == 'DB':
         return store_session_in_db(user_id, token, sess)
     elif session_store == 'S3':
@@ -384,7 +389,7 @@ def get_profile(user_id, token=None, reuse_old_token=None):
         user_profile = json.loads(packet)
 
         store_session(user_id, cookie_token, user_profile)
-
+        log.debug('{}/{} session stored'.format(user_id, cookie_token))
         return user_profile
 
     except urllib.error.URLError as e:

@@ -238,6 +238,7 @@ def login():
         user_id = auth['endpoint'].split('/')[-1]
 
         user_profile = get_profile(user_id, auth['access_token'])
+        log.debug('Got the user profile: {}'.format(user_profile))
         if user_profile:
             log.debug('urs-access-token: {}'.format(auth['access_token']))
             if 'state' in args:

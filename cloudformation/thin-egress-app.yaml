@@ -261,7 +261,7 @@ Resources:
           PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !Ref DownloadRoleArn
-      #Timeout: 600
+      Timeout: 6
       Handler: app.app
       Runtime: 'python3.7'
       #MemorySize: 128

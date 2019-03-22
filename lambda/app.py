@@ -207,8 +207,7 @@ def logout():
 def login():
 
     args = app.current_request.query_params
-    print('query_params: ')
-    print(args)
+    log.debug('the query_params: {}'.format(args))
 
     if not args:
         template_vars = {'contentstring': 'No params', 'title': 'Could Not Login'}
@@ -233,13 +232,14 @@ def login():
             log.debug('no auth returned from do_auth()')
 
             template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
-            headers = {}
-            return make_html_response(template_vars, headers, 400, 'error.html')
+
+            return make_html_response(template_vars, {}, 400, 'error.html')
 
         user_id = auth['endpoint'].split('/')[-1]
-        get_profile(user_id, auth['access_token'])
 
-        if auth:
+        user_profile = get_profile(user_id, auth['access_token'])
+        log.debug('Got the user profile: {}'.format(user_profile))
+        if user_profile:
             log.debug('urs-access-token: {}'.format(auth['access_token']))
             if 'state' in args:
                 redirect_to = args["state"]
@@ -249,18 +249,14 @@ def login():
             headers = {'Location': redirect_to}
             # Interesting worklaround: api gateway will technically only accept one of each type of header, but if you
             # specify your set-cookies with different alpha cases, you can actually send multiple.
-            cookieheader0 = {'Set-Cookie': 'urs-access-token={}; Expires={}'.format(auth['access_token'],
-                                                                                    get_cookie_expiration_date_str())}
-            cookieheader1 = {
-                'set-cookie': 'urs-user-id={}; Expires={}'.format(user_id, get_cookie_expiration_date_str())}
-            headers.update(cookieheader0)
-            headers.update(cookieheader1)
+            headers['Set-Cookie'] = 'urs-access-token={}; Expires={}'.format(auth['access_token'],
+                                                                                           get_cookie_expiration_date_str())
+            headers['set-cookie'] = 'urs-user-id={}; Expires={}'.format(user_id, get_cookie_expiration_date_str())
 
             return Response(body='', status_code=301, headers=headers)
-
-    template_vars = {'contentstring': 'There was a problem processing URS Login', 'title': 'Could Not Login'}
-    headers = {}
-    return make_html_response(template_vars, headers, 400, 'error.html')
+        else:
+            template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
+            return make_html_response(template_vars, {}, 400, 'error.html')
 
 
 def get_range_header_val():

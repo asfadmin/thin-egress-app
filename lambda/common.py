@@ -54,19 +54,25 @@ def get_yaml_file(bucket, key):
 
 
 def get_log():
-
-    loglevel = os.getenv('LOGLEVEL', 'DEBUG') # TODO: change default to 'INFO'
+    loglevel = os.getenv('LOGLEVEL', 'INFO')
     log_fmt_str = "%(levelname)s: %(message)s (%(filename)s line %(lineno)d/" + \
                   os.getenv("BUILD_VERSION", "NOBUILD") + "/" + \
                   os.getenv('MATURITY', 'DEV') + ")"
-    log_handler = logging.getLogger()
-    log_handler.setLevel(getattr(logging, loglevel))
-    log_fmt = logging.Formatter(log_fmt_str)
-    screenlog = logging.StreamHandler()
-    screenlog.setFormatter(log_fmt)
-    log_handler.addHandler(screenlog)
+
+    logger = logging.getLogger()
+    for h in logger.handlers:
+        logger.removeHandler(h)
+
+    h = logging.StreamHandler(sys.stdout)
+
+    # use whatever format you want here
+    FORMAT = '%(asctime)s %(message)s'
+    h.setFormatter(logging.Formatter(log_fmt_str))
+    logger.addHandler(h)
+    logger.setLevel(getattr(logging, loglevel))
+
     if os.getenv("QUIETBOTO", 'TRUE').upper() == 'TRUE':
-        log_handler.setLevel('DEBUG')
+        # BOTO, be quiet plz
         logging.getLogger('boto3').setLevel(logging.CRITICAL)
         logging.getLogger('botocore').setLevel(logging.CRITICAL)
         logging.getLogger('nose').setLevel(logging.CRITICAL)
@@ -74,8 +80,8 @@ def get_log():
         logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
         logging.getLogger('urllib3').setLevel(logging.CRITICAL)
         logging.getLogger('connectionpool').setLevel(logging.CRITICAL)
-        #log_handler.warning('elasticsearch, boto3, etc silenced to WARNING levels of output')
-    return log_handler
+
+    return logger
 
 
 def get_urs_url(ctxt, to=False):

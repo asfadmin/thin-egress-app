@@ -17,10 +17,10 @@ from datetime import datetime
 
 from wsgiref.handlers import format_date_time as format_7231_date
 
-header_map = {'date': 	        'Date',
+header_map = {'date':           'Date',
               'last-modified':  'Last-Modified',
               'accept-ranges':  'Accept-Ranges',
-              'etag': 	        'ETag',
+              'etag':           'ETag',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
 
@@ -54,28 +54,33 @@ def get_yaml_file(bucket, key):
 
 
 def get_log():
-
-    loglevel = os.getenv('LOGLEVEL', 'DEBUG') # TODO: change default to 'INFO'
+    loglevel = os.getenv('LOGLEVEL', 'INFO')
     log_fmt_str = "%(levelname)s: %(message)s (%(filename)s line %(lineno)d/" + \
                   os.getenv("BUILD_VERSION", "NOBUILD") + "/" + \
                   os.getenv('MATURITY', 'DEV') + ")"
-    log_handler = logging.getLogger()
-    log_handler.setLevel(getattr(logging, loglevel))
-    log_fmt = logging.Formatter(log_fmt_str)
-    screenlog = logging.StreamHandler()
-    screenlog.setFormatter(log_fmt)
-    log_handler.addHandler(screenlog)
+
+    logger = logging.getLogger()
+    for h in logger.handlers:
+        logger.removeHandler(h)
+
+    h = logging.StreamHandler(sys.stdout)
+
+    # use whatever format you want here
+    FORMAT = '%(asctime)s %(message)s'
+    h.setFormatter(logging.Formatter(log_fmt_str))
+    logger.addHandler(h)
+    logger.setLevel(getattr(logging, loglevel))
+
     if os.getenv("QUIETBOTO", 'TRUE').upper() == 'TRUE':
-        log_handler.setLevel('DEBUG')
-        logging.getLogger('boto3').setLevel(logging.CRITICAL)
-        logging.getLogger('botocore').setLevel(logging.CRITICAL)
-        logging.getLogger('nose').setLevel(logging.CRITICAL)
-        logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
-        logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
-        logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-        logging.getLogger('connectionpool').setLevel(logging.CRITICAL)
-        #log_handler.warning('elasticsearch, boto3, etc silenced to WARNING levels of output')
-    return log_handler
+        # BOTO, be quiet plz
+        logging.getLogger('boto3').setLevel(logging.ERROR)
+        logging.getLogger('botocore').setLevel(logging.ERROR)
+        logging.getLogger('nose').setLevel(logging.ERROR)
+        logging.getLogger('elasticsearch').setLevel(logging.ERROR)
+        logging.getLogger('s3transfer').setLevel(logging.ERROR)
+        logging.getLogger('urllib3').setLevel(logging.ERROR)
+        logging.getLogger('connectionpool').setLevel(logging.ERROR)
+    return logger
 
 
 def get_urs_url(ctxt, to=False):
@@ -197,7 +202,11 @@ def uncache_session(user_id, token):
     global active_sessions                                                             #pylint: disable=global-statement
 
     session_path = craft_profile_path(user_id, token)
-    active_sessions.pop(session_path)
+    try:
+        active_sessions.pop(session_path)
+    except KeyError:
+        # If it's not there, it's not there.
+        pass
 
 
 def prune_cached_sessions():
@@ -273,6 +282,8 @@ def get_session_from_s3(user_id, token):
 def store_session(user_id, token, sess):
 
     log.debug('storing session into {} for {}: {}'.format(session_store, user_id, sess))
+    cache_session(user_id, token, sess)
+    log.debug('{}/{} session cached in lambda memory'.format(user_id, token))
     if session_store == 'DB':
         return store_session_in_db(user_id, token, sess)
     elif session_store == 'S3':
@@ -281,7 +292,6 @@ def store_session(user_id, token, sess):
 
 def store_session_in_db(user_id, token, sess):
 
-    cache_session(user_id, token, sess)
     item = {'id': {'S': '{}/{}'.format(user_id, token)},
             'expires': {'N': str(int(time.time()) + sessttl)},
             'session': {'S': json.dumps(sess)}}
@@ -292,8 +302,6 @@ def store_session_in_db(user_id, token, sess):
 
 def store_session_in_s3(user_id, token, user_profile):
 
-    log.debug('writing new userprofile for {}: {}'.format(user_id, user_profile))
-    cache_session(user_id, token, user_profile)
     profile_path = craft_profile_path(user_id, token)
     write_s3(os.getenv('SESSION_BUCKET', None), profile_path, json.dumps(user_profile))
 
@@ -357,8 +365,7 @@ def get_profile(user_id, token=None, reuse_old_token=None):
         return False
 
     if reuse_old_token:
-        log.info("Refreshing user_id {0} with new token {1}".format(user_id, token))
-        refresh_user_profile(user_id, token)
+        refresh_user_profile(user_id)
     else:
         log.info("Getting profile for {0}".format(user_id))
 
@@ -375,7 +382,6 @@ def get_profile(user_id, token=None, reuse_old_token=None):
         user_profile = json.loads(packet)
 
         store_session(user_id, cookie_token, user_profile)
-
         return user_profile
 
     except urllib.error.URLError as e:

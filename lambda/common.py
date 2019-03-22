@@ -2,7 +2,7 @@ import boto3
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 #import base64 # potentially used by get_urs_creds()
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, select_autoescape, TemplateNotFound
 import json
 import logging
 import os
@@ -690,7 +690,13 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
         loader=FileSystemLoader([os.path.join(os.path.dirname(__file__), "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
-    jin_tmp = jin_env.get_template(templatefile)
+    try:
+        jin_tmp = jin_env.get_template(templatefile)
+
+    except TemplateNotFound as e:
+        log.error('Template not found: {}'.format(e))
+        return 'Cannot find the HTML template directory'
+
     return jin_tmp.render(**template_vars)
 
 

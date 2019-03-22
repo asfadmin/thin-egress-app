@@ -203,7 +203,11 @@ def uncache_session(user_id, token):
     global active_sessions                                                             #pylint: disable=global-statement
 
     session_path = craft_profile_path(user_id, token)
-    active_sessions.pop(session_path)
+    try:
+        active_sessions.pop(session_path)
+    except KeyError:
+        # If it's not there, it's not there.
+        pass
 
 
 def prune_cached_sessions():

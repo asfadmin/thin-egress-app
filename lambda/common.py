@@ -31,6 +31,9 @@ STAGE = os.getenv('STAGE_NAME', 'DEV')
 active_sessions = {}
 session_store = os.getenv('SESSION_STORE', 'DB')
 sessttl = int(os.getenv('SESSION_TTL', '168')) * 60 * 60
+html_template_status = ''
+html_template_local_cachedir = '/tmp/'
+
 if session_store == 'DB':
     ddb = boto3.client('dynamodb')
     sesstable = os.getenv('SESSION_TABLE')
@@ -685,9 +688,18 @@ def refresh_user_profile(user_id):
         return False
 
 
+def cache_html_templates():
+    try:
+        os.mkdir(html_template_local_cachedir, 700)
+    except FileExistsError:
+        pass
+    # TODO: 
+
 def get_html_body(template_vars:dict, templatefile:str='root.html'):
+    if html_template_status == '':
+        cache_html_templates()
     jin_env = Environment(
-        loader=FileSystemLoader([os.path.join(os.path.dirname(__file__), "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:

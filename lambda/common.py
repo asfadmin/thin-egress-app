@@ -712,7 +712,6 @@ def cache_html_templates():
             if filename:
                 log.debug('attempting to save {}'.format(os.path.join(html_template_local_cachedir, filename)))
                 client.download_file(bucket, o['Key'], os.path.join(html_template_local_cachedir, filename))
-                log.debug('saved template to {}'.format(os.path.join(html_template_local_cachedir, filename)))
         return 'CACHED'
     except (TypeError, KeyError) as e:
         log.error(e)

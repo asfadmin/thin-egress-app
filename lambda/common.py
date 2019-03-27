@@ -32,7 +32,7 @@ active_sessions = {}
 session_store = os.getenv('SESSION_STORE', 'DB')
 sessttl = int(os.getenv('SESSION_TTL', '168')) * 60 * 60
 html_template_status = ''
-html_template_local_cachedir = '/tmp/templates/' # Should this be settable via ENV?
+html_template_local_cachedir = '/tmp/templates/'
 
 if session_store == 'DB':
     ddb = boto3.client('dynamodb')
@@ -694,21 +694,30 @@ def cache_html_templates():
     except FileExistsError:
         # good.
         log.debug('somehow, {} exists already'.format(html_template_local_cachedir))
+
+    if os.getenv('HTML_TEMPLATE_DIR', '') == '':
+        return 'DEFAULT'
+
     bucket = os.getenv('CONFIG_BUCKET')
     templatedir = os.getenv('HTML_TEMPLATE_DIR')
     if not templatedir[-1] == '/': #we need a trailing slash
         templatedir = '{}/'.format(templatedir)
 
     client = boto3.client('s3')
-    result = client.list_objects(Bucket=bucket, Prefix=templatedir, Delimiter='/')
+    try:
+        result = client.list_objects(Bucket=bucket, Prefix=templatedir, Delimiter='/')
 
-    for o in result.get('Contents'):
-        filename = os.path.basename(o['Key'])
-        if filename:
-            log.debug('attempting to save {}'.format(os.path.join(html_template_local_cachedir, filename)))
-            client.download_file(bucket, o['Key'], os.path.join(html_template_local_cachedir, filename))
-            log.debug('saved template to {}'.format(os.path.join(html_template_local_cachedir, filename)))
-    return True
+        for o in result.get('Contents'):
+            filename = os.path.basename(o['Key'])
+            if filename:
+                log.debug('attempting to save {}'.format(os.path.join(html_template_local_cachedir, filename)))
+                client.download_file(bucket, o['Key'], os.path.join(html_template_local_cachedir, filename))
+                log.debug('saved template to {}'.format(os.path.join(html_template_local_cachedir, filename)))
+        return 'CACHED'
+    except (TypeError, KeyError) as e:
+        log.error(e)
+        log.error('Trouble trying to download HTML templates from s3://{}/{}'.format(bucket, templatedir))
+        return 'ERROR'
 
 
 def get_html_body(template_vars:dict, templatefile:str='root.html'):
@@ -716,8 +725,7 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
     global html_template_status                                                       # pylint: disable=global-statement
 
     if html_template_status == '':
-        if cache_html_templates():
-            html_template_status = 'CACHED'
+        html_template_status = cache_html_templates()
 
     jin_env = Environment(
         loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), "templates")]),

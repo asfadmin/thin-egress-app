@@ -84,7 +84,7 @@ Parameters:
   HtmlTemplateDir:
     Type: String
     Default: 'egress-html-templates'
-    Description: 'Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates here.'
+    Description: 'Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates.'
 
   BucketMapFile:
     Type: String

@@ -13,7 +13,7 @@
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets.
 
 
-### Packaging Lambda Code
+### Packaging lambda code
 
 ```bash 
 # Make up a filename for code archive:
@@ -41,12 +41,12 @@ zip -g ../${CODE_ARCHIVE_FILENAME} ./*.py
 zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates
 cd ..
 
-#Upload to S3
+# Upload to S3
 aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
 
-### Bucket Map
+### Bucket map
 
 The bucket map allows the app to determine in which bucket to look when given the path from the URL. 
 
@@ -79,17 +79,55 @@ MAP:
     PLATFORM_B:         imgs
     
 PUBLIC_BUCKETS:
-  - imgs
+  - imgs 
 ```
 
+### HTML templates 
+You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html templates.
 
-### Cloudformation Parameters
+#### Using custom templates
+After you've created your custom templates, create a subdirectory in your `ConfigBucket` and upload them there. Since the lambda downloads the files in this directory to itself, it's best to put only your template files here. When you deploy your CF, enter this directory name into the `HtmlTemplateDir` param.  
+
+#### Using default templates
+When deploying the CF, set `HtmlTemplateDir` to '' (empty string).
+
+#### The templates
+
+**base.html**
+This is the base template. 
+
+Blocks: 
+ * pagetitle: Gets inserted inside the `<title></title>` element
+ * content
+
+**root.html**
+Child template. Gets called by `/` and `/logout` for 200 responses.
+
+Variables: 
+ * `title`: page title
+ * `URS_URL`: used to make the login link
+ * `STAGE`: used to make a URL back to the egress app
+ * `profile`: in the default template, `profile.first_name` and `profile.last_name` are used to greet a logged-in user. The entire profile dict is available to the template.
+ * `contentstring`: any text can go here
+ 
+**error.html** 
+Child template that gets called when various 400 type errors happen.
+
+Variables:
+ * `title`: page title
+ * `status_code`: http status code goes here
+ * `contentstring`: any text can go here
+
+**profile.html** 
+Child template that displays profile info. Only used for debugging in dev.
+
+### Cloudformation parameters
 It's best to look at the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
 
 
-### Deploying
-The *stack-name* needs to be compatible with S3 naming requirements (lower case, no underscores, etc) because the CF template may create buckets using this name as a base.
+### Deploying the app
+The `stack-name` needs to be compatible with S3 naming requirements (lower case, no underscores, etc) because the CF template may create buckets using this name.
 ```bash
 aws cloudformation deploy --profile=default --region=us-east-1 \
   --stack-name ${STACK_NAME} \
@@ -98,6 +136,7 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
   --parameter-overrides \
     URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
     ConfigBucket=${CFG_BUCKETNAME} \
+    HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
     BucketnamePrefix=${BUCKET_PREFIX} \
     BucketMapFile=${BUCKETMAP_FILENAME} \
     LambdaCodeS3Bucket=${CODE_BUCKET} \

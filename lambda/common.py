@@ -31,6 +31,9 @@ STAGE = os.getenv('STAGE_NAME', 'DEV')
 active_sessions = {}
 session_store = os.getenv('SESSION_STORE', 'DB')
 sessttl = int(os.getenv('SESSION_TTL', '168')) * 60 * 60
+html_template_status = ''
+html_template_local_cachedir = '/tmp/templates/'
+
 if session_store == 'DB':
     ddb = boto3.client('dynamodb')
     sesstable = os.getenv('SESSION_TABLE')
@@ -191,7 +194,7 @@ def do_auth(code, redirect_url):
 
 def cache_session(user_id, token, session):
 
-    global active_sessions                                                             #pylint: disable=global-statement
+    global active_sessions                                                            # pylint: disable=global-statement
 
     session_path = craft_profile_path(user_id, token)
     active_sessions[session_path] = {'profile': session, 'timestamp': round(time.time())}
@@ -199,7 +202,7 @@ def cache_session(user_id, token, session):
 
 def uncache_session(user_id, token):
 
-    global active_sessions                                                             #pylint: disable=global-statement
+    global active_sessions                                                            # pylint: disable=global-statement
 
     session_path = craft_profile_path(user_id, token)
     try:
@@ -225,7 +228,7 @@ def prune_cached_sessions():
 
 def get_cached_session(user_id, token):
 
-    global active_sessions                                                             #pylint: disable=global-statement
+    global active_sessions                                                            # pylint: disable=global-statement
 
     prune_cached_sessions()
 
@@ -685,9 +688,46 @@ def refresh_user_profile(user_id):
         return False
 
 
+def cache_html_templates():
+    try:
+        os.mkdir(html_template_local_cachedir, 0o700)
+    except FileExistsError:
+        # good.
+        log.debug('somehow, {} exists already'.format(html_template_local_cachedir))
+
+    if os.getenv('HTML_TEMPLATE_DIR', '') == '':
+        return 'DEFAULT'
+
+    bucket = os.getenv('CONFIG_BUCKET')
+    templatedir = os.getenv('HTML_TEMPLATE_DIR')
+    if not templatedir[-1] == '/': #we need a trailing slash
+        templatedir = '{}/'.format(templatedir)
+
+    client = boto3.client('s3')
+    try:
+        result = client.list_objects(Bucket=bucket, Prefix=templatedir, Delimiter='/')
+
+        for o in result.get('Contents'):
+            filename = os.path.basename(o['Key'])
+            if filename:
+                log.debug('attempting to save {}'.format(os.path.join(html_template_local_cachedir, filename)))
+                client.download_file(bucket, o['Key'], os.path.join(html_template_local_cachedir, filename))
+        return 'CACHED'
+    except (TypeError, KeyError) as e:
+        log.error(e)
+        log.error('Trouble trying to download HTML templates from s3://{}/{}'.format(bucket, templatedir))
+        return 'ERROR'
+
+
 def get_html_body(template_vars:dict, templatefile:str='root.html'):
+
+    global html_template_status                                                       # pylint: disable=global-statement
+
+    if html_template_status == '':
+        html_template_status = cache_html_templates()
+
     jin_env = Environment(
-        loader=FileSystemLoader([os.path.join(os.path.dirname(__file__), "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:
@@ -709,6 +749,10 @@ def get_urs_creds():
 
     secret_name = os.getenv('URS_CREDS_SECRET_NAME', None)
     region_name = os.getenv('AWS_DEFAULT_REGION')
+
+    if not secret_name:
+        log.error('URS_CREDS_SECRET_NAME not set')
+        return {}
 
     # Create a Secrets Manager client
     session = boto3.session.Session()
@@ -760,4 +804,3 @@ def get_urs_creds():
             #decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
             #log.debug('decoded_binary_secret: '.format(decoded_binary_secret))
             #return decoded_binary_secret
-    # Your code goes here.

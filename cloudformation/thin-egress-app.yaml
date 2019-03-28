@@ -114,10 +114,17 @@ Parameters:
     Default: ""
     Description: "ARN for reading of data buckets"
 
+  PermissionsBoundaryName:
+    Type: String
+    Default: ""
+    Description: "Some accounts require use of a PermissionsBoundaryPolicy to create roles. If the EgressLambdaIamRole fails creation, you may need to enter one here."
+
 
 Conditions:
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
+  UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
+
 
 Outputs:
   ApiEndpoint:
@@ -204,6 +211,11 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub "${AWS::StackName}-EgressLambdaIamRole"
+      PermissionsBoundary:
+        !If
+          - UsePermissionsBoundary
+          - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+          - !Ref "AWS::NoValue"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

@@ -117,7 +117,7 @@ Parameters:
   PermissionsBoundaryName:
     Type: String
     Default: ""
-    Description: "Some accounts require use of a PermissionsBoundaryPolicy to create roles. If the EgressLambdaIamRole fails creation, you may need to enter one here."
+    Description: 'Optional PermissionsBoundary Policy name. In NGAP2, the policy name is "NGAPShRoleBoundary".'
 
 
 Conditions:

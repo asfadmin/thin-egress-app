@@ -6,12 +6,12 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: ""
+    Default: "thin-egress-app/tea-code-build.3.zip"
     Description: "S3 Key of packaged lambda egress code"
 
   LambdaCodeS3Bucket:
     Type: String
-    Default: ""
+    Default: "asf.public.code"
     Description: "S3 bucket where log processing code for lambda gets placed"
 
   URSAuthCredsSecretName:

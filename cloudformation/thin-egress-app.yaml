@@ -309,7 +309,7 @@ Resources:
           USE_REVERSE_BUCKET_MAP: !Ref UseReverseBucketMap
           PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
-          EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !Ref DownloadRoleLocal, !Ref DownloadRoleArn ]
+          EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
       Timeout: 6
       Handler: app.app

@@ -5,7 +5,7 @@
 * An application on [Earthdata URS](https://urs.earthdata.nasa.gov/apps/new)
   * Must use `OAuth 2`
 * A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
-  * This secret should have two rows, one with key `client_id` and the other `auth_key`
+  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
 * A bucket map yaml file in a config bucket
 * The buckets described in the bucket map must exist. 
   * These need not be in the same account as the egress app.

@@ -6,7 +6,7 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: "thin-egress-app/tea-code-build.3.zip"
+    Default: "thin-egress-app/tea-code-<BUILD_ID>.zip"
     Description: "S3 Key of packaged lambda egress code"
 
   LambdaCodeS3Bucket:

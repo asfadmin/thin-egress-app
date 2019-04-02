@@ -91,7 +91,7 @@ def get_urs_url(ctxt, to=False):
     base_url = os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov') + '/oauth/authorize'
 
     # From URS Application
-    client_id = get_urs_creds()['client_id']
+    client_id = get_urs_creds()['UrsId']
     redirect_url = 'https://{}/{}/login'.format(ctxt['domainName'], ctxt['stage'])
     urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, redirect_url)
     if to:
@@ -168,7 +168,7 @@ def do_auth(code, redirect_url):
     url = os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov') + "/oauth/token"
 
     # App U:P from URS Application
-    auth = get_urs_creds()['auth_key']
+    auth = get_urs_creds()['UrsAuth']
 
     post_data = {"grant_type": "authorization_code",
                  "code": code,
@@ -569,10 +569,10 @@ def user_in_group(private_groups, cookievars, user_profile=None, refresh_first=F
     # check if the use has one of the groups from the private group list
 
     if 'user_groups' in user_profile:
-        client_id = get_urs_creds()['client_id']
+        client_id = get_urs_creds()['UrsId']
         log.info ("Searching for private groups {0} in {1}".format( private_groups, user_profile['user_groups']))
         for u_g in user_profile['user_groups']:
-            if u_g['client_id'] == client_id:
+            if u_g['UrsId'] == client_id:
                 for p_g in private_groups:
                     if p_g == u_g['name']:
                         # Found the matching group!
@@ -665,7 +665,7 @@ def refresh_user_profile(user_id):
     url = os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov') + "/oauth/token"
 
     # App U:P from URS Application
-    auth = get_urs_creds()['auth_key']
+    auth = get_urs_creds()['UrsAuth']
     post_data = {"grant_type": "client_credentials" }
     headers = {"Authorization": "BASIC " + auth}
 
@@ -742,8 +742,8 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
 
 # return looks like:
 # {
-#     "client_id": "stringofseeminglyrandomcharacters",
-#     "auth_key": "verymuchlongerstringofseeminglyrandomcharacters"
+#     "UrsId": "stringofseeminglyrandomcharacters",
+#     "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
 # }
 def get_urs_creds():
 
@@ -793,14 +793,10 @@ def get_urs_creds():
     else:
         # Decrypts secret using the associated KMS CMK.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
-        #log.debug(get_secret_value_response)
         if 'SecretString' in get_secret_value_response:
             secret = json.loads(get_secret_value_response['SecretString'])
-            #log.debug('secret: {}'.format(secret))
-            return secret
-        else:
-            # We probably wouldn't get here since we're storing text data, right?
-            return {}
-            #decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
-            #log.debug('decoded_binary_secret: '.format(decoded_binary_secret))
-            #return decoded_binary_secret
+            if 'UrsId' in secret and 'UrsAuth' in secret:
+                return secret
+            else:
+                log.error('AWS secret {} does not contain required keys "UrsId" and "UrsAuth"'.format(secret_name))
+    return {}

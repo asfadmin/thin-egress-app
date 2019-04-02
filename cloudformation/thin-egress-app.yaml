@@ -17,7 +17,7 @@ Parameters:
   URSAuthCredsSecretName:
     Type: String
     Default: ''
-    Description: "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'client_id' and 'auth_key'."
+    Description: "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'UrsId' and 'UrsAuth'."
 
   AuthBaseUrl:
     Type: String

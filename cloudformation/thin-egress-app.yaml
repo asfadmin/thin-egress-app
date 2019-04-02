@@ -210,6 +210,7 @@ Resources:
 
   DownloadRoleLocal:
     Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-DownloadRoleLocal"
       PermissionsBoundary:

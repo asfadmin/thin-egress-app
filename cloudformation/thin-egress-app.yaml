@@ -123,6 +123,7 @@ Parameters:
 Conditions:
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
+  CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
 
 
@@ -207,6 +208,36 @@ Resources:
       Roles:
         - !Sub "${AWS::StackName}-EgressLambdaIamRole"
 
+  DownloadRoleLocal:
+    Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-DownloadRoleLocal"
+      PermissionsBoundary:
+        !If
+        - UsePermissionsBoundary
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*"
+
   EgressLambdaIamRole:
     Type: AWS::IAM::Role
     Properties:
@@ -279,7 +310,7 @@ Resources:
           USE_REVERSE_BUCKET_MAP: !Ref UseReverseBucketMap
           PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
-          EGRESS_APP_DOWNLOAD_ROLE_ARN: !Ref DownloadRoleArn
+          EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
       Timeout: 6
       Handler: app.app

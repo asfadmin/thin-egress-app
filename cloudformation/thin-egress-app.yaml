@@ -38,11 +38,6 @@ Parameters:
     Default: 'DEBUG'
     Description: "Python loglevel."
 
-  BuildVersion:
-    Type: String
-    Default: 'NOBUILD'
-    Description: "Build number, mainly used in logs."
-
   Maturity:
     Type: String
     AllowedValues:
@@ -296,7 +291,7 @@ Resources:
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
-          BUILD_VERSION: !Ref BuildVersion
+          BUILD_VERSION: "<BUILD_ID>"
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix

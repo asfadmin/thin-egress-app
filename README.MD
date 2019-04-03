@@ -145,7 +145,6 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
     SessionStore=S3 \
     SessionTTL=168 \
     StageName=${STAGE_NAME} \
-    BuildVersion=${BUILD_VERSION_TAG} \
     AuthBaseUrl=https://urs.earthdata.nasa.gov \
     Loglevel=DEBUG \
     Maturity=DEV

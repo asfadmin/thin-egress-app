@@ -12,9 +12,12 @@
   * It would help if there were some data in them.
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets.
 
+### Using pre-packaged lambda code
+
+Pre packaged versions of the lambda code and associated cloudformation YAML are in in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
 
 ### Packaging lambda code
-
+If you prefer to roll your own zip for the lambda code:
 ```bash 
 # Make up a filename for code archive:
 CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip

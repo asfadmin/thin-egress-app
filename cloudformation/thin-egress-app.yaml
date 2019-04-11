@@ -229,6 +229,7 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:ListBucket
+                  - s3:GetBucketLocation
                 Resource:
                   - !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
                   - !Sub "arn:aws:s3:::${BucketnamePrefix}*"

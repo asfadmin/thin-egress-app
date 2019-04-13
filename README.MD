@@ -128,11 +128,12 @@ Variables:
 Child template that displays profile info. Only used for debugging in dev.
 
 ### Cloudformation parameters
-It's best to look at the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
-
+It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
 
 ### Deploying the app
+The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.
+
 The `stack-name` needs to be compatible with S3 naming requirements (lower case, no underscores, etc) because the CF template may create buckets using this name.
 ```bash
 aws cloudformation deploy --profile=default --region=us-east-1 \
@@ -145,8 +146,8 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
     HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
     BucketnamePrefix=${BUCKET_PREFIX} \
     BucketMapFile=${BUCKETMAP_FILENAME} \
-    LambdaCodeS3Bucket=${CODE_BUCKET} \
-    LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \
+    LambdaCodeS3Bucket=${CODE_BUCKET} \ # Omit this if using build-specific YAML from ASF's public code bucket
+    LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \ # Omit this if using build-specific YAML from ASF's public code bucket
     DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
     SessionStore=S3 \
     SessionTTL=168 \

@@ -1,4 +1,7 @@
 # TEA (Thin Egress App)
+## About
+The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration.
+
 ## Setup and Deploying
 
 ### Prerequisites:
@@ -14,7 +17,7 @@
 
 ### Using pre-packaged lambda code
 
-Pre packaged versions of the lambda code and associated cloudformation YAML are in in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
+Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
 
 ### Packaging lambda code
 If you prefer to roll your own zip for the lambda code:
@@ -53,7 +56,7 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 The bucket map allows the app to determine in which bucket to look when given the path from the URL. 
 
-If a url for a product would looks like:
+If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```
 
 

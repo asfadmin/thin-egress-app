@@ -7,12 +7,12 @@ Parameters:
   LambdaCodeS3Key:
     Type: String
     Default: "thin-egress-app/tea-code-<BUILD_ID>.zip"
-    Description: "S3 Key of packaged lambda egress code"
+    Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
     Default: "asf.public.code"
-    Description: "S3 bucket where log processing code for lambda gets placed"
+    Description: "S3 bucket where log processing code for lambda gets placed."
 
   URSAuthCredsSecretName:
     Type: String
@@ -25,7 +25,7 @@ Parameters:
       - 'https://urs.earthdata.nasa.gov'
       - 'https://uat.urs.earthdata.nasa.gov'
     Default: 'https://urs.earthdata.nasa.gov'
-    Description: "Is the 'AUTH_BASE_URL' env var in the lambda"
+    Description: "Is the 'AUTH_BASE_URL' env var in the lambda."
 
   Loglevel:
     Type: String
@@ -46,12 +46,12 @@ Parameters:
       - 'TEST'
       - 'PROD'
     Default: 'DEV'
-    Description: "Maturity of deployment"
+    Description: "Maturity of deployment."
 
   BucketnamePrefix:
     Type: String
     Default: 'prfx-d-'
-    Description: "All data buckets should have names prefixed with this. Must be compatible with S3 naming conventions (lower case only, etc)"
+    Description: "All data buckets should have names prefixed with this. Must be compatible with S3 naming conventions (lower case only, etc)."
 
   SessionTTL:
     Type: Number
@@ -68,8 +68,8 @@ Parameters:
 
   StageName:
     Type: String
-    Default: 'DEV'
-    Description: "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on"
+    Default: 'API'
+    Description: "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on."
 
   ConfigBucket:
     Type: String
@@ -78,13 +78,13 @@ Parameters:
 
   HtmlTemplateDir:
     Type: String
-    Default: 'egress-html-templates'
-    Description: 'Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates.'
+    Default: ''
+    Description: 'Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates that are included with the lambda code zip file.'
 
   BucketMapFile:
     Type: String
     Default: 'bucket_map.yaml'
-    Description: "Path and file of bucketmap file's location in the ConfigBucket"
+    Description: "Path and file of bucketmap file's location in the ConfigBucket."
 
   UseReverseBucketMap:
     Type: String
@@ -97,12 +97,12 @@ Parameters:
   PublicBucketsFile:
     Type: String
     Default: ''
-    Description: "Path and file of public buckets file's location in the ConfigBucket"
+    Description: "Path and file of public buckets file's location in the ConfigBucket."
 
   PrivateBucketsFile:
     Type: String
     Default: ''
-    Description: "Path and file of private buckets file's location in the ConfigBucket"
+    Description: "Path and file of private buckets file's location in the ConfigBucket."
 
   DownloadRoleArn:
     Type: String

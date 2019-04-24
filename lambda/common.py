@@ -92,6 +92,7 @@ def get_urs_url(ctxt, to=False):
 
     # From URS Application
     client_id = get_urs_creds()['UrsId']
+    # Make a redirect url using optional custom domain_name, otherwise use raw domain/stage provided by API Gateway.
     redirect_url = 'https://{}/login'.format(
         os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'],
                                                 ctxt['stage'])))

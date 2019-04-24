@@ -92,7 +92,9 @@ def get_urs_url(ctxt, to=False):
 
     # From URS Application
     client_id = get_urs_creds()['UrsId']
-    redirect_url = 'https://{}/{}/login'.format(ctxt['domainName'], ctxt['stage'])
+    redirect_url = 'https://{}/login'.format(
+        os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'],
+                                                ctxt['stage'])))
     urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, redirect_url)
     if to:
         urs_url += "&state={0}".format(to)

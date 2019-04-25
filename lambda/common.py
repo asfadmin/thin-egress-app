@@ -41,15 +41,18 @@ else:
     ddb = sesstable = None
 
 
-def get_redirect_url(ctxt=False):
-
+def get_base_url(ctxt=False):
     # Make a redirect url using optional custom domain_name, otherwise use raw domain/stage provided by API Gateway.
     try:
-        return 'https://{}/login'.format(
+        return 'https://{}/'.format(
             os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'], ctxt['stage'])))
     except (TypeError, IndexError) as e:
         log.error('could not create a redirect_url, because {}'.format(e))
         raise
+
+
+def get_redirect_url(ctxt=False):
+    return '{}login'.format(get_base_url(ctxt))
 
 
 def get_yaml_file(bucket, key):

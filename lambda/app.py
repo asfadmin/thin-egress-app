@@ -7,7 +7,7 @@ from urllib.parse import urlparse, quote_plus
 
 from common import get_log, do_auth, get_yaml_file, process_varargs, \
     check_private_bucket, check_public_bucket, user_in_group, \
-    header_map, get_presigned_url, get_html_body, \
+    header_map, get_presigned_url, get_html_body, get_redirect_url, \
     get_profile, get_urs_url, STAGE, get_session, delete_session, get_cookie_expiration_date_str, get_cookie_vars, \
     get_role_session, get_role_creds
 
@@ -50,11 +50,6 @@ def restore_bucket_vars():
             private_buckets = {}
     else:
         log.info('reusing old bucket configs')
-
-
-def get_endpoint():
-
-    return 'https://{}/{}/'.format(app.current_request.context['domainName'], STAGE)
 
 
 def do_auth_and_return(ctxt):
@@ -225,7 +220,7 @@ def login():
         return make_html_response(template_vars, headers, 400, 'error.html')
     else:
         log.debug('pre-do_auth() query params: {}'.format(app.current_request.query_params))
-        redir_url = '{}{}'.format(get_endpoint(), 'login')
+        redir_url = get_redirect_url(app.current_request.context)
         auth = do_auth(app.current_request.query_params["code"], redir_url)
         log.debug('auth: {}'.format(auth))
         if not auth:

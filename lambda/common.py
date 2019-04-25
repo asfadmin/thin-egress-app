@@ -41,6 +41,17 @@ else:
     ddb = sesstable = None
 
 
+def get_redirect_url(ctxt=False):
+
+    # Make a redirect url using optional custom domain_name, otherwise use raw domain/stage provided by API Gateway.
+    try:
+        return 'https://{}/login'.format(
+            os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'], ctxt['stage'])))
+    except (TypeError, IndexError) as e:
+        log.error('could not create a redirect_url, because {}'.format(e))
+        raise
+
+
 def get_yaml_file(bucket, key):
 
     if not key:
@@ -92,11 +103,11 @@ def get_urs_url(ctxt, to=False):
 
     # From URS Application
     client_id = get_urs_creds()['UrsId']
-    # Make a redirect url using optional custom domain_name, otherwise use raw domain/stage provided by API Gateway.
-    redirect_url = 'https://{}/login'.format(
-        os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'],
-                                                ctxt['stage'])))
-    urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, redirect_url)
+
+    log.debug('domain name: %s' % os.getenv('DOMAIN_NAME', 'no domainname set'))
+    log.debug('if no domain name set: {}/{}'.format(ctxt['domainName'], ctxt['stage']))
+
+    urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, get_redirect_url(ctxt))
     if to:
         urs_url += "&state={0}".format(to)
 

@@ -2,6 +2,49 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Description: "A 'thinner' egress app using lambda."
 
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      -
+        Label:
+          default: App Settings
+        Parameters:
+          - Loglevel
+          - Maturity
+          - ConfigBucket
+          - HtmlTemplateDir
+          - StageName
+          - PermissionsBoundaryName
+      -
+        Label:
+          default: Lambda Code
+        Parameters:
+          - LambdaCodeS3Key
+          - LambdaCodeS3Bucket
+      -
+        Label:
+          default: URS Settings
+        Parameters:
+          - URSAuthCredsSecretName
+          - AuthBaseUrl
+      -
+        Label:
+          default: Data Bucket Setup
+        Parameters:
+          - BucketnamePrefix
+          - BucketMapFile
+          - UseReverseBucketMap
+          - PublicBucketsFile
+          - PrivateBucketsFile
+          - DownloadRoleArn
+      -
+        Label:
+          default: Session Settings
+        Parameters:
+          - SessionStore
+          - SessionTTL
+
+
 Parameters:
 
   LambdaCodeS3Key:
@@ -74,7 +117,7 @@ Parameters:
   ConfigBucket:
     Type: String
     Default: 'egress-config-bucket'
-    Description: 'This is the bucket where config files can be found'
+    Description: 'This is the bucket where config files can be found.'
 
   HtmlTemplateDir:
     Type: String
@@ -107,7 +150,7 @@ Parameters:
   DownloadRoleArn:
     Type: String
     Default: ""
-    Description: "ARN for reading of data buckets"
+    Description: "ARN for reading of data buckets."
 
   PermissionsBoundaryName:
     Type: String

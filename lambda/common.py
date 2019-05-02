@@ -757,20 +757,9 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
     return jin_tmp.render(**template_vars)
 
 
-# return looks like:
-# {
-#     "UrsId": "stringofseeminglyrandomcharacters",
-#     "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
-# }
-def get_urs_creds():
+def retrieve_secret(secret_name):
 
-    secret_name = os.getenv('URS_CREDS_SECRET_NAME', None)
     region_name = os.getenv('AWS_DEFAULT_REGION')
-
-    if not secret_name:
-        log.error('URS_CREDS_SECRET_NAME not set')
-        return {}
-
     # Create a Secrets Manager client
     session = boto3.session.Session()
     client = session.client(
@@ -811,9 +800,25 @@ def get_urs_creds():
         # Decrypts secret using the associated KMS CMK.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
         if 'SecretString' in get_secret_value_response:
-            secret = json.loads(get_secret_value_response['SecretString'])
-            if 'UrsId' in secret and 'UrsAuth' in secret:
-                return secret
-            else:
-                log.error('AWS secret {} does not contain required keys "UrsId" and "UrsAuth"'.format(secret_name))
+            return json.loads(get_secret_value_response['SecretString'])
+
     return {}
+
+
+# return looks like:
+# {
+#     "UrsId": "stringofseeminglyrandomcharacters",
+#     "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
+# }
+def get_urs_creds():
+
+    secret_name = os.getenv('URS_CREDS_SECRET_NAME', None)
+
+    if not secret_name:
+        log.error('URS_CREDS_SECRET_NAME not set')
+        return {}
+    secret = retrieve_secret(secret_name)
+    if not ('UrsId' in secret and 'UrsAuth' in secret):
+        log.error('AWS secret {} does not contain required keys "UrsId" and "UrsAuth"'.format(secret_name))
+
+    return secret

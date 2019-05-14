@@ -5,7 +5,7 @@ import os
 from urllib.parse import urlparse, quote_plus
 
 
-from common import get_log, do_auth, get_yaml_file, process_varargs, \
+from common.common import get_log, do_auth, get_yaml_file, process_varargs, \
     check_private_bucket, check_public_bucket, user_in_group, \
     header_map, get_presigned_url, get_html_body, get_redirect_url, \
     get_profile, get_urs_url, STAGE, get_session, delete_session, get_cookie_expiration_date_str, get_cookie_vars, \

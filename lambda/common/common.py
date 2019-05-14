@@ -293,7 +293,12 @@ def craft_profile_path(user_id, token):
 def get_session_from_s3(user_id, token):
 
     profile_path = craft_profile_path(user_id, token)
-    profile = json.loads(read_s3(os.getenv('SESSION_BUCKET', "rain-t-config"), profile_path))
+    try:
+        profile = json.loads(read_s3(os.getenv('SESSION_BUCKET', "rain-t-config"), profile_path))
+    except ClientError as e:
+        log.warning('error loading profile: ')
+        log.warning(e)
+        return {}
     log.debug("Saving memory cached profile @ {0}".format(profile_path))
     cache_session(user_id, token, profile)
     return profile
@@ -744,7 +749,7 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
         html_template_status = cache_html_templates()
 
     jin_env = Environment(
-        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '..', "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:

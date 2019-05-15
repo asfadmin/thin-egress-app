@@ -41,6 +41,20 @@ else:
     ddb = sesstable = None
 
 
+def get_base_url(ctxt=False):
+    # Make a redirect url using optional custom domain_name, otherwise use raw domain/stage provided by API Gateway.
+    try:
+        return 'https://{}/'.format(
+            os.getenv('DOMAIN_NAME', '{}/{}'.format(ctxt['domainName'], ctxt['stage'])))
+    except (TypeError, IndexError) as e:
+        log.error('could not create a redirect_url, because {}'.format(e))
+        raise
+
+
+def get_redirect_url(ctxt=False):
+    return '{}login'.format(get_base_url(ctxt))
+
+
 def get_yaml_file(bucket, key):
 
     if not key:
@@ -92,8 +106,11 @@ def get_urs_url(ctxt, to=False):
 
     # From URS Application
     client_id = get_urs_creds()['UrsId']
-    redirect_url = 'https://{}/{}/login'.format(ctxt['domainName'], ctxt['stage'])
-    urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, redirect_url)
+
+    log.debug('domain name: %s' % os.getenv('DOMAIN_NAME', 'no domainname set'))
+    log.debug('if no domain name set: {}/{}'.format(ctxt['domainName'], ctxt['stage']))
+
+    urs_url = '{0}?client_id={1}&response_type=code&redirect_uri={2}'.format(base_url, client_id, get_redirect_url(ctxt))
     if to:
         urs_url += "&state={0}".format(to)
 
@@ -276,7 +293,12 @@ def craft_profile_path(user_id, token):
 def get_session_from_s3(user_id, token):
 
     profile_path = craft_profile_path(user_id, token)
-    profile = json.loads(read_s3(os.getenv('SESSION_BUCKET', "rain-t-config"), profile_path))
+    try:
+        profile = json.loads(read_s3(os.getenv('SESSION_BUCKET', "rain-t-config"), profile_path))
+    except ClientError as e:
+        log.warning('error loading profile: ')
+        log.warning(e)
+        return {}
     log.debug("Saving memory cached profile @ {0}".format(profile_path))
     cache_session(user_id, token, profile)
     return profile
@@ -727,7 +749,7 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
         html_template_status = cache_html_templates()
 
     jin_env = Environment(
-        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '..', "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:
@@ -740,20 +762,9 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
     return jin_tmp.render(**template_vars)
 
 
-# return looks like:
-# {
-#     "UrsId": "stringofseeminglyrandomcharacters",
-#     "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
-# }
-def get_urs_creds():
+def retrieve_secret(secret_name):
 
-    secret_name = os.getenv('URS_CREDS_SECRET_NAME', None)
     region_name = os.getenv('AWS_DEFAULT_REGION')
-
-    if not secret_name:
-        log.error('URS_CREDS_SECRET_NAME not set')
-        return {}
-
     # Create a Secrets Manager client
     session = boto3.session.Session()
     client = session.client(
@@ -794,9 +805,25 @@ def get_urs_creds():
         # Decrypts secret using the associated KMS CMK.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
         if 'SecretString' in get_secret_value_response:
-            secret = json.loads(get_secret_value_response['SecretString'])
-            if 'UrsId' in secret and 'UrsAuth' in secret:
-                return secret
-            else:
-                log.error('AWS secret {} does not contain required keys "UrsId" and "UrsAuth"'.format(secret_name))
+            return json.loads(get_secret_value_response['SecretString'])
+
     return {}
+
+
+# return looks like:
+# {
+#     "UrsId": "stringofseeminglyrandomcharacters",
+#     "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
+# }
+def get_urs_creds():
+
+    secret_name = os.getenv('URS_CREDS_SECRET_NAME', None)
+
+    if not secret_name:
+        log.error('URS_CREDS_SECRET_NAME not set')
+        return {}
+    secret = retrieve_secret(secret_name)
+    if not ('UrsId' in secret and 'UrsAuth' in secret):
+        log.error('AWS secret {} does not contain required keys "UrsId" and "UrsAuth"'.format(secret_name))
+
+    return secret

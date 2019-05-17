@@ -6,7 +6,7 @@ pipeline {
     AWSENV=""
     APPTAG="teadev"
     BUILDTAG="${APPTAG}-code-${NEWTAG}"
-    CODE_ARCHIVE_FILENAME="$BUILDTAG.zip"
+    CODE_ARCHIVE_FILENAME="${BUILDTAG}.zip"
     CODE_BUCKET="asf.rain.code"
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
@@ -105,11 +105,11 @@ pipeline {
 
         // tags current changeset
         sh "echo '>> Creating Build Tag'"
-        sh ("git tag -a $BUILDTAG -m \"versioning $BUILDTAG\"")
+        sh ("git tag -a ${BUILDTAG} -m \"versioning ${BUILDTAG}\"")
 
         // pushes the tags
         sh "echo '>> Pushing Build Tag'"
-        sh ("git push origin $BUILDTAG")
+        sh ("git push origin ${BUILDTAG}")
       }
     }    
     

@@ -43,6 +43,7 @@ pipeline {
       
         // Create a working space, pull in dependancies
         sh "echo '>> Gathering Dependencies....'"
+        sh 'tree'
         sh "cd ${WORKSPACE} && mkdir pkg && cd pkg"
         sh "pip3 install -r ../lambda/requirements.txt --target ."
         

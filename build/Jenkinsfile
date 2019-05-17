@@ -34,7 +34,7 @@ pipeline {
         sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
         sh "git config user.name 'jenkins'"
         sh "git submodule update --init --recursive"
-
+      }
     }
 
     // Check that our cumulus is fresh!
@@ -123,5 +123,5 @@ pipeline {
     failure {
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: 'https://chat.asf.alaska.edu/hooks/dm8kzc8rxpr57xkt9w6tnfaasr', message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
     }
-  }  
+  }
 }

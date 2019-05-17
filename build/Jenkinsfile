@@ -14,7 +14,7 @@ pipeline {
   }
 
   // Build on a slave with nodejs
-  agent any
+  agent { label 'docker' }
 
   stages {
 

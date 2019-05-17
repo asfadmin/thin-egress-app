@@ -6,7 +6,7 @@ pipeline {
     AWSENV=""
     APPTAG="teadev"
     BUILDTAG="${APPTAG}-code-${NEWTAG}"
-    CODE_ARCHIVE_FILENAME="$BUILDDTAG.zip"
+    CODE_ARCHIVE_FILENAME="$BUILDTAG.zip"
     CODE_BUCKET='asf.rain.code'
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR='thin-egress-app'

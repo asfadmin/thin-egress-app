@@ -43,22 +43,21 @@ pipeline {
       
         // Create a working space, pull in dependancies
         sh "echo '>> Gathering Dependencies....'"
-        sh 'rm -rf pkg'
-        sh 'tree'
-        sh "cd ${WORKSPACE} && mkdir pkg && cd pkg"
-        sh 'pwd'
-        sh "pip3 install -r ../lambda/requirements.txt --target ."
+        sh "rm -rf pkg && mkdir pkg"
+        sh "cd pkg && pip3 install -r ${WORKSPACE}/lambda/requirements.txt --target ."
         
         // Remove unwanted pieces
         sh "echo '>> Removing Unwanted....'"
-        sh "rm -rf *.dist-info pip docutils chalice/cli botocore setuptools tests easy_install.py "
+        sh "cd ${WORKSPACE}/pkg && rm -rf *.dist-info pip docutils chalice/cli botocore setuptools tests easy_install.py "
         
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
-        sh "zip -r9 ../${CODE_ARCHIVE_FILENAME} ./* && ../lambda"
-        sh "zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py "
-        sh "zip -g -r ../${CODE_ARCHIVE_FILENAME} ./common "
-        sh "zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates "
+        sh """ cd ${WORKSPACE}/pkg && \
+               zip -r9 ../${CODE_ARCHIVE_FILENAME} ./* && \
+               cd ../lambda  && \
+               zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
+               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./common && \
+               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates """
         
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
@@ -70,7 +69,6 @@ pipeline {
    
    stage('Push to AWS') {
       steps {
-        sh "cd ${WORKSPACE}"
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
           // Push the code up to private bucket 
           sh "echo '>> Pushing code to ASF Bucket'"

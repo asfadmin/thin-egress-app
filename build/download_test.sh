@@ -24,12 +24,14 @@ echo "  > curl -s --head $APIROOT/$BROWSE_FILE | grep 'Content-Type: image/jpeg'
 # echo " >>> PASSED"
 
 echo " >>> Trying URS auth..."
-echo "  > curl -s -v --cookie-jar /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep $METADATA_CHECK"
+echo "  > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep $METADATA_CHECK"
 # First step is send auth to do URS... This will actually fail because of AWS...
-curl --location-trusted -v --cookie-jar /tmp/urscookie.txt -u "$URS_USERNAME:$URS_PASSWORD" -L $APIROOT/$METADATA_FILE
+echo " >>> Expect to see \`<Error><Code>InvalidArgument</Code><Message>...\` because U:P + Pre-Sign" 
+curl -s --location-trusted --cookie-jar /tmp/urscookie.txt -u "$URS_USERNAME:$URS_PASSWORD" -L $APIROOT/$METADATA_FILE
+echo ""
 # Now try again with jus tthe cookie jar.
-curl -s -v --cookie-jar /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep $METADATA_CHECK
-curl -s -v --cookie-jar /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep -q $METADATA_CHECK
+curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep $METADATA_CHECK
+curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep -q $METADATA_CHECK
 if [ $? -ne 0 ]; then echo "Could not verify URS Auth'd Downloads"; exit 1; fi
 echo " >>> PASSED"
 

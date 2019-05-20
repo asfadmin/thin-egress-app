@@ -76,9 +76,8 @@ echo " >>> Test 7 PASSED"
 # Check that approved users can access PRIVATE data:
 # FIXME!!!
 echo " >>> Validating retriction of private data access"
-echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile | grep 'The file was successfully downloaded'"
-curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile 2>&1 &> /tmp/test8
-cat /tmp/test8 && cat /tmp/test8 | grep -v -q 'The file was successfully downloaded'
-#if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; exit 1; fi
-if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; fi
-#echo " >>> 8 PASSED"
+echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile | grep 'HTTP/1.1 403 Forbidden'"
+curl -sv -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile 2>&1 &> /tmp/test8
+cat /tmp/test8 | grep 'HTTP/1.1 403 Forbidden' && cat /tmp/test8 | grep -q 'HTTP/1.1 403 Forbidden'
+if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; exit 1; fi
+echo " >>> 8 PASSED"

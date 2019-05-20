@@ -594,7 +594,7 @@ def user_in_group(private_groups, cookievars, user_profile=None, refresh_first=F
         client_id = get_urs_creds()['UrsId']
         log.info ("Searching for private groups {0} in {1}".format( private_groups, user_profile['user_groups']))
         for u_g in user_profile['user_groups']:
-            if u_g['UrsId'] == client_id:
+            if u_g['client_id'] == client_id:
                 for p_g in private_groups:
                     if p_g == u_g['name']:
                         # Found the matching group!

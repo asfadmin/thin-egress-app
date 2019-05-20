@@ -2,7 +2,7 @@
 ## About
 The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration.
 
-**LAST BUILD**: ![Last Build Status](http://asf.public.code.s3.amazonaws.com/thin-egress-app/lastbuild.png)
+**LAST BUILD**: ![Last Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Fbuildstatus.json)
 
 ## Setup and Deploying
 

@@ -13,12 +13,12 @@ pipeline {
     STACKNAME="${APPTAG}-stack"
   }
 
-  // Build on a slave with nodejs
+  // Build on a slave with docker (for pre-req?)
   agent { label 'docker' }
 
   stages {
 
-    // just sort of asess the enviroment
+    // just sort of assess the enviroment
     stage('Setup Env') {
       steps {
         // Send chat notification
@@ -37,7 +37,7 @@ pipeline {
       }
     }
 
-    // Check that our cumulus is fresh!
+    // Download and package dependancies 
     stage('Package Dependancies') {
       steps {
       
@@ -66,7 +66,8 @@ pipeline {
 
       }
    }
-   
+  
+   // Push packages to AWS and deploy new version 
    stage('Push to AWS') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
@@ -98,7 +99,8 @@ pipeline {
         }
       }
     } 
-    
+   
+    // Run download test script 
     stage('Validate AWS Deployment'){
       steps {
         // Load up AWS + URS credentials
@@ -110,7 +112,8 @@ pipeline {
         }
       }
     }
-    
+   
+    // Tag it in Github 
     stage('Tag Build'){
       steps {
         // Use existing creds
@@ -129,18 +132,25 @@ pipeline {
     
     
   } // stages 
-  
+ 
+  // Send build status to Mattermost, Update build badge 
   post {
     success {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildstatus """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh "aws s3 cp s3://asf.public.code/util/success.png s3://asf.public.code/thin-egress-app/lastbuild.png --cache-control max-age=0 --acl public-read"
+        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                         --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                         /tmp/buildstatus s3://asf.public.code/thin-egress-app/buildstatus.json --acl public-read """
       }
     }
     failure {
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildstatus """
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh "aws s3 cp s3://asf.public.code/util/failed.png s3://asf.public.code/thin-egress-app/lastbuild.png --cache-control max-age=0 --acl public-read"
+        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                         --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                         /tmp/buildstatus s3://asf.public.code/thin-egress-app/buildstatus.json --acl public-read """ 
       } 
     }
   }

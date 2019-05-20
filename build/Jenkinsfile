@@ -87,6 +87,7 @@ pipeline {
                        PermissionsBoundaryName= \
                        BucketMapFile=bucket_map_TEA.yaml \
                        PublicBucketsFile=public_buckets_TEA.yaml \
+                       PrivateBucketsFile=private_buckets_TEA.yaml \
                        BucketnamePrefix=t- \
                        DownloadRoleArn= \
                        HtmlTemplateDir= \

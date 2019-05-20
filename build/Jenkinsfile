@@ -133,9 +133,17 @@ pipeline {
   post {
     success {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+        sh "aws s3 cp s3://asf.public.code/util/success.png s3://asf.public.code/thin-egress-app/lastbuild.png"
+        sh "aws s3api put-object-acl --bucket asf.public.code --key thin-egress-app/lastbuild.png --acl public-read"
+      }
     }
     failure {
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+        sh "aws s3 cp s3://asf.public.code/util/failed.png s3://asf.public.code/thin-egress-app/lastbuild.png"
+        sh "aws s3api put-object-acl --bucket asf.public.code --key thin-egress-app/lastbuild.png --acl public-read"
+      } 
     }
   }
 }

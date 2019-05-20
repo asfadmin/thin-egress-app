@@ -2,6 +2,7 @@ from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import os
+import re
 from urllib.parse import urlparse, quote_plus
 
 
@@ -302,13 +303,15 @@ def try_download_head(bucket, filename):
     #return 'Finish this thing'
 
     response_headers = {'Content-Type': download['ContentType']}
+    # this is to get around lambda not wanting to deal with binary returns.
+    response_headers['Content-Type'] = re.sub(r'^image/', 'application/', str(response_headers['Content-Type']))
+
     for header in download['ResponseMetadata']['HTTPHeaders']:
         name = header_map[header] if header in header_map else header
         value = download['ResponseMetadata']['HTTPHeaders'][header] if header != 'server' else 'egress'
         log.debug("setting header {0} to {1}.".format(name, value))
         response_headers['name'] = value
 
-    # response.headers.add('Content-Disposition', 'attachment; filename={0}'.format(filename))
     log.debug(response_headers)
     return Response(body='', headers=response_headers, status_code=200)
 

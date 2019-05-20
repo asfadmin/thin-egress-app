@@ -4,7 +4,6 @@ pipeline {
   environment {
     AWS_DEFAULT_REGION="us-east-1"
     AWSENV=""
-    APPTAG="teadev"
     BUILDTAG="${APPTAG}-${NEWTAG}"
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"

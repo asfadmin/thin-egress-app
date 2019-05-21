@@ -749,7 +749,7 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
         html_template_status = cache_html_templates()
 
     jin_env = Environment(
-        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '../..', "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '../', "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:

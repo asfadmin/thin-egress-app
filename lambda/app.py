@@ -5,7 +5,6 @@ import os
 import re
 from urllib.parse import urlparse, quote_plus
 
-
 from common.common import get_log, do_auth, get_yaml_file, process_varargs, \
     check_private_bucket, check_public_bucket, user_in_group, \
     header_map, get_presigned_url, get_html_body, get_redirect_url, \
@@ -26,10 +25,9 @@ private_buckets = None
 
 
 def restore_bucket_vars():
-
-    global b_map                                                                       #pylint: disable=global-statement
-    global public_buckets                                                              #pylint: disable=global-statement
-    global private_buckets                                                             #pylint: disable=global-statement
+    global b_map                                                                      # pylint: disable=global-statement
+    global public_buckets                                                             # pylint: disable=global-statement
+    global private_buckets                                                            # pylint: disable=global-statement
 
     log.debug(
         'conf bucket: {}, bucket_map_file: {}, public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
@@ -37,7 +35,9 @@ def restore_bucket_vars():
                                                                                                          public_buckets_file,
                                                                                                          private_buckets_file))
     if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, public buckets file: {}, private buckets file: {}'.format(conf_bucket, bucket_map_file, public_buckets_file, private_buckets_file))
+        log.info(
+            'downloading various bucket configs from {}: bucketmapfile: {}, public buckets file: {}, private buckets file: {}'.format(
+                conf_bucket, bucket_map_file, public_buckets_file, private_buckets_file))
         b_map = get_yaml_file(conf_bucket, bucket_map_file)
         log.debug('bucket map: {}'.format(b_map))
         if public_buckets_file:
@@ -54,7 +54,6 @@ def restore_bucket_vars():
 
 
 def do_auth_and_return(ctxt):
-
     log.debug('context: {}'.format(ctxt))
     here = ctxt['path']
     log.info("here will be {0}".format(here))
@@ -73,7 +72,7 @@ def make_redriect(to_url, headers=None, status_code=301):
     return Response(body='', headers=headers, status_code=status_code)
 
 
-def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_file:str='root.html'):
+def make_html_response(t_vars: dict, hdrs: dict, status_code: int=200, template_file: str='root.html'):
     template_vars = {'STAGE': STAGE, 'status_code': status_code}
     template_vars.update(t_vars)
 
@@ -159,7 +158,6 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
 @app.route('/')
 def root():
-
     user_profile = False
     template_vars = {'title': 'Welcome'}
 
@@ -179,7 +177,6 @@ def root():
 
 @app.route('/logout')
 def logout():
-
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
@@ -201,7 +198,6 @@ def logout():
 
 @app.route('/login')
 def login():
-
     args = app.current_request.query_params
     log.debug('the query_params: {}'.format(args))
 
@@ -246,7 +242,7 @@ def login():
             # Interesting worklaround: api gateway will technically only accept one of each type of header, but if you
             # specify your set-cookies with different alpha cases, you can actually send multiple.
             headers['Set-Cookie'] = 'urs-access-token={}; Expires={}'.format(auth['access_token'],
-                                                                                           get_cookie_expiration_date_str())
+                                                                             get_cookie_expiration_date_str())
             headers['set-cookie'] = 'urs-user-id={}; Expires={}'.format(user_id, get_cookie_expiration_date_str())
 
             return Response(body='', status_code=301, headers=headers)
@@ -256,7 +252,6 @@ def login():
 
 
 def get_range_header_val():
-
     if 'Range' in app.current_request.headers:
         return app.current_request.headers['Range']
     if 'range' in app.current_request.headers:
@@ -265,7 +260,6 @@ def get_range_header_val():
 
 
 def get_data_dl_s3_client():
-
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
         user_id = cookievars['urs-user-id']
@@ -282,7 +276,6 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-
     client = get_data_dl_s3_client()
     # Check for range request
     range_header = get_range_header_val()
@@ -300,18 +293,18 @@ def try_download_head(bucket, filename):
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
-    #return 'Finish this thing'
+    # return 'Finish this thing'
 
     response_headers = {'Content-Type': download['ContentType']}
-    # this is to get around lambda not wanting to deal with binary returns.
-    response_headers['Content-Type'] = re.sub(r'^image/', 'application/', str(response_headers['Content-Type']))
 
     for header in download['ResponseMetadata']['HTTPHeaders']:
         name = header_map[header] if header in header_map else header
         value = download['ResponseMetadata']['HTTPHeaders'][header] if header != 'server' else 'egress'
         log.debug("setting header {0} to {1}.".format(name, value))
-        response_headers['name'] = value
+        response_headers[name] = value
 
+    # this is to get around lambda not wanting to deal with binary returns until we can get a proper solution
+    response_headers['Content-Type'] = re.sub(r'^[a-zA-Z\-+.]+/', 'asf/', str(response_headers['Content-Type']))
     log.debug(response_headers)
     return Response(body='', headers=response_headers, status_code=200)
 
@@ -319,7 +312,6 @@ def try_download_head(bucket, filename):
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
-
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
 
@@ -341,13 +333,12 @@ def dynamic_url_head():
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename = process_varargs(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename: {}'.format(( path, bucket, filename)))
+        log.debug('path, bucket, filename: {}'.format((path, bucket, filename)))
         if not bucket:
             template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
             headers = {}

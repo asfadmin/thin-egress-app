@@ -137,20 +137,27 @@ pipeline {
   post {
     success {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
-      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildstatus """
+      sh "rm -rf /tmp/buildreport/*"
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Build Successful", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
-                         /tmp/buildstatus s3://asf.public.code/thin-egress-app/buildstatus.json --acl public-read """
+                         --recursive /tmp/buildreport/ \
+                         s3://asf.public.code/thin-egress-app/ --acl public-read """
       }
     }
     failure {
-      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildstatus """
+      sh "rm -rf /tmp/buildreport/*"
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buil/report/buildstatus.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
-                         /tmp/buildstatus s3://asf.public.code/thin-egress-app/buildstatus.json --acl public-read """ 
+                         --recursive /tmp/buildreport/ \
+                         s3://asf.public.code/thin-egress-app/ --acl public-read """
       } 
     }
   }

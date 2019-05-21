@@ -95,7 +95,7 @@ pipeline {
                        SessionStore=S3 \
                        StageName=DEV \
                        Loglevel=DEBUG \
-                       UseReverseBucketMap="True" """
+                       UseReverseBucketMap="False" """
         }
       }
     } 
@@ -129,8 +129,18 @@ pipeline {
         sh ("git push origin ${BUILDTAG}")
       }
     }    
-    
-    
+
+    // If this is PROD, push the code to public
+    stage ('Push Public Code') {
+      when {
+        expression { "${env.APPTAG}" == 'tea' }
+      }
+      steps {
+        sh "echo '>> Pushing code to Public Code Bucket'"
+        sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+        sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
+      }
+    }
   } // stages 
  
   // Send build status to Mattermost, Update build badge 
@@ -139,7 +149,7 @@ pipeline {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
-      sh """ echo '{ "schemaVersion": 1, "label": "Last Build Successful", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \

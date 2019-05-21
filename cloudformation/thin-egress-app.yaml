@@ -14,7 +14,6 @@ Metadata:
           - ConfigBucket
           - HtmlTemplateDir
           - StageName
-          - PermissionsBoundaryName
       -
         Label:
           default: Lambda Code
@@ -43,9 +42,32 @@ Metadata:
         Parameters:
           - SessionStore
           - SessionTTL
+      - 
+        Label:
+          default: NGAP Integration
+        Parameters:
+          - PrivateVPC
+          - VPCSecurityGroupIDs
+          - VPCSubnetIDs
+          - PermissionsBoundaryName
 
 
 Parameters:
+
+  VPCSecurityGroupIDs:
+    Type: String
+    Default: ""
+    Description: "Optional list of security groups for the Lambda function."
+ 
+  VPCSubnetIDs:
+    Type: String
+    Default: ""
+    Description: "Optional list of Subnets for the Lambda function."
+  
+  PrivateVPC:
+    Type: String
+    Default: ""
+    Description: "Optional internal VPC."
 
   LambdaCodeS3Key:
     Type: String
@@ -163,6 +185,7 @@ Conditions:
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
+  UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ] 
 
 
 Outputs:
@@ -330,6 +353,14 @@ Resources:
         S3Key: !Ref LambdaCodeS3Key
       Role: !GetAtt EgressLambdaIamRole.Arn
       FunctionName: !Sub "${AWS::StackName}-EgressLambda"
+      VpcConfig:
+        !If
+        - UsePrivateVPC
+        - SecurityGroupIds:
+            !Split [ ',', !Ref VPCSecurityGroupIDs ]
+          SubnetIds:
+            !Split [ ',', !Ref VPCSubnetIDs ]
+        - !Ref "AWS::NoValue"
       Environment:
         Variables:
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
@@ -360,6 +391,25 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub "${AWS::StackName}-EgressGateway"
+      EndpointConfiguration:
+        !If
+        - UsePrivateVPC
+        - Types:
+            - 'PRIVATE'
+        - !Ref "AWS::NoValue"
+      Policy: 
+        !If
+        - UsePrivateVPC
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: "Allow"
+              Principal: "*"
+              Action: "*"
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  aws:SourceVpc: !Ref PrivateVPC
+        - !Ref "AWS::NoValue"
 
   EgressApiResourceLogin:
     Type: AWS::ApiGateway::Resource

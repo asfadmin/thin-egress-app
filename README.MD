@@ -135,6 +135,27 @@ Child template that displays profile info. Only used for debugging in dev.
 ### Cloudformation parameters
 It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
+### Deployiny the app in NGAP
+
+To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` section of the CloudFormation Template.
+
+Use the following bash script to determine appropriate compliance paramaters.
+
+```
+export AWSENV='--profile=cumulus --region=us-east-1'
+export VPCID=$(aws $AWSENV ec2 describe-vpcs --query "Vpcs[*].VpcId" --filters "Name=tag:Name,Values=Application VPC" --output text)
+export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query "Subnets[?VpcId=='$VPCID'].{ID:SubnetId}[0]" --filters "Name=tag:Name,Values=Private*" --output=text)
+export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query "SecurityGroups[?VpcId=='$VPCID'].{ID:GroupId}" --filters "Name=tag:Name,Values=Application Default*" --output=text)
+echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;"
+```
+
+Its also important to be aware that if an API Gateway VPC Endpoint will need to setup prior to deployment. You can check to see if your account has the appropriate VPCE by runing this command:
+
+```
+aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' && ServiceName=='com.amazonaws.us-east-1.execute-api')].{ID:VpcEndpointId}" --output=text
+```
+
+Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value above. If you get a return value like `vpce-0123456789abcdef0`, you're good to go. 
 
 ### Deploying the app
 The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.

@@ -95,7 +95,7 @@ pipeline {
                        SessionStore=S3 \
                        StageName=DEV \
                        Loglevel=DEBUG \
-                       UseReverseBucketMap="True" """
+                       UseReverseBucketMap="False" """
         }
       }
     } 

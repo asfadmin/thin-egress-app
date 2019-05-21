@@ -7,9 +7,9 @@ if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
 APIROOT=$(echo "https://${API}.execute-api.us-east-1.amazonaws.com/DEV")
 echo " >>> APIROOT is $APIROOT"
 
-METADATA_FILE=METADATA_GRD_HS/SA/S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml
+METADATA_FILE=SA/METADATA_GRD_HS/S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml
 METADATA_CHECK='<gco:CharacterString>S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml</gco:CharacterString>'
-BROWSE_FILE=BROWSE/SA/S1A_IW_GRDH_1SDH_20151205T093344_20151205T093417_008905_00CBDB_81B5.jpg
+BROWSE_FILE=SA/BROWSE/S1A_IW_GRDH_1SDH_20151205T093344_20151205T093417_008905_00CBDB_81B5.jpg
 
 # Fail Count
 FC=0
@@ -65,18 +65,25 @@ if [ $? -ne 0 ]; then echo; echo " >> Could not verify bad auth redirect (TEST 6
 
 # Check that approved users can access PRIVATE data:
 echo " >>> Validating approved private data access"
-echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/ACCESS/PRIVATE/testfile | grep 'The file was successfully downloaded'"
-curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/ACCESS/PRIVATE/testfile 2>&1 &> /tmp/test7
+echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/ACCESS/testfile | grep 'The file was successfully downloaded'"
+curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/ACCESS/testfile 2>&1 &> /tmp/test7
 cat /tmp/test7 && cat /tmp/test7 | grep -q 'The file was successfully downloaded'
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access (TEST 7) << "; echo; FC=$((FC+1)); else echo " >>> Test 7 PASSED"; fi
 
 # Check that approved users can access PRIVATE data:
 # FIXME!!!
 echo " >>> Validating retriction of private data access"
-echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile | grep 'HTTP/1.1 403 Forbidden'"
-curl -sv -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/NOACCESS/PRIVATE/testfile 2>&1 &> /tmp/test8
+echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile | grep 'HTTP/1.1 403 Forbidden'"
+curl -sv -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile 2>&1 &> /tmp/test8
 cat /tmp/test8 | grep 'HTTP/1.1 403 Forbidden' && cat /tmp/test8 | grep -q 'HTTP/1.1 403 Forbidden'
-if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; FC=$((FC+1)); else echo " >>> 8 PASSED"; fi
+if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; FC=$((FC+1)); else echo " >>> TEST 8 PASSED"; fi
+
+# Validating objects with prefix
+echo " >>> Validating accessing objects with prefix's"
+echo " > curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt | grep 'The file was successfully downloaded'"
+curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt 2>&1 &> /tmp/test9
+cat /tmp/test9 && cat /tmp/test9 | grep -q 'The file was successfully downloaded'
+if [ $? -ne 0 ]; then echo; echo " >> Could not verify prefixed file access (TEST9) << "; echo; FC=$((FC+1)); else echo " >>> TEST 9 PASSED"; fi
 
 # Build Summary
 if [ $FC -le 0 ]; then 
@@ -84,10 +91,10 @@ if [ $FC -le 0 ]; then
    echo '{ "schemaVersion": 1, "label": "Tests", "message": "All Tests Passed", "color": "success" }' > /tmp/testresults.json
 elif [ $FC -lt 3 ]; then 
    echo " >>> Some Tests Failed"
-   echo '{ "schemaVersion": 1, "label": "Tests", "message": "'$FC'/8 Tests Failed ⚠️", "color": "important" }' > /tmp/testresults.json
+   echo '{ "schemaVersion": 1, "label": "Tests", "message": "'$FC'/9 Tests Failed ⚠️", "color": "important" }' > /tmp/testresults.json
 else
    echo " >>> TOO MANY TEST FAILURES! "
-   echo '{ "schemaVersion": 1, "label": "Tests", "message": "'$FC'/8 Tests Failed ☠", "color": "critical" }' > /tmp/testresults.json
+   echo '{ "schemaVersion": 1, "label": "Tests", "message": "'$FC'/9 Tests Failed ☠", "color": "critical" }' > /tmp/testresults.json
 fi
 
 # Upload test results

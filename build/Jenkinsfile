@@ -133,7 +133,7 @@ pipeline {
     // If this is PROD, push the code to public
     stage ('Push Public Code') {
       when {
-        expression { "${env.APPTAG}" == 'thin-egress-app' }
+        expression { "${env.APPTAG}" == 'tea' }
       }
       steps {
         sh "echo '>> Pushing code to Public Code Bucket'"

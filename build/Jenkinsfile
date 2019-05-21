@@ -97,6 +97,8 @@ pipeline {
                        SessionStore=S3 \
                        StageName=DEV \
                        Loglevel=DEBUG \
+                       LambdaCodeS3Key=${CODE_DIR}/${CF_TEMPLATE_FILENAME} \
+                       LambdaCodeS3Bucket=${CODE_BUCKET} \
                        UseReverseBucketMap="False" """
         }
       }

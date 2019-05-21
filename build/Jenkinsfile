@@ -139,7 +139,7 @@ pipeline {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
-      sh """ echo '{ "schemaVersion": 1, "label": "Last Build Successful", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \

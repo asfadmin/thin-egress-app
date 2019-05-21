@@ -137,7 +137,7 @@ pipeline {
   post {
     success {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
-      sh "rm -rf /tmp/buildreport/*"
+      sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build Successful", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
@@ -149,7 +149,7 @@ pipeline {
       }
     }
     failure {
-      sh "rm -rf /tmp/buildreport/*"
+      sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buil/report/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"

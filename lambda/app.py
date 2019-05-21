@@ -292,9 +292,7 @@ def try_download_head(bucket, filename):
                          'title': 'File not found'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
-    log.debug(download)
-    # return 'Finish this thing'
-
+    
     response_headers = {'Content-Type': download['ContentType']}
 
     for header in download['ResponseMetadata']['HTTPHeaders']:

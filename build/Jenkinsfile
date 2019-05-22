@@ -13,12 +13,12 @@ pipeline {
     STACKNAME="${APPTAG}-stack"
   }
 
-  // Build on a slave with nodejs
+  // Build on a slave with docker (for pre-req?)
   agent { label 'docker' }
 
   stages {
 
-    // just sort of asess the enviroment
+    // just sort of assess the enviroment
     stage('Setup Env') {
       steps {
         // Send chat notification
@@ -29,7 +29,7 @@ pipeline {
           sh 'pwd'
           sh 'env'
         }
-        // Update submodules. 
+        // Update submodules.
         sh "echo '>> Updating submodules....'"
         sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
         sh "git config user.name 'jenkins'"
@@ -37,19 +37,19 @@ pipeline {
       }
     }
 
-    // Check that our cumulus is fresh!
+    // Download and package dependancies
     stage('Package Dependancies') {
       steps {
-      
+
         // Create a working space, pull in dependancies
         sh "echo '>> Gathering Dependencies....'"
         sh "rm -rf pkg && mkdir pkg"
         sh "cd pkg && pip3 install -r ${WORKSPACE}/lambda/requirements.txt --system --target ."
-        
+
         // Remove unwanted pieces
         sh "echo '>> Removing Unwanted....'"
         sh "cd ${WORKSPACE}/pkg && rm -rf *.dist-info pip docutils chalice/cli botocore setuptools tests easy_install.py "
-        
+
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
         sh """ cd ${WORKSPACE}/pkg && \
@@ -58,23 +58,26 @@ pipeline {
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./common && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates """
-        
+
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/^Description:.*/Description: \\"TEA deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
 
       }
    }
-   
+
+   // Push packages to AWS and deploy new version
    stage('Push to AWS') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-          // Push the code up to private bucket 
+          // Push the code up to private bucket
           sh "echo '>> Pushing code to ASF Bucket'"
           sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/"
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
-          
+
+          // Clarify in description that this stack is deployed by Jenkins
+          sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
           sh """ aws cloudformation deploy --profile=jenkins --region=us-east-1 \
@@ -94,15 +97,21 @@ pipeline {
                        SessionStore=S3 \
                        StageName=DEV \
                        Loglevel=DEBUG \
-                       UseReverseBucketMap="True" """
+                       PrivateVPC= \
+                       VPCSecurityGroupIDs= \
+                       VPCSubnetIDs= \
+                       LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                       LambdaCodeS3Bucket=${CODE_BUCKET} \
+                       UseReverseBucketMap="False" """
         }
       }
-    } 
-    
+    }
+
+    // Run download test script
     stage('Validate AWS Deployment'){
       steps {
         // Load up AWS + URS credentials
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {                           
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
           withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
             // Attempt some downloads
             sh("bash ./build/download_test.sh")
@@ -110,7 +119,8 @@ pipeline {
         }
       }
     }
-    
+
+    // Tag it in Github
     stage('Tag Build'){
       steps {
         // Use existing creds
@@ -125,17 +135,51 @@ pipeline {
         sh "echo '>> Pushing Build Tag'"
         sh ("git push origin ${BUILDTAG}")
       }
-    }    
-    
-    
-  } // stages 
-  
+    }
+
+    // If this is PROD, push the code to public
+    stage ('Push Public Code') {
+      when {
+        expression { "${env.APPTAG}" == 'tea' }
+      }
+      steps {
+        sh "echo '>> Pushing code to Public Code Bucket'"
+        sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+        sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
+        sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
+        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                         --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                         /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
+      }
+    }
+  } // stages
+
+  // Send build status to Mattermost, Update build badge
   post {
     success {
       mattermostSend channel: 'rain', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
+      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                         --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                         --recursive /tmp/buildreport/ \
+                         s3://asf.public.code/thin-egress-app/ --acl public-read """
+      }
     }
     failure {
+      sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
+      sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildreport/buildstatus.json """
+      sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
       mattermostSend channel: 'rain', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                         --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                         --recursive /tmp/buildreport/ \
+                         s3://asf.public.code/thin-egress-app/ --acl public-read """
+      }
     }
   }
 }

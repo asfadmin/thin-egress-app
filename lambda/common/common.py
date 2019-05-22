@@ -463,7 +463,7 @@ def hmacsha256 (key, string):
     return hmac.new( key, string.encode('utf-8'), hashlib.sha256 )
 
 
-def get_presigned_url(session, bucket_name, object_name, region_name, expire_seconds, user_id):
+def get_presigned_url(session, bucket_name, object_name, region_name, expire_seconds, user_id, method='GET'):
 
     timez = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
     datez = timez[:8]
@@ -488,7 +488,7 @@ def get_presigned_url(session, bucket_name, object_name, region_name, expire_sec
     can_query_string = "&".join(parts)
 
     # Canonical Requst
-    can_req = "GET" + "\n/" + object_name + "\n" + can_query_string + "\nhost:" + hostname + "\n\nhost\nUNSIGNED-PAYLOAD"
+    can_req = method + "\n/" + object_name + "\n" + can_query_string + "\nhost:" + hostname + "\n\nhost\nUNSIGNED-PAYLOAD"
     can_req_hash = hashlib.sha256(can_req.encode('utf-8')).hexdigest()
 
     # String to Sign
@@ -703,7 +703,7 @@ def refresh_user_profile(user_id):
         log.info("Retrieved new token: {0}".format(new_token))
 
         # Get user profile with new token
-        return get_profile(new_token, user_id)
+        return get_profile(user_id, new_token)
 
     except urllib.error.URLError as e:
         log.error("Error fetching auth: {0}".format(e))
@@ -749,7 +749,7 @@ def get_html_body(template_vars:dict, templatefile:str='root.html'):
         html_template_status = cache_html_templates()
 
     jin_env = Environment(
-        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '../..', "templates")]),
+        loader=FileSystemLoader([html_template_local_cachedir, os.path.join(os.path.dirname(__file__), '../', "templates")]),
         autoescape=select_autoescape(['html', 'xml'])
     )
     try:

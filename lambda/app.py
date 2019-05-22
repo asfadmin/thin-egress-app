@@ -192,8 +192,8 @@ def logout():
 
     headers = {
         'Content-Type': 'text/html',
-        'Set-Cookie': 'urs-access-token=deleted; Expires=; expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        'set-cookie': 'urs-user-id=deleted; Expires=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        'Set-Cookie': 'urs-access-token=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'set-cookie': 'urs-user-id=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
     return make_html_response(template_vars, headers, 200, 'root.html')
 
@@ -307,6 +307,25 @@ def try_download_head(bucket, filename):
         value = download['ResponseMetadata']['HTTPHeaders'][header] if header != 'server' else 'egress'
         log.debug("setting header {0} to {1}.".format(name, value))
         response_headers['name'] = value
+
+    # Try Redirecting to HEAD. There should be a better way.
+    cookievars = get_cookie_vars(app.current_request.headers)
+    if 'urs-user-id' in cookievars:
+        user_id = cookievars['urs-user-id']
+    else:
+        user_id = 'Unknown'
+
+    # Generate URL
+    creds = get_role_creds(user_id=user_id)
+    client = get_data_dl_s3_client()
+    bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
+    bucket_region = 'us-east-1' if not bucket_region else bucket_region
+    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')
+    s3_host = urlparse(presigned_url).netloc
+
+    # Return a redirect to a HEAD
+    log.debug("Presigned HEAD URL host was {0}".format(s3_host))
+    return make_redriect(presigned_url, {}, 303)
 
     # response.headers.add('Content-Disposition', 'attachment; filename={0}'.format(filename))
     log.debug(response_headers)

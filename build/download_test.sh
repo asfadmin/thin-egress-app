@@ -25,7 +25,7 @@ if [ $? -ne 0 ]; then echo; echo " >> Could not verify redirect url was present 
 # FIXME!!!
 echo " >>> Check that images are public..."
 echo "  > curl -s -L --head $APIROOT/$BROWSE_FILE | grep 'Content-Type: image/jpeg'"
-curl -s --head $APIROOT/$BROWSE_FILE &> /tmp/test2
+curl -s -L --head $APIROOT/$BROWSE_FILE &> /tmp/test2
 cat /tmp/test2 | grep 'Content-Type: image/jpeg' && cat /tmp/test2 | grep -q 'Content-Type: image/jpeg'
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify public images (TEST 2) << "; echo; FC=$((FC+1)); else echo " >>> Test 2 PASSED"; fi
 

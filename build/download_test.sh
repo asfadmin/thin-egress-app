@@ -22,7 +22,6 @@ cat /tmp/test1 | grep redirect_uri && cat /tmp/test1 | grep -q redirect_uri
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify redirect url was present (TEST 1) <<"; echo; FC=$((FC+1)); else echo " >>> Test 1 PASSED"; fi
 
 # Check that public files are returned without auth
-# FIXME!!!
 echo " >>> Check that images are public..."
 echo "  > curl -s -L --head $APIROOT/$BROWSE_FILE | grep 'Content-Type: image/jpeg'"
 curl -s -L --head $APIROOT/$BROWSE_FILE &> /tmp/test2
@@ -55,7 +54,6 @@ cat /tmp/test5 | grep "^Codelist$" && cat /tmp/test5 | grep -q "^Codelist$"
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify Range request (TEST 5) << "; echo; FC=$((FC+1)); else echo " >>> Test 5 PASSED"; fi
 
 # Check that a bad cookie value causes URS redirect:
-# FIXME!!!
 echo " >>> Testing invalid URS redirect "
 echo " > curl -s -v --cookie 'urs-user-id=badusernamedne; urs-access-token=BLABLABLA' $APIROOT/$METADATA_FILE | grep redirect_uri"
 curl -s -v --cookie 'urs-user-id=badusernamedne; urs-access-token=BLABLABLA' $APIROOT/$METADATA_FILE 2>&1 &> /tmp/test6
@@ -69,8 +67,7 @@ curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/ACCESS/t
 cat /tmp/test7 && cat /tmp/test7 | grep -q 'The file was successfully downloaded'
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access (TEST 7) << "; echo; FC=$((FC+1)); else echo " >>> Test 7 PASSED"; fi
 
-# Check that approved users can access PRIVATE data:
-# FIXME!!!
+# Check that approved users CAN'T access PRIVATE data they don't have access to:
 echo " >>> Validating retriction of private data access"
 echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile | grep 'HTTP/1.1 403 Forbidden'"
 curl -sv -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile 2>&1 &> /tmp/test8

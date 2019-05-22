@@ -192,8 +192,8 @@ def logout():
 
     headers = {
         'Content-Type': 'text/html',
-        'Set-Cookie': 'urs-access-token=deleted; Expires=; expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        'set-cookie': 'urs-user-id=deleted; Expires=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        'Set-Cookie': 'urs-access-token=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'set-cookie': 'urs-user-id=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
     return make_html_response(template_vars, headers, 200, 'root.html')
 
@@ -314,7 +314,7 @@ def try_download_head(bucket, filename):
         user_id = cookievars['urs-user-id']
     else:
         user_id = 'Unknown'
-   
+
     # Generate URL
     creds = get_role_creds(user_id=user_id)
     client = get_data_dl_s3_client()

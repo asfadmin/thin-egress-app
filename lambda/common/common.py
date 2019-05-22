@@ -703,7 +703,7 @@ def refresh_user_profile(user_id):
         log.info("Retrieved new token: {0}".format(new_token))
 
         # Get user profile with new token
-        return get_profile(new_token, user_id)
+        return get_profile(user_id, new_token)
 
     except urllib.error.URLError as e:
         log.error("Error fetching auth: {0}".format(e))

@@ -56,7 +56,7 @@ export CF_TEMPLATE=$(aws $AWSENV s3api list-objects --bucket asf.public.code --p
 
 Unfortunately, the aws cli command `aws cloudformation deploy` doesn't work with template-url, so do it the hard way.
 
-This will deply the latest codebase, currently: ![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json). Alternatively, you can select a Cloudformation template from [ASF's Public Code](https://s3.amazonaws.com/asf.public.code/index.html) bucket. 
+This will deploy the latest codebase, currently: ![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json). Alternatively, you can select a Cloudformation template from [ASF's Public Code](https://s3.amazonaws.com/asf.public.code/index.html) bucket. 
 
 
 ```

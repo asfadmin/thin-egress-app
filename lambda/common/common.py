@@ -463,7 +463,7 @@ def hmacsha256 (key, string):
     return hmac.new( key, string.encode('utf-8'), hashlib.sha256 )
 
 
-def get_presigned_url(session, bucket_name, object_name, region_name, expire_seconds, user_id):
+def get_presigned_url(session, bucket_name, object_name, region_name, expire_seconds, user_id, method='GET'):
 
     timez = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
     datez = timez[:8]
@@ -488,7 +488,7 @@ def get_presigned_url(session, bucket_name, object_name, region_name, expire_sec
     can_query_string = "&".join(parts)
 
     # Canonical Requst
-    can_req = "GET" + "\n/" + object_name + "\n" + can_query_string + "\nhost:" + hostname + "\n\nhost\nUNSIGNED-PAYLOAD"
+    can_req = method + "\n/" + object_name + "\n" + can_query_string + "\nhost:" + hostname + "\n\nhost\nUNSIGNED-PAYLOAD"
     can_req_hash = hashlib.sha256(can_req.encode('utf-8')).hexdigest()
 
     # String to Sign

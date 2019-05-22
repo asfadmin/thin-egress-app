@@ -49,7 +49,7 @@ export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query "Securit
 
 ### Create the stack stack.  
 
-Unfortunately, the aws cli command `aws cloudfront deploy` doesn't work with template-url, so do it the hard way.
+Unfortunately, the aws cli command `aws cloudformation deploy` doesn't work with template-url, so do it the hard way.
 
 Be sure to change the `<BUILD-ID>` placeholder to the appropriate build: ![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json), or select one from [ASF's Public Code](https://s3.amazonaws.com/asf.public.code/index.html) bucket. **HINT**: if the `Last Release` is `tea-build.13`, `<BUILD-ID>` below would be `build.13`. 
 

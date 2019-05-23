@@ -98,4 +98,4 @@ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
           --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
           /tmp/testresults.json s3://asf.public.code/thin-egress-app/ --acl public-read
 
-if [ $FC -gt 2 ]; then echo "Angry Exit!"; exit 1; fi
+if [ $FC -gt 0 ]; then echo "Angry Exit!"; exit 1; fi

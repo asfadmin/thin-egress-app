@@ -16,7 +16,7 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
 * A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
   * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
 * A bucket map yaml file in a config bucket
-* The buckets described in the bucket map must exist. 
+* The buckets described in the bucket map must exist.
   * These need not be in the same account as the egress app.
   * It would help if there were some data in them.
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets.
@@ -27,7 +27,7 @@ Pre-packaged versions of the lambda code and associated cloudformation YAML are 
 
 ### Packaging lambda code
 If you prefer to roll your own zip for the lambda code:
-```bash 
+```bash
 # Make up a filename for code archive:
 CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
 
@@ -37,7 +37,7 @@ cd thin-egress-app
 
 # Create a scratch directory in which to confine the required modules
 mkdir pkg
-cd pkg 
+cd pkg
 
 # Install requirements here
 pip3 install -r ../lambda/requirements.txt  --target .
@@ -60,7 +60,7 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ### Bucket map
 
-The bucket map allows the app to determine in which bucket to look when given the path from the URL. 
+The bucket map allows the app to determine in which bucket to look when given the path from the URL.
 
 If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```
@@ -89,16 +89,16 @@ MAP:
   THUMBNAIL:
     PLATFORM_A:         imgs
     PLATFORM_B:         imgs
-    
+
 PUBLIC_BUCKETS:
-  - imgs 
+  - imgs
 ```
 
-### HTML templates 
+### HTML templates
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html templates.
 
 #### Using custom templates
-After you've created your custom templates, create a subdirectory in your `ConfigBucket` and upload them there. Since the lambda downloads the files in this directory to itself, it's best to put only your template files here. When you deploy your CF, enter this directory name into the `HtmlTemplateDir` param.  
+After you've created your custom templates, create a subdirectory in your `ConfigBucket` and upload them there. Since the lambda downloads the files in this directory to itself, it's best to put only your template files here. When you deploy your CF, enter this directory name into the `HtmlTemplateDir` param.
 
 #### Using default templates
 When deploying the CF, set `HtmlTemplateDir` to '' (empty string).
@@ -106,23 +106,23 @@ When deploying the CF, set `HtmlTemplateDir` to '' (empty string).
 #### The templates
 
 **base.html**
-This is the base template. 
+This is the base template.
 
-Blocks: 
+Blocks:
  * pagetitle: Gets inserted inside the `<title></title>` element
  * content
 
 **root.html**
 Child template. Gets called by `/` and `/logout` for 200 responses.
 
-Variables: 
+Variables:
  * `title`: page title
  * `URS_URL`: used to make the login link
  * `STAGE`: used to make a URL back to the egress app
  * `profile`: in the default template, `profile.first_name` and `profile.last_name` are used to greet a logged-in user. The entire profile dict is available to the template.
  * `contentstring`: any text can go here
- 
-**error.html** 
+
+**error.html**
 Child template that gets called when various 400 type errors happen.
 
 Variables:
@@ -130,13 +130,13 @@ Variables:
  * `status_code`: http status code goes here
  * `contentstring`: any text can go here
 
-**profile.html** 
+**profile.html**
 Child template that displays profile info. Only used for debugging in dev.
 
 ### Cloudformation parameters
 It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
-### Deployiny the app in NGAP
+### Deploying the app in NGAP
 
 To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` section of the CloudFormation Template.
 
@@ -156,7 +156,7 @@ Its also important to be aware that if an API Gateway VPC Endpoint will need to 
 aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' && ServiceName=='com.amazonaws.us-east-1.execute-api')].{ID:VpcEndpointId}" --output=text
 ```
 
-Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value above. If you get a return value like `vpce-0123456789abcdef0`, you're good to go. 
+Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value above. If you get a return value like `vpce-0123456789abcdef0`, you're good to go.
 
 ### Deploying the app
 The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.

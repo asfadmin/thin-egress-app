@@ -791,6 +791,88 @@ def retrieve_secret(secret_name):
 
     return {}
 
+def make_set_cookie_headers(user_id, access_token, expdate='', cookie_domain=''):
+    if cookie_domain:
+        cookie_domain_payloadpiece = '; Domain={}'.format(cookie_domain)
+    else:
+        cookie_domain_payloadpiece = ''
+
+    log.debug('cookie domain: {}'.format(cookie_domain_payloadpiece))
+    if not expdate:
+        expdate = get_cookie_expiration_date_str()
+
+    headers = {}
+    # Interesting worklaround: api gateway will technically only accept one of each type of header, but if you
+    # specify your set-cookies with different alpha cases, you can actually send multiple.
+    headers['Set-Cookie'] = 'urs-access-token={}; Expires={}; Path=/{}'.format(access_token, expdate, cookie_domain_payloadpiece)
+    headers['set-cookie'] = 'urs-user-id={}; Expires={}; Path=/{}'.format(user_id, expdate, cookie_domain_payloadpiece)
+    #headers['SET-COOKIE'] = 'asf-auth={}; Expires={}; Path=/{}'.format(make_jwt_cookie({'asf': 'payload'}), get_cookie_expiration_date_str(), cookie_domain)
+    log.debug('set-cookies: {}'.format(headers))
+    return headers
+
+
+# This do_login() is mainly for chalice clients.
+def do_login(args, context, cookie_domain=''):
+
+    log.debug('the query_params: {}'.format(args))
+
+    if not args:
+        template_vars = {'contentstring': 'No params', 'title': 'Could Not Login'}
+        headers = {}
+        return 400, template_vars, headers
+
+    if args.get('error', False):
+        contentstring = 'An error occurred while trying to log into URS. URS says: "{}". '.format(args.get('error', ''))
+        if args.get('error') == 'access_denied':
+            # This happens when user doesn't agree to EULA. Maybe other times too.
+            return_status = 401
+            contentstring += 'Be sure to agree to the EULA.'
+        else:
+            return_status = 400
+
+        template_vars = {'contentstring': contentstring, 'title': 'Could Not Login'}
+
+        return return_status, template_vars, {}
+
+    elif 'code' not in args:
+        contentstring = 'Did not get the required CODE from URS'
+
+        template_vars = {'contentstring': contentstring, 'title': 'Could not login.'}
+        headers = {}
+        return 400, template_vars, headers
+
+    else:
+        log.debug('pre-do_auth() query params: {}'.format(args))
+        redir_url = get_redirect_url(context)
+        auth = do_auth(args.get('code', ''), redir_url)
+        log.debug('auth: {}'.format(auth))
+        if not auth:
+            log.debug('no auth returned from do_auth()')
+
+            template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
+
+            return 400, template_vars, {}
+
+        user_id = auth['endpoint'].split('/')[-1]
+
+        user_profile = get_profile(user_id, auth['access_token'])
+        log.debug('Got the user profile: {}'.format(user_profile))
+        if user_profile:
+            log.debug('urs-access-token: {}'.format(auth['access_token']))
+            if 'state' in args:
+                redirect_to = args["state"]
+            else:
+                redirect_to = get_base_url(context)
+
+            headers = {'Location': redirect_to}
+            headers.update(make_set_cookie_headers(user_id, auth['access_token'], '', cookie_domain))
+            return 301, {}, headers
+
+        else:
+            template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
+            return 400, template_vars, {}
+
+
 
 # return looks like:
 # {

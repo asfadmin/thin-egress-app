@@ -42,7 +42,7 @@ Metadata:
         Parameters:
           - SessionStore
           - SessionTTL
-      - 
+      -
         Label:
           default: NGAP Integration
         Parameters:
@@ -58,12 +58,12 @@ Parameters:
     Type: String
     Default: ""
     Description: "Optional list of security groups for the Lambda function."
- 
+
   VPCSubnetIDs:
     Type: String
     Default: ""
     Description: "Optional list of Subnets for the Lambda function."
-  
+
   PrivateVPC:
     Type: String
     Default: ""
@@ -185,7 +185,7 @@ Conditions:
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
-  UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ] 
+  UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
 
 
 Outputs:
@@ -338,7 +338,7 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource: "*"
-              - Effect: Allow 
+              - Effect: Allow
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -403,7 +403,7 @@ Resources:
         - Types:
             - 'PRIVATE'
         - !Ref "AWS::NoValue"
-      Policy: 
+      Policy:
         !If
         - UsePrivateVPC
         - Version: '2012-10-17'

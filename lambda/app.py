@@ -5,11 +5,11 @@ import os
 from urllib.parse import urlparse, quote_plus
 
 
-from common.common import get_log, do_auth, get_yaml_file, process_varargs, \
+from common.common import get_log, get_yaml_file, process_varargs, \
     check_private_bucket, check_public_bucket, user_in_group, \
-    header_map, get_presigned_url, get_html_body, get_redirect_url, \
-    get_profile, get_urs_url, STAGE, get_session, delete_session, get_cookie_expiration_date_str, get_cookie_vars, \
-    get_role_session, get_role_creds
+    header_map, get_presigned_url, get_html_body,  make_set_cookie_headers, \
+    get_urs_url, STAGE, get_session, delete_session, get_cookie_vars, \
+    get_role_session, get_role_creds, do_login
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -192,66 +192,18 @@ def logout():
 
     headers = {
         'Content-Type': 'text/html',
-        'Set-Cookie': 'urs-access-token=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-        'set-cookie': 'urs-user-id=deleted; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
+    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT'))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
 @app.route('/login')
 def login():
-
-    args = app.current_request.query_params
-    log.debug('the query_params: {}'.format(args))
-
-    if not args:
-        template_vars = {'contentstring': 'No params', 'title': 'Could Not Login'}
-        headers = {}
-        return make_html_response(template_vars, headers, 400, 'error.html')
-
-    if 'code' not in args:
-        contentstring = 'Did not get the required CODE from URS'
-        if os.getenv('MATURITY', '') == 'DEV':
-            contentstring += "<br /><h2>Params:</h2><ul>" + "\n".join(
-                map(lambda x: '<li><b>{0}</b>: {1}</li>'.format(x, args[x]), args)) + "</ul>" if args else None
-
-        template_vars = {'contentstring': contentstring, 'title': 'Could Not Login'}
-        headers = {}
-        return make_html_response(template_vars, headers, 400, 'error.html')
+    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context)
+    if status_code == 301:
+        return Response(body='', status_code=status_code, headers=headers)
     else:
-        log.debug('pre-do_auth() query params: {}'.format(app.current_request.query_params))
-        redir_url = get_redirect_url(app.current_request.context)
-        auth = do_auth(app.current_request.query_params["code"], redir_url)
-        log.debug('auth: {}'.format(auth))
-        if not auth:
-            log.debug('no auth returned from do_auth()')
-
-            template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
-
-            return make_html_response(template_vars, {}, 400, 'error.html')
-
-        user_id = auth['endpoint'].split('/')[-1]
-
-        user_profile = get_profile(user_id, auth['access_token'])
-        log.debug('Got the user profile: {}'.format(user_profile))
-        if user_profile:
-            log.debug('urs-access-token: {}'.format(auth['access_token']))
-            if 'state' in args:
-                redirect_to = args["state"]
-            else:
-                redirect_to = '/{}/'.format(STAGE)
-
-            headers = {'Location': redirect_to}
-            # Interesting worklaround: api gateway will technically only accept one of each type of header, but if you
-            # specify your set-cookies with different alpha cases, you can actually send multiple.
-            headers['Set-Cookie'] = 'urs-access-token={}; Expires={}'.format(auth['access_token'],
-                                                                                           get_cookie_expiration_date_str())
-            headers['set-cookie'] = 'urs-user-id={}; Expires={}'.format(user_id, get_cookie_expiration_date_str())
-
-            return Response(body='', status_code=301, headers=headers)
-        else:
-            template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
-            return make_html_response(template_vars, {}, 400, 'error.html')
+        return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
 def get_range_header_val():

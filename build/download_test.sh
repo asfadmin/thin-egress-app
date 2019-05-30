@@ -4,7 +4,7 @@
 API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)
 if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
 
-APIROOT=$(echo "https://${API}.execute-api.us-east-1.amazonaws.com/DEV")
+APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/DEV"
 echo " >>> APIROOT is $APIROOT"
 
 METADATA_FILE=SA/METADATA_GRD_HS/S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml
@@ -18,14 +18,14 @@ FC=0
 echo " >>> Checking for URS Redirect URL..."
 echo "  > curl -s -v $APIROOT/$METADATA_FILE 2>&1 | grep redirect_uri "
 curl -s -v $APIROOT/$METADATA_FILE 2>&1 &> /tmp/test1
-cat /tmp/test1 | grep redirect_uri && cat /tmp/test1 | grep -q redirect_uri
+grep redirect_uri /tmp/test1 && grep -q redirect_uri /tmp/test1
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify redirect url was present (TEST 1) <<"; echo; FC=$((FC+1)); else echo " >>> Test 1 PASSED"; fi
 
 # Check that public files are returned without auth
 echo " >>> Check that images are public..."
 echo "  > curl -s -L --head $APIROOT/$BROWSE_FILE | grep 'Content-Type: image/jpeg'"
 curl -s -L --head $APIROOT/$BROWSE_FILE &> /tmp/test2
-cat /tmp/test2 | grep 'Content-Type: image/jpeg' && cat /tmp/test2 | grep -q 'Content-Type: image/jpeg'
+grep 'Content-Type: image/jpeg' /tmp/test2 && grep -q 'Content-Type: image/jpeg' /tmp/test2
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify public images (TEST 2) << "; echo; FC=$((FC+1)); else echo " >>> Test 2 PASSED"; fi
 
 # Validate that auth process is successful
@@ -37,48 +37,48 @@ curl -s --location-trusted --cookie-jar /tmp/urscookie.txt -u "$URS_USERNAME:$UR
 echo ""
 # Now try again with jus tthe cookie jar.
 curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/$METADATA_FILE 2>&1 &> /tmp/test3
-cat /tmp/test3 | grep $METADATA_CHECK && cat /tmp/test3 | grep -q $METADATA_CHECK
+grep $METADATA_CHECK /tmp/test3 && grep -q $METADATA_CHECK /tmp/test3
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify URS Auth'd Downloads (TEST 3) << "; echo; FC=$((FC+1)); else echo " >>> Test 3 PASSED"; fi
 
 # Check for 404 on bad request
 echo " >>> Testing 404 error return"
 curl -sv $APIROOT/bad/url.ext 2>&1 &> /tmp/test4
-cat /tmp/test4 | grep 'HTTP/1.1 404 Not Found' && cat /tmp/test4 | grep -q 'HTTP/1.1 404 Not Found'
+grep 'HTTP/1.1 404 Not Found' /tmp/test4 && grep -q 'HTTP/1.1 404 Not Found' /tmp/test4
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify 404 return (TEST 4) << "; echo; FC=$((FC+1)); else echo " >>> Test 4 PASSED"; fi
 
 # Check that range requests work
 echo " >>> Testing Range requests "
 echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt -r1035-1042 $APIROOT/$METADATA_FILE | grep \"^Codelist$\" "
 curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt -r1035-1042 $APIROOT/$METADATA_FILE 2>&1 &> /tmp/test5
-cat /tmp/test5 | grep "^Codelist$" && cat /tmp/test5 | grep -q "^Codelist$"
+grep "^Codelist$" /tmp/test5 && grep -q "^Codelist$" /tmp/test5
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify Range request (TEST 5) << "; echo; FC=$((FC+1)); else echo " >>> Test 5 PASSED"; fi
 
 # Check that a bad cookie value causes URS redirect:
 echo " >>> Testing invalid URS redirect "
 echo " > curl -s -v --cookie 'urs-user-id=badusernamedne; urs-access-token=BLABLABLA' $APIROOT/$METADATA_FILE | grep redirect_uri"
 curl -s -v --cookie 'urs-user-id=badusernamedne; urs-access-token=BLABLABLA' $APIROOT/$METADATA_FILE 2>&1 &> /tmp/test6
-cat /tmp/test6 | grep redirect_uri && cat /tmp/test6 | grep -q redirect_uri
+grep redirect_uri /tmp/test6 && grep -q redirect_uri /tmp/test6
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify bad auth redirect (TEST 6) << "; echo; FC=$((FC+1)); else echo " >>> Test 6 PASSED"; fi
 
 # Check that approved users can access PRIVATE data:
 echo " >>> Validating approved private data access"
 echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/ACCESS/testfile | grep 'The file was successfully downloaded'"
 curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/ACCESS/testfile 2>&1 &> /tmp/test7
-cat /tmp/test7 && cat /tmp/test7 | grep -q 'The file was successfully downloaded'
+cat /tmp/test7 && grep -q 'The file was successfully downloaded' cat /tmp/test7
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access (TEST 7) << "; echo; FC=$((FC+1)); else echo " >>> Test 7 PASSED"; fi
 
 # Check that approved users CAN'T access PRIVATE data they don't have access to:
 echo " >>> Validating retriction of private data access"
 echo " > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile | grep 'HTTP/1.1 403 Forbidden'"
 curl -sv -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/PRIVATE/NOACCESS/testfile 2>&1 &> /tmp/test8
-cat /tmp/test8 | grep 'HTTP/1.1 403 Forbidden' && cat /tmp/test8 | grep -q 'HTTP/1.1 403 Forbidden'
+grep 'HTTP/1.1 403 Forbidden' /tmp/test8 && grep -q 'HTTP/1.1 403 Forbidden' /tmp/test8
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify PRIVATE access was restricted (TEST 8) << "; echo; FC=$((FC+1)); else echo " >>> TEST 8 PASSED"; fi
 
 # Validating objects with prefix
 echo " >>> Validating accessing objects with prefix's"
 echo " > curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt | grep 'The file was successfully downloaded'"
 curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt 2>&1 &> /tmp/test9
-cat /tmp/test9 && cat /tmp/test9 | grep -q 'The file was successfully downloaded'
+cat /tmp/test9 && grep -q 'The file was successfully downloaded' /tmp/test9
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify prefixed file access (TEST9) << "; echo; FC=$((FC+1)); else echo " >>> TEST 9 PASSED"; fi
 
 # Build Summary

@@ -202,8 +202,8 @@ def login():
     status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context)
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
-    else:
-        return make_html_response(template_vars, headers, status_code, 'error.html')
+
+    return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
 def get_range_header_val():
@@ -278,11 +278,6 @@ def try_download_head(bucket, filename):
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
     return make_redriect(presigned_url, {}, 303)
-
-    # response.headers.add('Content-Disposition', 'attachment; filename={0}'.format(filename))
-    log.debug(response_headers)
-    return Response(body='', headers=response_headers, status_code=200)
-
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])

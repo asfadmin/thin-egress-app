@@ -32,7 +32,7 @@ active_sessions = {}
 session_store = os.getenv('SESSION_STORE', 'DB')
 sessttl = int(os.getenv('SESSION_TTL', '168')) * 60 * 60
 html_template_status = ''
-html_template_local_cachedir = '/tmp/templates/'
+html_template_local_cachedir = '/tmp/templates/'                                     #nosec We want to leverage instance persistance
 
 if session_store == 'DB':
     ddb = boto3.client('dynamodb')
@@ -176,8 +176,8 @@ def get_cookie_vars(headers):
     log.debug('cooks: {}'.format(cooks))
     if 'urs-user-id' in cooks and 'urs-access-token' in cooks:
         return {'urs-user-id': cooks['urs-user-id'], 'urs-access-token': cooks['urs-access-token']}
-    else:
-        return {}
+
+    return {}
 
 
 def do_auth(code, redirect_url):
@@ -200,7 +200,7 @@ def do_auth(code, redirect_url):
         log.debug('url: {}'.format(url))
         log.debug('post_data: {}'.format(post_data))
 
-        response = urllib.request.urlopen(post_request)
+        response = urllib.request.urlopen(post_request)                               #nosec URL is *always* URS.
         packet = response.read()
         return json.loads(packet)
 
@@ -267,7 +267,8 @@ def get_session(user_id, token):
 
     if session_store == 'DB':
         return get_session_from_db(user_id, token)
-    elif session_store == 'S3':
+
+    if session_store == 'S3':
         return get_session_from_s3(user_id, token)
 
 
@@ -311,7 +312,7 @@ def store_session(user_id, token, sess):
     log.debug('{}/{} session cached in lambda memory'.format(user_id, token))
     if session_store == 'DB':
         return store_session_in_db(user_id, token, sess)
-    elif session_store == 'S3':
+    if session_store == 'S3':
         return store_session_in_s3(user_id, token, sess)
 
 
@@ -334,7 +335,7 @@ def store_session_in_s3(user_id, token, user_profile):
 def extend_session_ttl(user_id, token):
     if session_store == 'DB':
         return extend_session_ttl_db(user_id, token)
-    elif session_store == 'S3':
+    if session_store == 'S3':
         return extend_session_ttl_s3(user_id, token)
 
 
@@ -356,7 +357,7 @@ def delete_session(user_id, token):
     uncache_session(user_id, token)
     if session_store == 'DB':
         return delete_session_db(user_id, token)
-    elif session_store == 'S3':
+    if session_store == 'S3':
         return delete_session_s3(user_id, token)
 
 
@@ -379,8 +380,8 @@ def delete_session_s3(user_id, token):
         if e.response['Error']['Code'] == "404":
             log.debug("File to delete was not found. Good enough.")
             return True
-        else:
-            return False
+        
+        return False
     return True
 
 
@@ -402,7 +403,7 @@ def get_profile(user_id, token=None, reuse_old_token=None):
     cookie_token = reuse_old_token if reuse_old_token else token
 
     try:
-        response = urllib.request.urlopen(req)
+        response = urllib.request.urlopen(req)                                       #nosec URL is *always* URS.
         packet = response.read()
         user_profile = json.loads(packet)
 
@@ -431,9 +432,8 @@ def check_profile(cookies):
     if token and user_id:
         return get_profile(user_id, token)
 
-    else:
-        log.warning('Did not find token ({0}) or user_id ({1})'.format(token, user_id))
-        return False
+    log.warning('Did not find token ({0}) or user_id ({1})'.format(token, user_id))
+    return False
 
 
 def get_role_creds(user_id=None):
@@ -525,7 +525,7 @@ def get_bucket_dynamic_path(path_list, b_map):
     for path_part in path_list:
 
         # Check if we hit a leaf of the YAML tree
-        if len(mapping) > 0 and isinstance(derived, str):
+        if mapping and isinstance(derived, str):
 
             # Pop mapping off path_list
             for _ in mapping:
@@ -697,7 +697,7 @@ def refresh_user_profile(user_id):
 
     try:
         log.info("Attempting to get new Token")
-        response = urllib.request.urlopen(post_request)
+        response = urllib.request.urlopen(post_request)                              #nosec URL is *always* URS.
         packet = response.read()
         new_token = json.loads(packet)['access_token']
         log.info("Retrieved new token: {0}".format(new_token))
@@ -834,43 +834,41 @@ def do_login(args, context, cookie_domain=''):
 
         return return_status, template_vars, {}
 
-    elif 'code' not in args:
+    if 'code' not in args:
         contentstring = 'Did not get the required CODE from URS'
 
         template_vars = {'contentstring': contentstring, 'title': 'Could not login.'}
         headers = {}
         return 400, template_vars, headers
 
-    else:
-        log.debug('pre-do_auth() query params: {}'.format(args))
-        redir_url = get_redirect_url(context)
-        auth = do_auth(args.get('code', ''), redir_url)
-        log.debug('auth: {}'.format(auth))
-        if not auth:
-            log.debug('no auth returned from do_auth()')
+    log.debug('pre-do_auth() query params: {}'.format(args))
+    redir_url = get_redirect_url(context)
+    auth = do_auth(args.get('code', ''), redir_url)
+    log.debug('auth: {}'.format(auth))
+    if not auth:
+        log.debug('no auth returned from do_auth()')
 
-            template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
+        template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
 
-            return 400, template_vars, {}
+        return 400, template_vars, {}
 
-        user_id = auth['endpoint'].split('/')[-1]
+    user_id = auth['endpoint'].split('/')[-1]
 
-        user_profile = get_profile(user_id, auth['access_token'])
-        log.debug('Got the user profile: {}'.format(user_profile))
-        if user_profile:
-            log.debug('urs-access-token: {}'.format(auth['access_token']))
-            if 'state' in args:
-                redirect_to = args["state"]
-            else:
-                redirect_to = get_base_url(context)
-
-            headers = {'Location': redirect_to}
-            headers.update(make_set_cookie_headers(user_id, auth['access_token'], '', cookie_domain))
-            return 301, {}, headers
-
+    user_profile = get_profile(user_id, auth['access_token'])
+    log.debug('Got the user profile: {}'.format(user_profile))
+    if user_profile:
+        log.debug('urs-access-token: {}'.format(auth['access_token']))
+        if 'state' in args:
+            redirect_to = args["state"]
         else:
-            template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
-            return 400, template_vars, {}
+            redirect_to = get_base_url(context)
+
+        headers = {'Location': redirect_to}
+        headers.update(make_set_cookie_headers(user_id, auth['access_token'], '', cookie_domain))
+        return 301, {}, headers
+
+    template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
+    return 400, template_vars, {}
 
 
 

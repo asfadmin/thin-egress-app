@@ -1,4 +1,4 @@
-jinja2
-PyYAML
-aws-requests-auth
-chalice
+jinja2==2.10.1
+PyYAML==5.1
+aws-requests-auth==0.4.2
+chalice==1.8.0

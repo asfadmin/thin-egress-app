@@ -39,6 +39,11 @@ aws secretsmanager create-secret $AWSENV \
   --description 'URS Credentials for TEA Distribution App'
 ```
 
+`UrsId` is the application client id from URS
+`UrsAuth` is the base64 encoding of the application client id and password in this format: `base64("ClientId:Password")`
+
+To generate the `UrsAuth`, run the following command with your client id and password: `echo -n 'client:password' | base64`
+
 ### Gather some environment info necessary to wire up Lambda/API Gateway inside the VPC.
 ```
 export VPCID=$(aws $AWSENV ec2 describe-vpcs --query "Vpcs[*].VpcId" --filters "Name=tag:Name,Values=Application VPC" --output text)

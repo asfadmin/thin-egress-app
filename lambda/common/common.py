@@ -32,7 +32,7 @@ active_sessions = {}
 session_store = os.getenv('SESSION_STORE', 'DB')
 sessttl = int(os.getenv('SESSION_TTL', '168')) * 60 * 60
 html_template_status = ''
-html_template_local_cachedir = '/tmp/templates/'
+html_template_local_cachedir = '/tmp/templates/'                                     #nosec We want to leverage instance persistance
 
 if session_store == 'DB':
     ddb = boto3.client('dynamodb')
@@ -841,35 +841,34 @@ def do_login(args, context, cookie_domain=''):
         headers = {}
         return 400, template_vars, headers
 
-    else:
-        log.debug('pre-do_auth() query params: {}'.format(args))
-        redir_url = get_redirect_url(context)
-        auth = do_auth(args.get('code', ''), redir_url)
-        log.debug('auth: {}'.format(auth))
-        if not auth:
-            log.debug('no auth returned from do_auth()')
+    log.debug('pre-do_auth() query params: {}'.format(args))
+    redir_url = get_redirect_url(context)
+    auth = do_auth(args.get('code', ''), redir_url)
+    log.debug('auth: {}'.format(auth))
+    if not auth:
+        log.debug('no auth returned from do_auth()')
 
-            template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
+        template_vars = {'contentstring': 'There was a problem talking to URS Login', 'title': 'Could Not Login'}
 
-            return 400, template_vars, {}
-
-        user_id = auth['endpoint'].split('/')[-1]
-
-        user_profile = get_profile(user_id, auth['access_token'])
-        log.debug('Got the user profile: {}'.format(user_profile))
-        if user_profile:
-            log.debug('urs-access-token: {}'.format(auth['access_token']))
-            if 'state' in args:
-                redirect_to = args["state"]
-            else:
-                redirect_to = get_base_url(context)
-
-            headers = {'Location': redirect_to}
-            headers.update(make_set_cookie_headers(user_id, auth['access_token'], '', cookie_domain))
-            return 301, {}, headers
-
-        template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
         return 400, template_vars, {}
+
+    user_id = auth['endpoint'].split('/')[-1]
+
+    user_profile = get_profile(user_id, auth['access_token'])
+    log.debug('Got the user profile: {}'.format(user_profile))
+    if user_profile:
+        log.debug('urs-access-token: {}'.format(auth['access_token']))
+        if 'state' in args:
+            redirect_to = args["state"]
+        else:
+            redirect_to = get_base_url(context)
+
+        headers = {'Location': redirect_to}
+        headers.update(make_set_cookie_headers(user_id, auth['access_token'], '', cookie_domain))
+        return 301, {}, headers
+
+    template_vars = {'contentstring': 'Could not get user profile from URS', 'title': 'Could Not Login'}
+    return 400, template_vars, {}
 
 
 

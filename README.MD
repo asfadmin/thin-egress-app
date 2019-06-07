@@ -44,15 +44,23 @@ cd pkg
 # Install requirements here
 pip3 install -r ../lambda/requirements.txt  --target .
 
+# To make the archive smaller, you can cull unecessary packages and files from the directory. The particulars are beyond 
+# the scope of this documentation.
+
 # Create the zip archive and put the required modules in
 zip -r9 ../${CODE_ARCHIVE_FILENAME} ./*
 
-# Add the egress python code
+# Go to the code directory
 cd ../lambda
-zip -g ../${CODE_ARCHIVE_FILENAME} ./*.py
+
+# Add the common code:
+zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./common
+
+# Add the egress python code
+zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py
 
 # Add the html templates
-zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates
+zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./templates
 cd ..
 
 # Upload to S3

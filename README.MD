@@ -7,6 +7,8 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
 ![Last Build](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastbuild.json)
 ![Last Good Build](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastgoodbuild.json)
 ![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json)
+[![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
+[![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 
 ## Setup and Deploying
 
@@ -42,15 +44,23 @@ cd pkg
 # Install requirements here
 pip3 install -r ../lambda/requirements.txt  --target .
 
+# To make the archive smaller, you can cull unecessary packages and files from the directory. The particulars are beyond 
+# the scope of this documentation.
+
 # Create the zip archive and put the required modules in
 zip -r9 ../${CODE_ARCHIVE_FILENAME} ./*
 
-# Add the egress python code
+# Go to the code directory
 cd ../lambda
-zip -g ../${CODE_ARCHIVE_FILENAME} ./*.py
+
+# Add the common code:
+zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./common
+
+# Add the egress python code
+zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py
 
 # Add the html templates
-zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates
+zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./templates
 cd ..
 
 # Upload to S3

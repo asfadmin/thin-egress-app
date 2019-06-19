@@ -111,7 +111,7 @@ variable "stage_name" {
 
 variable "template_url" {
   type        = string
-  default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-build.14.yaml"
+  default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-<BUILD_ID>.yaml"
   description = "URL of CloudFormation stack template"
 }
 

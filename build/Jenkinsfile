@@ -61,7 +61,6 @@ pipeline {
 
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
-        sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
 
       }
@@ -85,6 +84,7 @@ pipeline {
                      --template-file cloudformation/thin-egress-app.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
                      --parameter-overrides \
+                       BuildId=${NEWTAG} \
                        URSAuthCredsSecretName=EgressAppURSCreds-prod \
                        ConfigBucket=rain-t-config \
                        PermissionsBoundaryName= \
@@ -151,7 +151,7 @@ pipeline {
           sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
                            --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                            /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
-        } 
+        }
       }
     }
   } // stages

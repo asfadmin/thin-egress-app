@@ -9,6 +9,7 @@ Metadata:
         Label:
           default: App Settings
         Parameters:
+          - BuildId
           - Loglevel
           - Maturity
           - ConfigBucket
@@ -42,28 +43,37 @@ Metadata:
         Parameters:
           - SessionStore
           - SessionTTL
-      - 
+      -
         Label:
           default: NGAP Integration
         Parameters:
+          - DomainName
           - PrivateVPC
           - VPCSecurityGroupIDs
           - VPCSubnetIDs
           - PermissionsBoundaryName
 
-
 Parameters:
+  BuildId:
+    Type: String
+    Default: "build.14"
+    Description: The build of the Thin Egress App to be deployed
+
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Custom domain name used by redirect_url
 
   VPCSecurityGroupIDs:
     Type: String
     Default: ""
     Description: "Optional list of security groups for the Lambda function."
- 
+
   VPCSubnetIDs:
     Type: String
     Default: ""
     Description: "Optional list of Subnets for the Lambda function."
-  
+
   PrivateVPC:
     Type: String
     Default: ""
@@ -71,13 +81,13 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: "thin-egress-app/tea-code-<BUILD_ID>.zip"
+    Default: ""
     Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
     Default: "asf.public.code"
-    Description: "S3 bucket where log processing code for lambda gets placed."
+    Description: "S3 Bucket of packaged lambda egress code."
 
   URSAuthCredsSecretName:
     Type: String
@@ -181,11 +191,13 @@ Parameters:
 
 
 Conditions:
+  DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
+  LambdaCodeS3KeyIsSet: !Not [ !Equals [ !Ref LambdaCodeS3Key, "" ] ]
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
-  UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ] 
+  UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
 
 
 Outputs:
@@ -338,7 +350,7 @@ Resources:
                 Action:
                   - lambda:InvokeFunction
                 Resource: "*"
-              - Effect: Allow 
+              - Effect: Allow
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -356,7 +368,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
-        S3Key: !Ref LambdaCodeS3Key
+        S3Key: !If [LambdaCodeS3KeyIsSet, !Ref LambdaCodeS3Key, !Sub "thin-egress-app/tea-code-${BuildId}.zip"]
       Role: !GetAtt EgressLambdaIamRole.Arn
       FunctionName: !Sub "${AWS::StackName}-EgressLambda"
       VpcConfig:
@@ -369,10 +381,15 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          DOMAIN_NAME:
+            !If
+              - DomainNameIsSet
+              - !Ref DomainName
+              - !Ref AWS::NoValue
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
-          BUILD_VERSION: "<BUILD_ID>"
+          BUILD_VERSION: !Ref BuildId
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix
@@ -403,7 +420,7 @@ Resources:
         - Types:
             - 'PRIVATE'
         - !Ref "AWS::NoValue"
-      Policy: 
+      Policy:
         !If
         - UsePrivateVPC
         - Version: '2012-10-17'

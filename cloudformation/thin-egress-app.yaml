@@ -46,13 +46,17 @@ Metadata:
         Label:
           default: NGAP Integration
         Parameters:
+          - DomainName
           - PrivateVPC
           - VPCSecurityGroupIDs
           - VPCSubnetIDs
           - PermissionsBoundaryName
 
-
 Parameters:
+  DomainName:
+    Type: String
+    Default: ""
+    Description: Custom domain name used by redirect_url
 
   VPCSecurityGroupIDs:
     Type: String
@@ -77,7 +81,7 @@ Parameters:
   LambdaCodeS3Bucket:
     Type: String
     Default: "asf.public.code"
-    Description: "S3 bucket where log processing code for lambda gets placed."
+    Description: "S3 Bucket of packaged lambda egress code."
 
   URSAuthCredsSecretName:
     Type: String
@@ -181,6 +185,7 @@ Parameters:
 
 
 Conditions:
+  DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
@@ -369,6 +374,11 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          DOMAIN_NAME:
+            !If
+              - DomainNameIsSet
+              - !Ref DomainName
+              - !Ref AWS::NoValue
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel

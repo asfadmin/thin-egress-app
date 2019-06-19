@@ -15,12 +15,6 @@ variable "bucketname_prefix" {
   description = "All data buckets should have names prefixed with this. Must be compatible with S3 naming conventions (lower case only, etc)."
 }
 
-variable "build_id" {
-  type    = string
-  default = null
-  # TODO Add a description
-}
-
 variable "config_bucket" {
   type        = string
   description = "This is the bucket where config files can be found."
@@ -105,7 +99,7 @@ variable "session_ttl" {
 }
 
 variable "stack_name" {
-  type = string
+  type        = string
   description = "The name of the CloudFormation stack"
 }
 
@@ -113,6 +107,12 @@ variable "stage_name" {
   type        = string
   default     = null
   description = "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on."
+}
+
+variable "template_url" {
+  type        = string
+  default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-build.14.yaml"
+  description = "URL of CloudFormation stack template"
 }
 
 variable "urs_auth_creds_secret_name" {

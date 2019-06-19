@@ -14,9 +14,9 @@ resource "aws_security_group" "egress_lambda" {
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
-  name          = var.stack_name
-  template_body = file("${path.module}/cloudformation/thin-egress-app.yaml")
-  capabilities  = ["CAPABILITY_NAMED_IAM"]
+  name         = var.stack_name
+  template_url = var.template_url
+  capabilities = ["CAPABILITY_NAMED_IAM"]
   parameters = {
     AuthBaseUrl             = var.auth_base_url
     BucketMapFile           = var.bucket_map_file

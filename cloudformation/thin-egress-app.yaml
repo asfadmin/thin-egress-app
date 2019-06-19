@@ -9,7 +9,6 @@ Metadata:
         Label:
           default: App Settings
         Parameters:
-          - BuildId
           - Loglevel
           - Maturity
           - ConfigBucket
@@ -54,11 +53,6 @@ Metadata:
           - PermissionsBoundaryName
 
 Parameters:
-  BuildId:
-    Type: String
-    Default: "build.14"
-    Description: The build of the Thin Egress App to be deployed
-
   DomainName:
     Type: String
     Default: ""
@@ -81,7 +75,7 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: ""
+    Default: "thin-egress-app/tea-code-<BUILD_ID>.zip"
     Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
@@ -192,7 +186,6 @@ Parameters:
 
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
-  LambdaCodeS3KeyIsSet: !Not [ !Equals [ !Ref LambdaCodeS3Key, "" ] ]
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
@@ -368,7 +361,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
-        S3Key: !If [LambdaCodeS3KeyIsSet, !Ref LambdaCodeS3Key, !Sub "thin-egress-app/tea-code-${BuildId}.zip"]
+        S3Key: !Ref LambdaCodeS3Key
       Role: !GetAtt EgressLambdaIamRole.Arn
       FunctionName: !Sub "${AWS::StackName}-EgressLambda"
       VpcConfig:
@@ -389,7 +382,7 @@ Resources:
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
-          BUILD_VERSION: !Ref BuildId
+          BUILD_VERSION: "<BUILD_ID>"
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix

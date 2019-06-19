@@ -153,7 +153,7 @@ pipeline {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
           sh "echo '>> Pushing code to Public Code Bucket'"
           sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/ --acl public-read"
+          sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
           sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
           sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \

@@ -636,7 +636,7 @@ def check_private_bucket(bucket, private_buckets, b_map):
         for priv_bucket in b_map['PRIVATE_BUCKETS']:
             if bucket == prepend_bucketname(priv_bucket):
                 # This bucket is PRIVATE, return group!
-                return b_map['PRIVATE_BUCKETS'][bucket][priv_bucket]
+                return b_map['PRIVATE_BUCKETS'][priv_bucket]
 
     return False
 

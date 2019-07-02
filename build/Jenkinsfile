@@ -38,11 +38,10 @@ pipeline {
       }
     }
 
-    // Download and package dependancies
-    stage('Package Dependancies') {
+    // Download and package dependencies
+    stage('Package Dependencies') {
       steps {
-        sh "pwd"
-        sh "tree"
+
         // Create a working space, pull in dependencies
         sh "echo '>> Gathering Dependencies....'"
         sh "rm -rf pkg && mkdir pkg"
@@ -58,8 +57,11 @@ pipeline {
                zip -r9 ../${CODE_ARCHIVE_FILENAME} ./* && \
                cd ../lambda  && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
-               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates
-               cd ../rain-api-core/ &&
+               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
+               pwd  && \
+               cd ..  && \
+               tree  && \
+               cd rain-api-core  && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain-api-core """
 
         // Swap in BUILD#

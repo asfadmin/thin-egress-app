@@ -4,12 +4,12 @@ from botocore.exceptions import ClientError
 import os
 from urllib.parse import urlparse, quote_plus
 
-
-from common.common import get_log, get_yaml_file, process_varargs, \
-    check_private_bucket, check_public_bucket, user_in_group, \
-    header_map, get_presigned_url, get_html_body,  make_set_cookie_headers, \
-    get_urs_url, STAGE, get_session, delete_session, get_cookie_vars, \
-    get_role_session, get_role_creds, do_login
+from rain_api_core.general_util import get_log
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
+from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers, get_cookies
+from rain_api_core.session_util import get_session, delete_session
+from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -23,6 +23,13 @@ public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
 private_buckets = None
 
+STAGE = os.getenv('STAGE_NAME', 'DEV')
+header_map = {'date':           'Date',
+              'last-modified':  'Last-Modified',
+              'accept-ranges':  'Accept-Ranges',
+              'etag':           'ETag',
+              'content-type':   'Content-Type',
+              'content-length': 'Content-Length'}
 
 def restore_bucket_vars():
 

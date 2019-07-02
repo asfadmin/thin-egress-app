@@ -31,6 +31,7 @@ header_map = {'date':           'Date',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
 
+
 def restore_bucket_vars():
 
     global b_map                                                                       #pylint: disable=global-statement

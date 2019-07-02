@@ -58,6 +58,7 @@ pipeline {
                cd ../lambda  && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
+               cd .. && \
                cd rain-api-core  && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
 

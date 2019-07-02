@@ -23,7 +23,7 @@ pipeline {
     stage('Setup Env') {
       steps {
         // Send chat notification
-        mattermostSend channel: '${CHAT_ROOM}', color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+        mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
           // Dump ENV
           sh 'tree'
@@ -62,7 +62,7 @@ pipeline {
                cd ..  && \
                tree  && \
                cd rain-api-core  && \
-               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain-api-core """
+               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
 
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
@@ -171,7 +171,7 @@ pipeline {
   // Send build status to Mattermost, Update build badge
   post {
     success {
-      mattermostSend channel: '${CHAT_ROOM}', color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
@@ -187,7 +187,7 @@ pipeline {
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
-      mattermostSend channel: '${CHAT_ROOM}', color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \

@@ -111,7 +111,7 @@ pipeline {
                        DomainName= \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET} \
-                       UseReverseBucketMap="True" """
+                       UseReverseBucketMap="False" """
         }
       }
     }

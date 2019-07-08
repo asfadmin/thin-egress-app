@@ -266,7 +266,7 @@ def try_download_head(bucket, filename):
         name = header_map[header] if header in header_map else header
         value = download['ResponseMetadata']['HTTPHeaders'][header] if header != 'server' else 'egress'
         log.debug("setting header {0} to {1}.".format(name, value))
-        response_headers['name'] = value
+        response_headers[name] = value
 
     # Try Redirecting to HEAD. There should be a better way.
     cookievars = get_cookie_vars(app.current_request.headers)

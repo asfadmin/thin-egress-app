@@ -103,7 +103,7 @@ pipeline {
                        DownloadRoleArn= \
                        HtmlTemplateDir= \
                        SessionStore=S3 \
-                       StageName=DEV \
+                       StageName=API \
                        Loglevel=DEBUG \
                        PrivateVPC= \
                        VPCSecurityGroupIDs= \

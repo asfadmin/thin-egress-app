@@ -64,6 +64,8 @@ pipeline {
 
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
+        sh 'sed -i -e "s/asf.public.code/${CODE_DIR}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/tea-code-<BUILD_ID>.zip/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'
         sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'

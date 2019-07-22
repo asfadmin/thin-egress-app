@@ -196,6 +196,10 @@ Conditions:
 Outputs:
   ApiEndpoint:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
+  RestApiId:
+    Value: !Ref EgressApiGateway
+  RestApiRootResourceId:
+    Value: !GetAtt EgressApiGateway.RootResourceId
   URSredirectURI:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
 

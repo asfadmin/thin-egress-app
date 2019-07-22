@@ -12,6 +12,7 @@ pipeline {
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
+    CODE_ARCHIVE_PATH_FILENAME=${CODE_DIR}/${CODE_ARCHIVE_FILENAME}
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -65,7 +66,7 @@ pipeline {
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
         sh 'sed -i -e "s/asf.public.code/${CODE_DIR}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${env.CODE_ARCHIVE_PATH_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'
         sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'

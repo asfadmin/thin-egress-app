@@ -4,7 +4,7 @@
 API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)
 if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
 
-APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/DEV"
+APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/API"
 echo " >>> APIROOT is $APIROOT"
 
 METADATA_FILE=SA/METADATA_GRD_HS/S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml
@@ -32,7 +32,7 @@ if [ $? -ne 0 ]; then echo; echo " >> Could not verify public images (TEST 2) <<
 echo " >>> Trying URS auth..."
 echo "  > curl -s -L -b /tmp/urscookie.txt -c /tmp/urscookie.txt $APIROOT/$METADATA_FILE | grep $METADATA_CHECK"
 # First step is send auth to do URS... This will actually fail because of AWS...
-echo " >>> Expect to see \`<Error><Code>InvalidArgument</Code><Message>...\` because U:P + Pre-Sign" 
+echo " >>> Expect to see \`<Error><Code>InvalidArgument</Code><Message>...\` because U:P + Pre-Sign"
 curl -s --location-trusted --cookie-jar /tmp/urscookie.txt -u "$URS_USERNAME:$URS_PASSWORD" -L $APIROOT/$METADATA_FILE
 echo ""
 # Now try again with jus tthe cookie jar.
@@ -82,10 +82,10 @@ cat /tmp/test9 && grep -q 'The file was successfully downloaded' /tmp/test9
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify prefixed file access (TEST9) << "; echo; FC=$((FC+1)); else echo " >>> TEST 9 PASSED"; fi
 
 # Build Summary
-if [ $FC -le 0 ]; then 
-   echo " >>> All Tests Passed!" 
+if [ $FC -le 0 ]; then
+   echo " >>> All Tests Passed!"
    echo '{ "schemaVersion": 1, "label": "Tests", "message": "All Tests Passed", "color": "success" }' > /tmp/testresults.json
-elif [ $FC -lt 3 ]; then 
+elif [ $FC -lt 3 ]; then
    echo " >>> Some Tests Failed"
    echo '{ "schemaVersion": 1, "label": "Tests", "message": "'$FC'/9 Tests Failed ⚠️", "color": "important" }' > /tmp/testresults.json
 else

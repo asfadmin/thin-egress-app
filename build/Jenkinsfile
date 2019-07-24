@@ -65,11 +65,11 @@ pipeline {
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
         sh 'sed -i -e "s/asf.public.code/${CODE_DIR}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_ARCHIVE_PATH_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'
         sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
-
+        sh 'cat ./cloudformation/thin-egress-app.yaml'
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
         sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_ZIP_FILENAME} *.tf "
@@ -107,6 +107,7 @@ pipeline {
                        SessionStore=S3 \
                        StageName=API \
                        Loglevel=DEBUG \
+                       Maturity=${env.MATURITY}\
                        PrivateVPC= \
                        VPCSecurityGroupIDs= \
                        VPCSubnetIDs= \

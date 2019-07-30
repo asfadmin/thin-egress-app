@@ -27,6 +27,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     HtmlTemplateDir         = var.html_template_dir
     LambdaCodeS3Bucket      = var.lambda_code_s3_bucket
     LambdaCodeS3Key         = var.lambda_code_s3_key
+    LambdaTimeout           = var.lambda_timeout
     Loglevel                = var.log_level
     Maturity                = var.maturity
     PermissionsBoundaryName = var.permissions_boundary_name

@@ -50,6 +50,12 @@ variable "lambda_code_s3_key" {
   description = "S3 Key of packaged lambda egress code."
 }
 
+variable "lambda_timeout" {
+  type        = number
+  default     = 6
+  description = "Timeout in seconds for lambda."
+}
+
 variable "log_level" {
   type        = string
   default     = null

@@ -20,6 +20,7 @@ Metadata:
         Parameters:
           - LambdaCodeS3Key
           - LambdaCodeS3Bucket
+          - LambdaTimeout
       -
         Label:
           default: URS Settings
@@ -82,6 +83,13 @@ Parameters:
     Type: String
     Default: "asf.public.code"
     Description: "S3 Bucket of packaged lambda egress code."
+
+  LambdaTimeout:
+    Type: Number
+    Default: 6
+    MinValue: 3
+    MaxValue: 30
+    Description: "Timeout in seconds for lambda."
 
   URSAuthCredsSecretName:
     Type: String
@@ -402,7 +410,7 @@ Resources:
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
-      Timeout: 6
+      Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.7'
       #MemorySize: 128

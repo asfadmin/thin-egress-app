@@ -671,7 +671,7 @@ Resources:
       RestApiId: !Ref EgressApiGateway
       DeploymentId: !Ref EgressAPIdeployment
       AccessLogSetting:
-        !If 
+        !If
           - ApiGatewayLogToCloudWatchIsSet
           -
             DestinationArn:

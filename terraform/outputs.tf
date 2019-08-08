@@ -12,3 +12,7 @@ output "api_endpoint" {
 output "urs_redirect_uri" {
   value = var.domain_name == null ? aws_cloudformation_stack.thin_egress_app.outputs.URSredirectURI : "https://${var.domain_name}/login"
 }
+
+output "egress_log_group" {
+  value = var.log_api_gateway_to_cloudwatch ? aws_cloudformation_stack.thin_egress_app.outputs.ApiGatewayLogGroupEgress : null
+}

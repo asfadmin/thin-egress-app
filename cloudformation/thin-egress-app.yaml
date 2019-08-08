@@ -14,12 +14,14 @@ Metadata:
           - ConfigBucket
           - HtmlTemplateDir
           - StageName
+          - EnableApiGatewayLogToCloudWatch
       -
         Label:
           default: Lambda Code
         Parameters:
           - LambdaCodeS3Key
           - LambdaCodeS3Bucket
+          - LambdaTimeout
       -
         Label:
           default: URS Settings
@@ -75,13 +77,20 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: "thin-egress-app/tea-code-<BUILD_ID>.zip"
+    Default: "<CODE_ARCHIVE_PATH_FILENAME>"
     Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
     Default: "asf.public.code"
     Description: "S3 Bucket of packaged lambda egress code."
+
+  LambdaTimeout:
+    Type: Number
+    Default: 6
+    MinValue: 3
+    MaxValue: 30
+    Description: "Timeout in seconds for lambda."
 
   URSAuthCredsSecretName:
     Type: String
@@ -183,9 +192,18 @@ Parameters:
     Default: ""
     Description: 'Optional PermissionsBoundary Policy name. In NGAP2, the policy name is "NGAPShRoleBoundary".'
 
+  EnableApiGatewayLogToCloudWatch:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Optional flag to enable (true) Api Gateway logging to CloudWatch.'
+
 
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
+  ApiGatewayLogToCloudWatchIsSet: !Equals [ !Ref EnableApiGatewayLogToCloudWatch, "True" ]
   DBSess: !Equals [ !Ref SessionStore, "DB" ]
   S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
@@ -202,6 +220,9 @@ Outputs:
     Value: !GetAtt EgressApiGateway.RootResourceId
   URSredirectURI:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
+  ApiGatewayLogGroupEgress:
+    Value: !Ref ApiGatewayCloudWatchLogGroupEgress
+    Condition: ApiGatewayLogToCloudWatchIsSet
 
 Resources:
 
@@ -402,7 +423,7 @@ Resources:
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
-      Timeout: 6
+      Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.7'
       #MemorySize: 128
@@ -628,6 +649,18 @@ Resources:
       Description: 'just a deployment for egress app'
       RestApiId: !Ref EgressApiGateway
 
+  ApiGatewayCloudWatchLogGroupEgress:
+    Type: AWS::Logs::LogGroup
+    Condition: ApiGatewayLogToCloudWatchIsSet
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ""
+          - - "API-Gateway-Execution-Logs_"
+            - !Ref EgressApiGateway
+            - !Sub "/${StageName}"
+      RetentionInDays: 30
+
   EgressStage:
     Type: AWS::ApiGateway::Stage
     DependsOn:
@@ -637,6 +670,28 @@ Resources:
       StageName: !Ref StageName
       RestApiId: !Ref EgressApiGateway
       DeploymentId: !Ref EgressAPIdeployment
+      AccessLogSetting:
+        !If
+          - ApiGatewayLogToCloudWatchIsSet
+          -
+            DestinationArn:
+              Fn::GetAtt:
+                - ApiGatewayCloudWatchLogGroupEgress
+                - Arn
+            Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "caller":"$context.identity.caller",  "user":"$context.identity.user", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod", "resourcePath":"$context.resourcePath", "status":"$context.status", "protocol":"$context.protocol", "responseLength":"$context.responseLength" }'
+          -
+            !Ref "AWS::NoValue"
+      MethodSettings:
+        !If
+        - ApiGatewayLogToCloudWatchIsSet
+        -
+          - DataTraceEnabled: True
+            HttpMethod: "*"
+            LoggingLevel: INFO
+            ResourcePath: "/*"
+            MetricsEnabled: false
+        -
+          !Ref "AWS::NoValue"
 
   LambdaPermission:
     Type: AWS::Lambda::Permission

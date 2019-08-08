@@ -65,7 +65,7 @@ pipeline {
 
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
-        sh 'sed -i -e "s/asf.public.code/${CODE_DIR}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'

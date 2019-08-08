@@ -186,6 +186,7 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
     LambdaCodeS3Bucket=${CODE_BUCKET} \ # Omit this if using build-specific YAML from ASF's public code bucket
     LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \ # Omit this if using build-specific YAML from ASF's public code bucket
     DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
+    EnableApiGatewayLogToCloudWatch=${API_GATEWAY_LOGGING} \ # Valid values are "True" and "False" (default)
     SessionStore=S3 \
     SessionTTL=168 \
     StageName=${STAGE_NAME} \

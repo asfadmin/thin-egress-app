@@ -12,6 +12,7 @@ pipeline {
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
+    URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -95,7 +96,7 @@ pipeline {
                      --template-file cloudformation/thin-egress-app.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
                      --parameter-overrides \
-                       URSAuthCredsSecretName=EgressAppURSCreds-prod \
+                       URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
                        ConfigBucket=rain-t-config \
                        PermissionsBoundaryName= \
                        BucketMapFile=bucket_map_TEA.yaml \
@@ -111,6 +112,7 @@ pipeline {
                        PrivateVPC= \
                        VPCSecurityGroupIDs= \
                        VPCSubnetIDs= \
+                       EnableApiGatewayLogToCloudWatch="False" \
                        DomainName= \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET} \

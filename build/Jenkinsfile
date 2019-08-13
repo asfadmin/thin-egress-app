@@ -57,7 +57,7 @@ pipeline {
         // clean up container
         sh "docker container rm depbuilder"
 
-        sh "echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} should exist: "
+        sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} should exist: '
         sh "ls -lah *.zip"
 
         // Swap in BUILD#

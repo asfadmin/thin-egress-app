@@ -53,7 +53,7 @@ pipeline {
 
         sh "cd ${WORKSPACE}"
 
-        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name depbuilder ${DOCKERREPO}/${DEPENCENCYBUILDER_IMAGE}'
+        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name depbuilder ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
 
         // clean up container
         sh "docker container rm depbuilder"

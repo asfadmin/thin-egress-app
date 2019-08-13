@@ -13,6 +13,8 @@ pipeline {
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
+    DEPENDENCYBUILDER_IMAGE="${DEPENDENCYBUILDER_IMAGE}"
+    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -40,23 +42,42 @@ pipeline {
     }
 
     // Download and package dependencies
-    stage('Package Dependencies') {
+    stage('Package Dependency Layer') {
       steps {
+        // Since we can't build a working pycrypto in our Jenkins environment,
+        // we'll offload that to a amazonlinux:2 container
 
         // Create a working space, pull in dependencies
         sh "echo '>> Gathering Dependencies....'"
-        sh "rm -rf pkg && mkdir pkg"
-        sh "cd pkg && pip3 install -r ${WORKSPACE}/lambda/requirements.txt --system --target ."
 
-        // Remove unwanted pieces
-        sh "echo '>> Removing Unwanted....'"
-        sh "cd ${WORKSPACE}/pkg && rm -rf *.dist-info pip docutils chalice/cli botocore setuptools tests easy_install.py "
+        sh "cd ${WORKSPACE}"
+
+        sh "docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e ZIPFILENAME=${DEPENDENCYLAYERFILENAME} --name depbuilder ${DOCKERREPO}/${DEPENCENCYBUILDER_IMAGE}"
+
+        // clean up container
+        sh "docker container rm depbuilder"
+
+        sh "echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} should exist: "
+        sh "ls -lah *.zip"
+
+        // Swap in BUILD#
+        sh "echo '>> Build Stamping....'"
+        sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
+
+        // Zip up terraform
+        //sh "echo '>> Building Terraform Zip....'"
+        //sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_ZIP_FILENAME} *.tf "
+
+      }
+   }
+    // Package code
+    stage('Package Code') {
+      steps {
+
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
-        sh """ cd ${WORKSPACE}/pkg && \
-               zip -r9 ../${CODE_ARCHIVE_FILENAME} ./* && \
-               cd ../lambda  && \
+        sh """ cd ../lambda  && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \
@@ -65,6 +86,7 @@ pipeline {
 
         // Swap in BUILD#
         sh "echo '>> Build Stamping....'"
+        sh "cd ${WORKSPACE}"
         sh 'sed -i -e "s/asf.public.code/${CODE_DIR}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
@@ -77,12 +99,14 @@ pipeline {
 
       }
    }
-
    // Push packages to AWS and deploy new version
    stage('Push to AWS') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
           // Push the code up to private bucket
+
+          sh "echo '>> Pushing dependencylayer to ASF Bucket'"
+          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
           sh "echo '>> Pushing code to ASF Bucket'"
           sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/"
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
@@ -115,6 +139,7 @@ pipeline {
                        EnableApiGatewayLogToCloudWatch="False" \
                        DomainName= \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                       LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET} \
                        LambdaTimeout=6 \
                        UseReverseBucketMap="False" """

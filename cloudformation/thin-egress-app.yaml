@@ -21,6 +21,7 @@ Metadata:
         Parameters:
           - LambdaCodeS3Key
           - LambdaCodeS3Bucket
+          - LambdaCodeDependencyArchive
           - LambdaTimeout
       -
         Label:
@@ -84,6 +85,11 @@ Parameters:
     Type: String
     Default: "asf.public.code"
     Description: "S3 Bucket of packaged lambda egress code."
+
+  LambdaCodeDependencyArchive:
+    Type: String
+    Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
+    Description: "S3 Key of packaged lambda urs code dependencies."
 
   LambdaTimeout:
     Type: Number
@@ -381,8 +387,24 @@ Resources:
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
 
+  EgressLambdaDependencyLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+      - python3.6
+      - python3.7
+      Content:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeDependencyArchive
+        #S3ObjectVersion : String
+      Description: !Sub "Layer with python dependencies for the ${AWS::StackName} stack."
+      LayerName: !Sub "${AWS::StackName}-dependencies"
+      #LicenseInfo: String
+
   EgressLambda:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket

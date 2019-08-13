@@ -15,6 +15,7 @@ pipeline {
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
     DEPENDENCYBUILDER_IMAGE="${DEPENDENCYBUILDER_IMAGE}"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
+    DOCKERREPO="docker-registry.asf.alaska.edu:5000"
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -52,7 +53,7 @@ pipeline {
 
         sh "cd ${WORKSPACE}"
 
-        sh "docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e ZIPFILENAME=${DEPENDENCYLAYERFILENAME} --name depbuilder ${DOCKERREPO}/${DEPENCENCYBUILDER_IMAGE}"
+        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name depbuilder ${DOCKERREPO}/${DEPENCENCYBUILDER_IMAGE}'
 
         // clean up container
         sh "docker container rm depbuilder"

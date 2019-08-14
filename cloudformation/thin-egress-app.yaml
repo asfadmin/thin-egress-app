@@ -464,6 +464,8 @@ Resources:
       Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
 
   EgressApiGateway:

@@ -8,6 +8,7 @@ pipeline {
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"
     TF_ZIP_FILENAME="tea-terraform-${NEWTAG}.zip"
+    TF_DEPENDENCY_ZIP_FILENAME="tea-dependency-terraform-${NEWTAG}.zip"
     CODE_BUCKET="asf.rain.code"
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
@@ -58,7 +59,7 @@ pipeline {
 
         sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
 
-        sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} should exist: '
+        sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"
 
         // Swap in BUILD#
@@ -67,7 +68,7 @@ pipeline {
 
         // Zip up terraform
         //sh "echo '>> Building Terraform Zip....'"
-        //sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_ZIP_FILENAME} *.tf "
+        //sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_DEPENDENCY_ZIP_FILENAME} *.tf "
 
       }
    }
@@ -78,7 +79,7 @@ pipeline {
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
-        sh """ cd ../lambda  && \
+        sh """ cd ${WORKSPACE}/lambda  && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \
@@ -97,7 +98,7 @@ pipeline {
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
-        sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_ZIP_FILENAME} *.tf "
+        sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_DEPENDENCY_ZIP_FILENAME} *.tf "
 
       }
    }
@@ -191,6 +192,7 @@ pipeline {
           sh "echo '>> Pushing code to Public Code Bucket'"
           sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
           sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+          sh "aws s3 cp ./${TF_DEPENDENCY_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
           sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
           sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \

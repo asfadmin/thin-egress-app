@@ -16,6 +16,8 @@ pipeline {
     DEPENDENCYBUILDER_IMAGE="${DEPENDENCYBUILDER_IMAGE}"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
+    JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
+    JWTALGO="RS256"
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -53,10 +55,8 @@ pipeline {
 
         sh "cd ${WORKSPACE}"
 
-        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name depbuilder ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
 
-        // clean up container
-        sh "docker container rm depbuilder"
+        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
 
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} should exist: '
         sh "ls -lah *.zip"
@@ -144,6 +144,8 @@ pipeline {
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET} \
                        LambdaTimeout=6 \
+                       JwtAlgo=${JWTALGO} \
+                       JwtKeySecretName=${JWTKEYSECRETNAME} \
                        UseReverseBucketMap="False" """
         }
       }
@@ -204,6 +206,8 @@ pipeline {
     success {
       mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
+      // clean up container
+      sh 'docker container rm depbuilder.${APPTAG}.${NEWTAG}"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
@@ -216,6 +220,8 @@ pipeline {
     }
     failure {
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
+      // clean up container
+      sh 'docker container rm "depbuilder.${APPTAG}.${NEWTAG}"
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
       mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"

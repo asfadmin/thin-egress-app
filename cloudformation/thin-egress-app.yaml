@@ -45,6 +45,8 @@ Metadata:
         Parameters:
           - SessionStore
           - SessionTTL
+          - JwtAlgo
+          - JwtKeySecretName
       -
         Label:
           default: NGAP Integration
@@ -98,6 +100,18 @@ Parameters:
     MaxValue: 30
     Description: "Timeout in seconds for lambda."
 
+  JwtKeySecretName:
+    Type: String
+    Default: ''
+    Description: 'Name of secret that contains RSA public and private keys for use in encrypting JWT payload. Secret keys should be named "rsa_priv_key" and "rsa_pub_key" and contents should be base64 encoded.'
+
+  JwtAlgo:
+    Type: String
+    Default: 'RS256'
+    AllowedValues:
+      - 'HS256'
+      - 'RS256'
+    Description: 'Algorithm used for encoding or encrypting the JWT.'
   URSAuthCredsSecretName:
     Type: String
     Default: ''
@@ -445,6 +459,8 @@ Resources:
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
+          JWT_KEY_SECRET_NAME: !Ref JwtKeySecretName
+          JWT_ALGO: !Ref JwtAlgo
       Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.7'

@@ -19,6 +19,8 @@ pipeline {
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
+    DOMAIN_NAME="${DOMAIN_NAME}"
+    COOKIE_DOMAIN=".asf.alaska.edu"
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -140,7 +142,8 @@ pipeline {
                        VPCSecurityGroupIDs= \
                        VPCSubnetIDs= \
                        EnableApiGatewayLogToCloudWatch="False" \
-                       DomainName= \
+                       DomainName=${DOMAIN_NAME} \
+                       CookieDomain=${COOKIE_DOMAIN} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET} \

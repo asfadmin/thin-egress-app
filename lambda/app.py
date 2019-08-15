@@ -7,7 +7,7 @@ from urllib.parse import urlparse, quote_plus
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers, get_cookies
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
 from rain_api_core.session_util import get_session, delete_session
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
@@ -201,13 +201,13 @@ def logout():
     headers = {
         'Content-Type': 'text/html',
     }
-    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT'))
+    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
 @app.route('/login')
 def login():
-    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context)
+    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
 

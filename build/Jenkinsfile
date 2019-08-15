@@ -20,6 +20,7 @@ pipeline {
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
     DOMAIN_NAME="${DOMAIN_NAME}"
+    DOMAINCERTARN="arn:aws:acm:us-east-1:765666652335:certificate/9f6cc382-c06c-4304-81a7-35a3c330f173"
     COOKIE_DOMAIN=".asf.alaska.edu"
   }
 
@@ -143,6 +144,7 @@ pipeline {
                        VPCSubnetIDs= \
                        EnableApiGatewayLogToCloudWatch="False" \
                        DomainName=${DOMAIN_NAME} \
+                       DomainCertArn=${DOMAINCERTARN}  \
                        CookieDomain=${COOKIE_DOMAIN} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \

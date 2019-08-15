@@ -17,6 +17,13 @@ Metadata:
           - EnableApiGatewayLogToCloudWatch
       -
         Label:
+          default: Domain Settings
+        Parameters:
+          - DomainName
+          - CookieDomain
+          - DomainCertArn
+      -
+        Label:
           default: Lambda Code
         Parameters:
           - LambdaCodeS3Key
@@ -62,6 +69,16 @@ Parameters:
     Type: String
     Default: ""
     Description: Custom domain name used by redirect_url
+
+  CookieDomain:
+    Type: String
+    Default: ".asf.alaska.edu"
+    Description: "The cookies get set to this domain, and any subdomains."
+
+  DomainCertArn:
+    Type: String
+    Default: 'arn:aws:acm:us-east-1:765666652335:certificate/9f6cc382-c06c-4304-81a7-35a3c330f173'
+    Description: 'ARN for cert. Should live in Certificate Manager'
 
   VPCSecurityGroupIDs:
     Type: String
@@ -232,14 +249,18 @@ Conditions:
 
 
 Outputs:
+  ExternalEndpoint:
+    Value: !Sub "https://${DomainName}/"
+  URSredirectURI:
+    Value: !Sub "https://${DomainName}/login"
   ApiEndpoint:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
+  URSredirectNoDomainURI:
+    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
   RestApiId:
     Value: !Ref EgressApiGateway
   RestApiRootResourceId:
     Value: !GetAtt EgressApiGateway.RootResourceId
-  URSredirectURI:
-    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
   ApiGatewayLogGroupEgress:
     Value: !Ref ApiGatewayCloudWatchLogGroupEgress
     Condition: ApiGatewayLogToCloudWatchIsSet
@@ -440,6 +461,7 @@ Resources:
               - DomainNameIsSet
               - !Ref DomainName
               - !Ref AWS::NoValue
+          COOKIE_DOMAIN: !Ref CookieDomain
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
@@ -467,6 +489,26 @@ Resources:
       Layers:
         - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
+
+  AsfUrsDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Condition: DomainNameIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      CertificateArn: !Ref DomainCertArn
+      DomainName: !Ref DomainName
+
+  AsfUrsDomainBasePathMap:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: DomainNameIsSet
+    DependsOn:
+      - AsfUrsDomainName
+    Properties:
+      BasePath: ''
+      DomainName: !Ref DomainName
+      RestApiId: !Ref EgressApiGateway
+      Stage: !Ref StageName
 
   EgressApiGateway:
     Type: AWS::ApiGateway::RestApi

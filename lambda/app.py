@@ -172,7 +172,12 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if 'asf-urs' in cookievars:
+            # this means our cookie is a jwt and we don't need to go digging in the session db
+            user_profile = cookievars['asf-urs']
+        else:
+            log.warning('jwt cookie not found, falling back to old style')
+            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
 
     if user_profile:
         if os.getenv('MATURITY', '') == 'DEV':
@@ -330,7 +335,12 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if 'asf-urs' in cookievars:
+            # this means our cookie is a jwt and we don't need to go digging in the session db
+            user_profile = cookievars['asf-urs']
+        else:
+            log.warning('jwt cookie not found, falling back to old style')
+            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
 
     # Check for public bucket
     if check_public_bucket(bucket, public_buckets, b_map):

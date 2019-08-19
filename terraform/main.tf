@@ -13,6 +13,16 @@ resource "aws_security_group" "egress_lambda" {
   }
 }
 
+resource "aws_s3_bucket" "lambda_source" {
+}
+
+resource "aws_s3_bucket_object" "lambda_source" {
+  bucket = aws_s3_bucket.lambda_source.bucket
+  key    = "lambda.zip"
+  source = "${path.module}/lambda.zip"
+  etag   = filemd5("${path.module}/lambda.zip")
+}
+
 resource "aws_cloudformation_stack" "thin_egress_app" {
   name         = var.stack_name
   template_url = var.template_url
@@ -26,8 +36,8 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     DownloadRoleArn                 = var.download_role_arn
     EnableApiGatewayLogToCloudWatch = var.log_api_gateway_to_cloudwatch ? "True" : "False"
     HtmlTemplateDir                 = var.html_template_dir
-    LambdaCodeS3Bucket              = var.lambda_code_s3_bucket
-    LambdaCodeS3Key                 = var.lambda_code_s3_key
+    LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
+    LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout
     Loglevel                        = var.log_level
     Maturity                        = var.maturity

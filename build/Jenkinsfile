@@ -73,7 +73,7 @@ pipeline {
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
-        sh "cd ${WORKSPACE}/terraform && cp ../${CODE_ARCHIVE_FILENAME} ./lambda.zip && ${zip ../${TF_ZIP_FILENAME} *.tf lambda.zip"
+        sh "cd ${WORKSPACE}/terraform && cp ../${CODE_ARCHIVE_FILENAME} ./lambda.zip && zip ../${TF_ZIP_FILENAME} *.tf lambda.zip"
       }
    }
 

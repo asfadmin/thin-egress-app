@@ -172,9 +172,9 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if 'asf-urs' in cookievars:
+        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars['asf-urs']
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
         else:
             log.warning('jwt cookie not found, falling back to old style')
             user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
@@ -335,9 +335,9 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if 'asf-urs' in cookievars:
+        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars['asf-urs']
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
         else:
             log.warning('jwt cookie not found, falling back to old style')
             user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])

@@ -9,6 +9,7 @@ Metadata:
         Label:
           default: App Settings
         Parameters:
+          - DomainName
           - Loglevel
           - Maturity
           - ConfigBucket
@@ -38,6 +39,7 @@ Metadata:
           - PublicBucketsFile
           - PrivateBucketsFile
           - DownloadRoleArn
+          - DownloadRoleInRegionArn
       -
         Label:
           default: Session Settings
@@ -48,7 +50,6 @@ Metadata:
         Label:
           default: NGAP Integration
         Parameters:
-          - DomainName
           - PrivateVPC
           - VPCSecurityGroupIDs
           - VPCSubnetIDs
@@ -185,7 +186,12 @@ Parameters:
   DownloadRoleArn:
     Type: String
     Default: ""
-    Description: "ARN for reading of data buckets."
+    Description: "ARN for reading of data buckets. Roles for out and in-region will be created if left blank"
+
+  DownloadRoleInRegionArn:
+    Type: String
+    Default: ""
+    Description: "ARN for reading of data buckets when in-region request is made. Must contain value if DownloadRoleArn has a value."
 
   PermissionsBoundaryName:
     Type: String
@@ -214,12 +220,16 @@ Conditions:
 Outputs:
   ApiEndpoint:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
+  ExternalEndpoint:
+    Value: !Sub "https://${DomainName}/"
   RestApiId:
     Value: !Ref EgressApiGateway
   RestApiRootResourceId:
     Value: !GetAtt EgressApiGateway.RootResourceId
   URSredirectURI:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
+  URSredirectDomainURI:
+    Value: !Sub "https://${DomainName}/login"
   ApiGatewayLogGroupEgress:
     Value: !Ref ApiGatewayCloudWatchLogGroupEgress
     Condition: ApiGatewayLogToCloudWatchIsSet
@@ -299,6 +309,40 @@ Resources:
       Roles:
         - !Sub "${AWS::StackName}-EgressLambdaIamRole"
 
+  DownloadRoleInRegion:
+    Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
+      PermissionsBoundary:
+        !If
+        - UsePermissionsBoundary
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicyDownload"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+
   DownloadRoleLocal:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
@@ -317,7 +361,7 @@ Resources:
             AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
           Effect: Allow
       Policies:
-        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicyDownload"
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -422,6 +466,7 @@ Resources:
           PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
+          EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleInRegion.Arn, !Ref DownloadRoleInRegionArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
       Timeout: !Ref LambdaTimeout
       Handler: app.app

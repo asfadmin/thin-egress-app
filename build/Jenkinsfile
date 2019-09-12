@@ -59,6 +59,9 @@ pipeline {
 
         sh "cd ${WORKSPACE}"
 
+        // Make sure we get all the requirements:
+        // TODO: uncomment when rain-api-core gets updated to version that includes requirements.txt
+        //sh "cat ${WORKSPACE}/rain-api-core/requirements.txt >> ${WORKSPACE}/lambda/requirements.txt"
 
         sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
 

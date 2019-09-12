@@ -26,8 +26,8 @@ Metadata:
         Label:
           default: Lambda Code
         Parameters:
-          - LambdaCodeS3Key
           - LambdaCodeS3Bucket
+          - LambdaCodeS3Key
           - LambdaCodeDependencyArchive
           - LambdaTimeout
       -
@@ -58,7 +58,6 @@ Metadata:
         Label:
           default: NGAP Integration
         Parameters:
-          - DomainName
           - PrivateVPC
           - VPCSecurityGroupIDs
           - VPCSubnetIDs

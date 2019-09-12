@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Calculate the API Gateway path
-API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)
-if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
+#API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)
+#if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
 
-APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/API"
+#APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/API"
+APIROOT="https://${DOMAIN_NAME}"
 echo " >>> APIROOT is $APIROOT"
 
 METADATA_FILE=SA/METADATA_GRD_HS/S1A_EW_GRDM_1SSV_20150802T074938_20150802T075036_007081_009A36_90B2.iso.xml

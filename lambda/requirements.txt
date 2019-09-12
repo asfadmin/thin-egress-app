@@ -4,3 +4,9 @@ aws-requests-auth==0.4.2
 pyjwt
 jwcrypto
 chalice==1.10.0
+netaddr
+cryptography
+pyjwt
+pyOpenSSL # maybe not necessary
+python-jose
+jwcrypto

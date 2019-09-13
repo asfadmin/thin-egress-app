@@ -9,7 +9,6 @@ Metadata:
         Label:
           default: App Settings
         Parameters:
-          - DomainName
           - Loglevel
           - Maturity
           - ConfigBucket

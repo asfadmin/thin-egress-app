@@ -6,7 +6,7 @@ from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
-from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds
+from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
 from rain_api_core.session_util import get_session, delete_session
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
@@ -91,8 +91,11 @@ def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_fil
 
 
 def try_download_from_bucket(bucket, filename, user_profile):
+
     user_id = user_profile['uid'] if isinstance(user_profile, dict) and 'uid' in user_profile else None
-    creds = get_role_creds(user_id=user_id)
+
+    is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
+    creds = get_role_creds(user_id, is_in_region)
     session = get_role_session(creds=creds, user_id=user_id)
 
     params = {}

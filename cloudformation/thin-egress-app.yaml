@@ -129,6 +129,7 @@ Parameters:
       - 'HS256'
       - 'RS256'
     Description: 'Algorithm used for encoding or encrypting the JWT.'
+
   URSAuthCredsSecretName:
     Type: String
     Default: ''

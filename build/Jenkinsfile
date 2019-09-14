@@ -137,6 +137,7 @@ pipeline {
                        PrivateBucketsFile=private_buckets_TEA.yaml \
                        BucketnamePrefix=t- \
                        DownloadRoleArn= \
+                       DownloadRoleInRegionArn= \
                        HtmlTemplateDir= \
                        SessionStore=S3 \
                        StageName=API \

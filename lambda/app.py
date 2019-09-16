@@ -354,7 +354,7 @@ def dynamic_url():
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, private_buckets, b_map)
     log.debug('private check: {}'.format(private_check))
-    u_in_g = user_in_group(private_check, cookievars, user_profile, False)
+    u_in_g, user_profile = user_in_group(private_check, cookievars, user_profile, False)
     log.debug('user_in_group: {}'.format(u_in_g))
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}

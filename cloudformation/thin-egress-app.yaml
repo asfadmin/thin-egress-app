@@ -537,7 +537,11 @@ Resources:
     DependsOn:
       - EgressApiGateway
     Properties:
-      CertificateArn: !Ref DomainCertArn
+      CertificateArn:
+        !If
+        - UsePrivateVPC
+        - !Ref "AWS::NoValue" # If NGAP, we can't use cert here
+        - !Ref DomainCertArn # Not NGAP using cert.
       DomainName: !Ref DomainName
 
   AsfUrsDomainBasePathMap:

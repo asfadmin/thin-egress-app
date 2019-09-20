@@ -531,7 +531,7 @@ Resources:
         - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
 
-  AsfUrsDomainName:
+  ExtDomainName:
     Type: AWS::ApiGateway::DomainName
     Condition: DomainNameIsSet
     DependsOn:
@@ -544,11 +544,11 @@ Resources:
         - !Ref DomainCertArn # Not NGAP using cert.
       DomainName: !Ref DomainName
 
-  AsfUrsDomainBasePathMap:
+  ExtDomainBasePathMap:
     Type: AWS::ApiGateway::BasePathMapping
     Condition: DomainNameIsSet
     DependsOn:
-      - AsfUrsDomainName
+      - ExtDomainName
     Properties:
       BasePath: ''
       DomainName: !Ref DomainName

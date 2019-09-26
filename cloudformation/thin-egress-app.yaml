@@ -17,10 +17,18 @@ Metadata:
           - EnableApiGatewayLogToCloudWatch
       -
         Label:
+          default: Domain Settings
+        Parameters:
+          - DomainName
+          - CookieDomain
+          - DomainCertArn
+      -
+        Label:
           default: Lambda Code
         Parameters:
-          - LambdaCodeS3Key
           - LambdaCodeS3Bucket
+          - LambdaCodeS3Key
+          - LambdaCodeDependencyArchive
           - LambdaTimeout
       -
         Label:
@@ -38,17 +46,19 @@ Metadata:
           - PublicBucketsFile
           - PrivateBucketsFile
           - DownloadRoleArn
+          - DownloadRoleInRegionArn
       -
         Label:
           default: Session Settings
         Parameters:
           - SessionStore
           - SessionTTL
+          - JwtAlgo
+          - JwtKeySecretName
       -
         Label:
           default: NGAP Integration
         Parameters:
-          - DomainName
           - PrivateVPC
           - VPCSecurityGroupIDs
           - VPCSubnetIDs
@@ -59,6 +69,16 @@ Parameters:
     Type: String
     Default: ""
     Description: Custom domain name used by redirect_url
+
+  CookieDomain:
+    Type: String
+    Default: ".asf.alaska.edu"
+    Description: "The cookies get set to this domain, and any subdomains."
+
+  DomainCertArn:
+    Type: String
+    Default: 'arn:aws:acm:us-east-1:765666652335:certificate/9f6cc382-c06c-4304-81a7-35a3c330f173'
+    Description: 'ARN for cert. Should live in Certificate Manager'
 
   VPCSecurityGroupIDs:
     Type: String
@@ -85,12 +105,30 @@ Parameters:
     Default: "asf.public.code"
     Description: "S3 Bucket of packaged lambda egress code."
 
+  LambdaCodeDependencyArchive:
+    Type: String
+    Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
+    Description: "S3 Key of packaged lambda urs code dependencies."
+
   LambdaTimeout:
     Type: Number
     Default: 6
     MinValue: 3
     MaxValue: 30
     Description: "Timeout in seconds for lambda."
+
+  JwtKeySecretName:
+    Type: String
+    Default: ''
+    Description: 'Name of secret that contains RSA public and private keys for use in encrypting JWT payload. Secret keys should be named "rsa_priv_key" and "rsa_pub_key" and contents should be base64 encoded.'
+
+  JwtAlgo:
+    Type: String
+    Default: 'RS256'
+    AllowedValues:
+      - 'HS256'
+      - 'RS256'
+    Description: 'Algorithm used for encoding or encrypting the JWT.'
 
   URSAuthCredsSecretName:
     Type: String
@@ -185,7 +223,12 @@ Parameters:
   DownloadRoleArn:
     Type: String
     Default: ""
-    Description: "ARN for reading of data buckets."
+    Description: "ARN for reading of data buckets. Roles for out and in-region will be created if left blank"
+
+  DownloadRoleInRegionArn:
+    Type: String
+    Default: ""
+    Description: "ARN for reading of data buckets when in-region request is made. Must contain value if DownloadRoleArn has a value."
 
   PermissionsBoundaryName:
     Type: String
@@ -212,14 +255,18 @@ Conditions:
 
 
 Outputs:
+  ExternalEndpoint:
+    Value: !Sub "https://${DomainName}/"
+  URSredirectURI:
+    Value: !Sub "https://${DomainName}/login"
+  URSredirectNoDomainURI:
+    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
   ApiEndpoint:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
   RestApiId:
     Value: !Ref EgressApiGateway
   RestApiRootResourceId:
     Value: !GetAtt EgressApiGateway.RootResourceId
-  URSredirectURI:
-    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
   ApiGatewayLogGroupEgress:
     Value: !Ref ApiGatewayCloudWatchLogGroupEgress
     Condition: ApiGatewayLogToCloudWatchIsSet
@@ -299,6 +346,40 @@ Resources:
       Roles:
         - !Sub "${AWS::StackName}-EgressLambdaIamRole"
 
+  DownloadRoleInRegion:
+    Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
+      PermissionsBoundary:
+        !If
+        - UsePermissionsBoundary
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicyDownload"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
+                  - !Sub "arn:aws:s3:::${BucketnamePrefix}*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref AWS::Region
+
   DownloadRoleLocal:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
@@ -317,7 +398,7 @@ Resources:
             AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
           Effect: Allow
       Policies:
-        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicyDownload"
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -381,8 +462,24 @@ Resources:
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
 
+  EgressLambdaDependencyLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+      - python3.6
+      - python3.7
+      Content:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeDependencyArchive
+        #S3ObjectVersion : String
+      Description: !Sub "Layer with python dependencies for the ${AWS::StackName} stack."
+      LayerName: !Sub "${AWS::StackName}-dependencies"
+      #LicenseInfo: String
+
   EgressLambda:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
@@ -404,6 +501,7 @@ Resources:
               - DomainNameIsSet
               - !Ref DomainName
               - !Ref AWS::NoValue
+          COOKIE_DOMAIN: !Ref CookieDomain
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
@@ -422,11 +520,40 @@ Resources:
           PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
           PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
+          EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleInRegion.Arn, !Ref DownloadRoleInRegionArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
+          JWT_KEY_SECRET_NAME: !Ref JwtKeySecretName
+          JWT_ALGO: !Ref JwtAlgo
       Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
+
+  ExtDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Condition: DomainNameIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      CertificateArn:
+        !If
+        - UsePrivateVPC
+        - !Ref "AWS::NoValue" # If NGAP, we can't use cert here
+        - !Ref DomainCertArn # Not NGAP using cert.
+      DomainName: !Ref DomainName
+
+  ExtDomainBasePathMap:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: DomainNameIsSet
+    DependsOn:
+      - ExtDomainName
+    Properties:
+      BasePath: ''
+      DomainName: !Ref DomainName
+      RestApiId: !Ref EgressApiGateway
+      Stage: !Ref StageName
 
   EgressApiGateway:
     Type: AWS::ApiGateway::RestApi

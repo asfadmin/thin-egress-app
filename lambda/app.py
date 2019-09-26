@@ -6,8 +6,8 @@ from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
-from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers, get_cookies
+from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
 from rain_api_core.session_util import get_session, delete_session
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
@@ -91,8 +91,11 @@ def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_fil
 
 
 def try_download_from_bucket(bucket, filename, user_profile):
+
     user_id = user_profile['uid'] if isinstance(user_profile, dict) and 'uid' in user_profile else None
-    creds = get_role_creds(user_id=user_id)
+
+    is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
+    creds = get_role_creds(user_id, is_in_region)
     session = get_role_session(creds=creds, user_id=user_id)
 
     params = {}
@@ -172,7 +175,12 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
+            # this means our cookie is a jwt and we don't need to go digging in the session db
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
+        else:
+            log.warning('jwt cookie not found, falling back to old style')
+            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
 
     if user_profile:
         if os.getenv('MATURITY', '') == 'DEV':
@@ -201,13 +209,13 @@ def logout():
     headers = {
         'Content-Type': 'text/html',
     }
-    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT'))
+    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
 @app.route('/login')
 def login():
-    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context)
+    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
 
@@ -330,7 +338,12 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
+            # this means our cookie is a jwt and we don't need to go digging in the session db
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
+        else:
+            log.warning('jwt cookie not found, falling back to old style')
+            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
 
     # Check for public bucket
     if check_public_bucket(bucket, public_buckets, b_map):
@@ -341,7 +354,7 @@ def dynamic_url():
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, private_buckets, b_map)
     log.debug('private check: {}'.format(private_check))
-    u_in_g = user_in_group(private_check, cookievars, user_profile, False)
+    u_in_g, user_profile = user_in_group(private_check, cookievars, user_profile, False)
     log.debug('user_in_group: {}'.format(u_in_g))
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}

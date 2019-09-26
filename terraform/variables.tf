@@ -20,6 +20,12 @@ variable "config_bucket" {
   description = "This is the bucket where config files can be found."
 }
 
+variable "cookie_domain" {
+  type        = string
+  default     = null
+  description = "Valid domain for cookie."
+}
+
 variable "domain_name" {
   type        = string
   default     = null
@@ -32,10 +38,34 @@ variable "download_role_arn" {
   description = "ARN for reading of data buckets."
 }
 
+variable "download_role_in_region_arn" {
+  type        = string
+  default     = null
+  description = "ARN for reading of data buckets for in-region requests."
+}
+
 variable "html_template_dir" {
   type        = string
   default     = null
   description = "Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates that are included with the lambda code zip file."
+}
+
+variable "jwt_algo" {
+  type        = string
+  default     = "RS256"
+  description = "Algorithm with which to encode the JWT cookie."
+}
+
+variable "jwt_secret_name" {
+  type        = string
+  default     = null
+  description = "Name of AWS secret where keys for JWT encode/decode are stored."
+}
+
+variable "lambda_code_dependency_archive_key" {
+  type        = string
+  default     = null
+  description = "S3 Key of packaged python modules for lambda dependency layer."
 }
 
 variable "lambda_code_s3_bucket" {

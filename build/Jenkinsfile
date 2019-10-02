@@ -60,9 +60,10 @@ pipeline {
         sh "cd ${WORKSPACE}"
 
         // Make sure we get all the requirements:
-        sh "cat ${WORKSPACE}/rain-api-core/requirements.txt >> ${WORKSPACE}/lambda/requirements.txt"
+        sh "cp ${WORKSPACE}/rain-api-core/requirements.txt ${WORKSPACE}/lambda/requirements_rain-api-core.txt"
+        sh "cp ${WORKSPACE}/lambda/requirements.txt ${WORKSPACE}/lambda/requirements_tea.txt"
 
-        sh 'docker run -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" ${DOCKERREPO}/${DEPENDENCYBUILDER_IMAGE}'
+        sh 'docker run --rm -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh'
 
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"

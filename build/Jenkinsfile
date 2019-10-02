@@ -14,7 +14,6 @@ pipeline {
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
-    DEPENDENCYBUILDER_IMAGE="${DEPENDENCYBUILDER_IMAGE}"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
@@ -133,12 +132,12 @@ pipeline {
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
                        ConfigBucket=rain-t-config \
                        PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map_TEA.yaml \
+                       BucketMapFile=bucket_map_ngap2.yaml \
                        PublicBucketsFile=public_buckets_TEA.yaml \
                        PrivateBucketsFile=private_buckets_TEA.yaml \
-                       BucketnamePrefix=t- \
-                       DownloadRoleArn= \
-                       DownloadRoleInRegionArn= \
+                       BucketnamePrefix=asf-ngap2-t- \
+                       DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
+                       DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
                        HtmlTemplateDir= \
                        SessionStore=S3 \
                        StageName=API \

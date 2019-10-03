@@ -132,7 +132,7 @@ pipeline {
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
                        ConfigBucket=rain-t-config \
                        PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map_ngap2.yaml \
+                       BucketMapFile=bucket_map_TEST_ngap2.yaml \
                        PublicBucketsFile=public_buckets_TEA.yaml \
                        PrivateBucketsFile=private_buckets_TEA.yaml \
                        BucketnamePrefix=asf-ngap2-t- \

@@ -59,3 +59,10 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     VPCSubnetIDs                    = join(",", var.vpc_subnet_ids)
   }
 }
+
+data "aws_cloudformation_stack" "thin_egress_stack" {
+  name = aws_cloudformation_stack.thin_egress_app.name
+  depends_on = [
+    aws_cloudformation_stack.thin_egress_app
+  ]
+}

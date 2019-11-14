@@ -14,5 +14,5 @@ output "urs_redirect_uri" {
 }
 
 output "egress_log_group" {
-  value = var.log_api_gateway_to_cloudwatch ? aws_cloudformation_stack.thin_egress_app.outputs.ApiGatewayLogGroupEgress : null
+  value = var.log_api_gateway_to_cloudwatch ? data.aws_cloudformation_stack.thin_egress_stack.outputs.ApiGatewayLogGroupEgress : null
 }

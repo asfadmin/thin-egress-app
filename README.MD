@@ -1,6 +1,6 @@
 # TEA (Thin Egress App)
 ## About
-The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration.
+The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration. It provides a lightweight egress solution for when you don't need to throttle or cut off egress.
 
 ![Last Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Fbuildstatus.json)
 ![Test Results](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Ftestresults.json)
@@ -27,8 +27,35 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
 
 Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
 
+
 ### Packaging lambda code
+
 If you prefer to roll your own zip for the lambda code:
+
+#### Dependency Layer
+We've found that the if the dependency layer isn't built in an `amazonlinux` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+```bash 
+
+# Make up a filename for code archive:
+DEPENDENCYLAYERFILENAME=tea_depencency_layer.zip
+
+# get the repo
+git clone https://github.com/asfadmin/thin-egress-app
+cd thin-egress-app
+
+# copy requirements to a directory that 
+cp rain-api-core/requirements.txt lambda/requirements_rain-api-core.txt
+cp lambda/requirements.txt lambda/requirements_tea.txt
+cp build/dependency_builder.sh lambda/
+
+docker run --rm -v lambda/:/depbuild/in -v ./:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh
+
+# Upload to S3
+aws s3 cp --profile=default ./${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/
+```
+
+Packaging up the egress code:
+
 ```bash 
 # Make up a filename for code archive:
 CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
@@ -37,36 +64,30 @@ CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
 git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
-# Create a scratch directory in which to confine the required modules
-mkdir pkg
-cd pkg 
+# Create a scratch directory in which to confine the required module
 
-# Install requirements here
-pip3 install -r ../lambda/requirements.txt  --target .
-
-# To make the archive smaller, you can cull unecessary packages and files from the directory. The particulars are beyond 
-# the scope of this documentation.
+# To make the archive smaller, you can cull unecessary packages and files from the directory. The particulars 
+# are beyond the scope of this documentation.
 
 # Create the zip archive and put the required modules in
-zip -r9 ../${CODE_ARCHIVE_FILENAME} ./*
-
-# Go to the code directory
-cd ../lambda
-
-# Add the common code:
-zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./common
+zip -r9 ./${CODE_ARCHIVE_FILENAME} ./lambda
 
 # Add the egress python code
-zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py
+zip -g ./${CODE_ARCHIVE_FILENAME} ./app.py
 
 # Add the html templates
-zip -g -r2 ../${CODE_ARCHIVE_FILENAME} ./templates
+zip -g -r2 ./${CODE_ARCHIVE_FILENAME} ./templates
+
+# Add the common code:
+cd rain_api_core
+zip -g -r9 ./${CODE_ARCHIVE_FILENAME} ./rain_api_core
 cd ..
 
 # Upload to S3
 aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
+
 
 ### Bucket map
 

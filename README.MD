@@ -23,12 +23,15 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
   * It would help if there were some data in them.
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets.
 
-### Using pre-packaged lambda code
+
+### Getting the software
+
+#### Option 1: Using pre-packaged lambda code
 
 Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
 
 
-### Packaging lambda code
+#### Option 2: Packaging lambda code yourself
 
 If you prefer to roll your own zip for the lambda code:
 
@@ -87,6 +90,44 @@ cd ..
 aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
+
+### Cookies / JWT
+
+TEA now uses JWT cookies. 
+## Cookies
+When logging in, rain-api-core sets a few cookies:
+
+### asf-urs
+asf-urs is a JWT cookie that contains various information about the logged in user. New development should use this cookie.
+
+Its payload looks something like this:
+```
+{
+  "urs-user-id": "<User's URS ID>",
+  "urs-access-token": "<A URS access token string>",
+  "urs-groups": [
+    {
+      "app_uid": "<UID of URS app>",
+      "client_id": "<Client ID string>",
+      "name": "<Name of group>"
+    },
+    {
+      "app_uid": "<UID of URS app>",
+      "client_id": "<Client ID string>",
+      "name": "<Name of group>"
+    },
+  ],
+  "iat": 1565294120,
+  "exp: 1565299000
+}
+
+```
+
+#### urs-user-id
+This contains the logged in user's URS user ID. This cookie will be deprecated soon, please use the value in the JWT cookie.
+
+#### urs-access-token 
+This contains the logged in user's URS access token. This cookie will be deprecated soon, please use the value in the JWT cookie.
 
 
 ### Bucket map
@@ -192,29 +233,65 @@ Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value a
 ### Deploying the app
 The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.
 
-The `stack-name` needs to be compatible with S3 naming requirements (lower case, no underscores, etc) because the CF template may create buckets using this name.
 ```bash
+
+# Set some vars
+# See the Cloudformation parameters section above for a description of these params.
+STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
+                  # because the CF template may create buckets using this name.
+BUCKETMAP_FILENAME=my_bucketmap.yaml
+BUCKET_PREFIX=asf-tea-
+CFG_BUCKETNAME=asf-tea-cfg
+COOKIE_DOMAIN=.asf.alaska.edu
+DOMAINCERTARN=arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-0000-000000000000
+DOMAIN_NAME=filedownloads.asf.alaska.edu
+DOWNLOAD_ROLE_ARN=arn:aws:iam::000000000000:role/AccessToFiles
+DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion
+HTML_TEMPLATE_DIR=html # Omit if using default templates.
+JWTALGO=RS256
+JWTKEYSECRETNAME=jwt_secret_for_tea
+CODE_BUCKET=code-bucket # Omit this if using build-specific YAML from ASF's public code bucket
+CODE_DIR=code-dir
+DEPENDENCYLAYERFILENAME=tea-dependencylayer.zip
+CODE_ARCHIVE_FILENAME=tea-code.zip
+URS_CREDS_SECRET_NAME=urs_creds_for_tea
+
+# Deploy the stack
 aws cloudformation deploy --profile=default --region=us-east-1 \
   --stack-name ${STACK_NAME} \
   --template-file ./egress-lambda.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
-    URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-    ConfigBucket=${CFG_BUCKETNAME} \
-    HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
-    BucketnamePrefix=${BUCKET_PREFIX} \
-    BucketMapFile=${BUCKETMAP_FILENAME} \
-    LambdaCodeS3Bucket=${CODE_BUCKET} \ # Omit this if using build-specific YAML from ASF's public code bucket
-    LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \ # Omit this if using build-specific YAML from ASF's public code bucket
-    DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
-    EnableApiGatewayLogToCloudWatch=${API_GATEWAY_LOGGING} \ # Valid values are "True" and "False" (default)
-    SessionStore=S3 \
-    SessionTTL=168 \
-    StageName=${STAGE_NAME} \
-    AuthBaseUrl=https://urs.earthdata.nasa.gov \
-    Loglevel=DEBUG \
-    Maturity=DEV
-
+        AuthBaseUrl=https://urs.earthdata.nasa.gov \
+        BucketMapFile=${BUCKETMAP_FILENAME} \
+        BucketnamePrefix=${BUCKET_PREFIX} \
+        ConfigBucket=${CFG_BUCKETNAME} \
+        CookieDomain=${COOKIE_DOMAIN} \
+        DomainCertArn=${DOMAINCERTARN}  \
+        DomainName=${DOMAIN_NAME} \
+        DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
+        DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
+        EnableApiGatewayLogToCloudWatch=True \ # Valid values are "True" and "False" (default)
+        HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
+        JwtAlgo=${JWTALGO} \
+        JwtKeySecretName=${JWTKEYSECRETNAME} \
+        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+        LambdaCodeS3Bucket=${CODE_BUCKET} \ 
+        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+        LambdaTimeout=6 \
+        Loglevel=DEBUG \
+        Maturity=DEV
+        PermissionsBoundaryName= \
+        PrivateBucketsFile=private_buckets_TEA.yaml \
+        PrivateVPC= \
+        PublicBucketsFile=public_buckets_TEA.yaml \
+        SessionStore=S3 \
+        SessionTTL=168 \
+        StageName=API \
+        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+        UseReverseBucketMap="False" # Valid values are "True" and "False"
+        VPCSecurityGroupIDs= \
+        VPCSubnetIDs= \
 ```
 ### Post-deploy action
 After the Cloudformation has been deployed, we need to add the new endpoint to the URS Redirect URI list. Get the necessary value like so:

@@ -21,7 +21,11 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
 * The buckets described in the bucket map must exist. 
   * These need not be in the same account as the egress app.
   * It would help if there were some data in them.
-* An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets.
+
+Optional:
+* A domain name and SSL cert for the service.
+* An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets. One will be created if not provided.
+* An IAM Role that allows for only in-region access the lambda can assume to read the files in the data buckets. One will be created if not provided.
 
 
 ### Getting the software
@@ -37,7 +41,7 @@ If you prefer to roll your own zip for the lambda code:
 
 #### Dependency Layer
 We've found that the if the dependency layer isn't built in an `amazonlinux` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
-```bash 
+```bash
 
 # Make up a filename for code archive:
 DEPENDENCYLAYERFILENAME=tea_depencency_layer.zip
@@ -59,7 +63,8 @@ aws s3 cp --profile=default ./${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/
 
 Packaging up the egress code:
 
-```bash 
+```bash
+
 # Make up a filename for code archive:
 CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
 
@@ -91,17 +96,17 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
 
-### Cookies / JWT
+## Cookies / JWT
 
 TEA now uses JWT cookies. 
-## Cookies
+### Cookies
 When logging in, rain-api-core sets a few cookies:
 
-### asf-urs
-asf-urs is a JWT cookie that contains various information about the logged in user. New development should use this cookie.
+#### JWT cookie
+The JWT cookie's default name is `asf-urs` It contains various information about the logged in user. New development should use this cookie.
 
 Its payload looks something like this:
-```
+```json
 {
   "urs-user-id": "<User's URS ID>",
   "urs-access-token": "<A URS access token string>",
@@ -115,10 +120,10 @@ Its payload looks something like this:
       "app_uid": "<UID of URS app>",
       "client_id": "<Client ID string>",
       "name": "<Name of group>"
-    },
+    }
   ],
   "iat": 1565294120,
-  "exp: 1565299000
+  "exp": 1565299000
 }
 
 ```
@@ -169,10 +174,10 @@ PUBLIC_BUCKETS:
 ### HTML templates 
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html templates.
 
-#### Using custom templates
+#### Option 1: Using custom templates
 After you've created your custom templates, create a subdirectory in your `ConfigBucket` and upload them there. Since the lambda downloads the files in this directory to itself, it's best to put only your template files here. When you deploy your CF, enter this directory name into the `HtmlTemplateDir` param.  
 
-#### Using default templates
+#### Option 2: Using default templates
 When deploying the CF, set `HtmlTemplateDir` to '' (empty string).
 
 #### The templates
@@ -181,8 +186,8 @@ When deploying the CF, set `HtmlTemplateDir` to '' (empty string).
 This is the base template. 
 
 Blocks: 
- * pagetitle: Gets inserted inside the `<title></title>` element
- * content
+ * `pagetitle`: Gets inserted inside the `<title></title>` element
+ * `content`
 
 **root.html**
 Child template. Gets called by `/` and `/logout` for 200 responses.
@@ -214,7 +219,7 @@ To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` 
 
 Use the following bash script to determine appropriate compliance paramaters.
 
-```
+```bash
 export AWSENV='--profile=cumulus --region=us-east-1'
 export VPCID=$(aws $AWSENV ec2 describe-vpcs --query "Vpcs[*].VpcId" --filters "Name=tag:Name,Values=Application VPC" --output text)
 export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query "Subnets[?VpcId=='$VPCID'].{ID:SubnetId}[0]" --filters "Name=tag:Name,Values=Private*" --output=text)
@@ -234,7 +239,6 @@ Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value a
 The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.
 
 ```bash
-
 # Set some vars
 # See the Cloudformation parameters section above for a description of these params.
 STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
@@ -292,6 +296,7 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
         UseReverseBucketMap="False" # Valid values are "True" and "False"
         VPCSecurityGroupIDs= \
         VPCSubnetIDs= \
+
 ```
 ### Post-deploy action
 After the Cloudformation has been deployed, we need to add the new endpoint to the URS Redirect URI list. Get the necessary value like so:

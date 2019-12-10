@@ -13,7 +13,11 @@
 {% if URS_URL %}
    <a href="{{ URS_URL }}">Log In</a>
 {% else %}
-    <a href="/{{ STAGE }}/logout">Log Out</a>
+   {% if STAGE %}    
+       <a href="/{{ STAGE }}/logout">Log Out</a>
+   {% else %}
+       <a href="/logout">Log Out</a>
+   {% endif %}
 {% endif %}
 
 </div>

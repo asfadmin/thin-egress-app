@@ -65,7 +65,6 @@ def do_auth_and_return(ctxt):
     log.debug('context: {}'.format(ctxt))
     if os.getenv('DOMAIN_NAME'):
         # Pop STAGE value off the request if we have a custom domain
-        log.info("Poppin' STAGE in {0}".format(os.getenv('DOMAIN_NAME')))
         here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
     log.info("here will be {0}".format(here))
     redirect_here = quote_plus(here)

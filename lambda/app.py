@@ -63,7 +63,9 @@ def restore_bucket_vars():
 def do_auth_and_return(ctxt):
 
     log.debug('context: {}'.format(ctxt))
-    here = ctxt['path']
+    if os.getenv('DOMAIN_NAME'):
+        # Pop STAGE value off the request if we have a custom domain
+        here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
     log.info("here will be {0}".format(here))
     redirect_here = quote_plus(here)
     URS_URL = get_urs_url(ctxt, redirect_here)
@@ -81,7 +83,7 @@ def make_redriect(to_url, headers=None, status_code=301):
 
 
 def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_file:str='root.html'):
-    template_vars = {'STAGE': STAGE, 'status_code': status_code}
+    template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
     template_vars.update(t_vars)
 
     headers = {'Content-Type': 'text/html'}

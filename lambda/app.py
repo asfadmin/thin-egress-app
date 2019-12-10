@@ -63,6 +63,7 @@ def restore_bucket_vars():
 def do_auth_and_return(ctxt):
 
     log.debug('context: {}'.format(ctxt))
+    here = ctxt['path']
     if os.getenv('DOMAIN_NAME'):
         # Pop STAGE value off the request if we have a custom domain
         here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here

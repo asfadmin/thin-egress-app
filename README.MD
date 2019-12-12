@@ -15,14 +15,15 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
 ### Prerequisites:
 * An application on [Earthdata URS](https://urs.earthdata.nasa.gov/apps/new)
   * Must use `OAuth 2`
-* A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
-  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
-* A secret in the AWS Secrets manager for the JWT keys:
-  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key.
 * A bucket map yaml file in a config bucket
 * The buckets described in the bucket map must exist. 
   * These need not be in the same account as the egress app.
   * It would help if there were some data in them.
+* A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
+  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
+* A secret in the AWS Secrets manager for the JWT keys:
+  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key.
+
 
 Optional:
 * A domain name and SSL cert for the service.
@@ -98,13 +99,19 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
 
-## Cookies / JWT
+### Cookies / JWT
 
 TEA now uses JWT cookies. 
-### Cookies
+#### Cookies
 When logging in, rain-api-core sets a few cookies:
 
-#### JWT cookie
+##### urs-user-id
+This contains the logged in user's URS user ID. This cookie will be deprecated soon, please use the value in the JWT cookie.
+
+##### urs-access-token 
+This contains the logged in user's URS access token. This cookie will be deprecated soon, please use the value in the JWT cookie.
+
+##### JWT cookie
 The JWT cookie's default name is `asf-urs` It contains various information about the logged in user. New development should use this cookie.
 
 Its payload looks something like this:
@@ -129,7 +136,29 @@ Its payload looks something like this:
 }
 
 ```
-##### Setting up the JWT Cookie secrets
+
+### AWS Secrets
+
+### Setting up the URS client secrets:
+`UrsId` can be found on your appication's URS home page as `Client ID`. For `UrsAuth`, see URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation
+
+Put the base-64 encoded keys into a json file like so: 
+```json
+[
+    {"Key":"UrsId", "Value":"<pasted value of Client ID>"},
+    {"Key":"UrsAuth",  "Value":"<pasted value of URS auth>"}
+]
+```
+
+Create the secret in AWS, referencing the json file created above
+```
+aws secretsmanager create-secret --name urs_creds_for_tea \
+    --description "URS creds for TEA app" \
+    --secret-string file://urscreds.json
+```
+
+
+#### Setting up the JWT Cookie secrets
 Create a key pair and b64 encode them:
 ```
 ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key
@@ -146,15 +175,9 @@ Put the base-64 encoded keys into a json file like so:
 Create the secret in AWS, referencing the json file created above
 ```
 aws secretsmanager create-secret --name jwt_secret_for_tea \
-    --description "RS256 keys for JWT cookies" \
+    --description "RS256 keys for TEA app JWT cookies" \
     --secret-string file://jwtkeys.json
 ```
-
-#### urs-user-id
-This contains the logged in user's URS user ID. This cookie will be deprecated soon, please use the value in the JWT cookie.
-
-#### urs-access-token 
-This contains the logged in user's URS access token. This cookie will be deprecated soon, please use the value in the JWT cookie.
 
 
 ### Bucket map

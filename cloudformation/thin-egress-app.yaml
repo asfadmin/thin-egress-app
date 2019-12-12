@@ -252,7 +252,7 @@ Conditions:
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
-  DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ] 
+  DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
 
 Outputs:
   ExternalEndpoint:
@@ -538,7 +538,7 @@ Resources:
       - EgressApiGateway
     Properties:
       CertificateArn: DomainCertArn # Not NGAP using cert.
-      DomainName: !Ref DomainName 
+      DomainName: !Ref DomainName
 
   ExtDomainBasePathMap:
     Type: AWS::ApiGateway::BasePathMapping

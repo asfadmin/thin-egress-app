@@ -17,6 +17,8 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
   * Must use `OAuth 2`
 * A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
   * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
+* A secret in the AWS Secrets manager for the JWT keys:
+  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key.
 * A bucket map yaml file in a config bucket
 * The buckets described in the bucket map must exist. 
   * These need not be in the same account as the egress app.
@@ -126,6 +128,26 @@ Its payload looks something like this:
   "exp": 1565299000
 }
 
+```
+##### Setting up the JWT Cookie secrets
+Create a key pair and b64 encode them:
+```
+ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key
+openssl base64 -in jwtcookie.key -out jwtcookie.key.b64
+openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64
+```
+Put the base-64 encoded keys into a json file like so: 
+```json
+[
+    {"Key":"rsa_priv_key", "Value":"<pasted value of b64'd private key>"},
+    {"Key":"rsa_pub_key",  "Value":"<pasted value of b64'd public key>"}
+]
+```
+Create the secret in AWS, referencing the json file created above
+```
+aws secretsmanager create-secret --name jwt_secret_for_tea \
+    --description "RS256 keys for JWT cookies" \
+    --secret-string file://jwtkeys.json
 ```
 
 #### urs-user-id

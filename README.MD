@@ -167,10 +167,10 @@ openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64
 ```
 Put the base-64 encoded keys into a json file like so: 
 ```json
-[
-    {"Key":"rsa_priv_key", "Value":"<pasted value of b64'd private key>"},
-    {"Key":"rsa_pub_key",  "Value":"<pasted value of b64'd public key>"}
-]
+{
+    "rsa_priv_key": "<pasted value of b64'd private key>",
+    "rsa_pub_key":  "<pasted value of b64'd public key>"
+}
 ```
 Create the secret in AWS, referencing the json file created above
 ```bash

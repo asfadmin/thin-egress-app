@@ -252,7 +252,6 @@ Conditions:
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
-  DomainInNgap: !And [ !Condition DomainNameIsSet, !Condition UsePrivateVPC ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ] 
 
 Outputs:

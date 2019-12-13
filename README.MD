@@ -140,14 +140,21 @@ Its payload looks something like this:
 ### AWS Secrets
 
 ### Setting up the URS client secrets:
-`UrsId` can be found on your appication's URS home page as `Client ID`. For `UrsAuth`, see URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation
+`UrsId` can be found on your appication's URS home page as `Client ID`. 
+
+`UrsAuth` is the `Client ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
+
+```bash
+echo "<Client ID>:<App Password>" | openssl base64 
+```
+
 
 Put the base-64 encoded keys into a json file like so: 
 ```json
-[
-    {"Key":"UrsId", "Value":"<pasted value of Client ID>"},
-    {"Key":"UrsAuth",  "Value":"<pasted value of URS auth>"}
-]
+{
+    "UrsId": "<pasted value of Client ID>",
+    "UrsAuth": "<pasted value of b64 encoded URS auth>"
+}
 ```
 
 Create the secret in AWS, referencing the json file created above

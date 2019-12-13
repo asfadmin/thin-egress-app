@@ -537,7 +537,7 @@ Resources:
     DependsOn:
       - EgressApiGateway
     Properties:
-      CertificateArn: DomainCertArn # Not NGAP using cert.
+      CertificateArn: !Ref DomainCertArn # Not NGAP using cert.
       DomainName: !Ref DomainName
 
   ExtDomainBasePathMap:

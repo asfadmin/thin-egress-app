@@ -145,7 +145,7 @@ Its payload looks something like this:
 `UrsAuth` is the `Client ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
 
 ```bash
-echo "<Client ID>:<App Password>" | openssl base64 
+echo -n "<Client ID>:<App Password>" | openssl base64 
 ```
 
 

@@ -95,7 +95,14 @@ def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_fil
 
 def try_download_from_bucket(bucket, filename, user_profile):
 
-    user_id = user_profile['uid'] if isinstance(user_profile, dict) and 'uid' in user_profile else None
+    # Attempt to pull userid from profile
+    user_id = None
+    if isinstance(user_profile, dict):
+        if 'urs-user-id' in user_profile :
+            user_id = user_profile['urs-user-id']
+        elif 'uid' in user_profile:
+            user_id = user_profile['uid']
+    log.info("User Id for download is {0}".format(user_id))
 
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
     creds = get_role_creds(user_id, is_in_region)
@@ -357,7 +364,10 @@ def dynamic_url():
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, private_buckets, b_map)
     log.debug('private check: {}'.format(private_check))
-    u_in_g, user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    if new_user_profile and new_user_profile != user_profile:
+        log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
+        user_profile = new_user_profile
     log.debug('user_in_group: {}'.format(u_in_g))
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}

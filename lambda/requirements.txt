@@ -1,5 +1,5 @@
 jinja2==2.10.1
-PyYAML==5.2
+PyYAML==5.3
 aws-requests-auth==0.4.2
 pyjwt==1.7.1
 jwcrypto==0.6.0

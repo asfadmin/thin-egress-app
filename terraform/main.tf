@@ -32,10 +32,16 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     BucketMapFile                   = var.bucket_map_file
     BucketnamePrefix                = var.bucketname_prefix
     ConfigBucket                    = var.config_bucket
+    CookieDomain                    = var.cookie_domain
     DomainName                      = var.domain_name
     DownloadRoleArn                 = var.download_role_arn
+    DownloadRoleInRegionArn         = var.download_role_in_region_arn
     EnableApiGatewayLogToCloudWatch = var.log_api_gateway_to_cloudwatch ? "True" : "False"
     HtmlTemplateDir                 = var.html_template_dir
+    JwtAlgo                         = var.jwt_algo
+    JwtKeySecretName                = var.jwt_secret_name
+    LambdaCodeDependencyArchive     = var.lambda_code_dependency_archive_key
+
     LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
     LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout

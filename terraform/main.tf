@@ -41,6 +41,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     JwtAlgo                         = var.jwt_algo
     JwtKeySecretName                = var.jwt_secret_name
     LambdaCodeDependencyArchive     = var.lambda_code_dependency_archive_key
+
     LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
     LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout

@@ -13,7 +13,7 @@ pipeline {
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
-    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
+    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"

@@ -33,6 +33,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     BucketnamePrefix                = var.bucketname_prefix
     ConfigBucket                    = var.config_bucket
     CookieDomain                    = var.cookie_domain
+    DomainCertArn                   = var.domain_cert_arn
     DomainName                      = var.domain_name
     DownloadRoleArn                 = var.download_role_arn
     DownloadRoleInRegionArn         = var.download_role_in_region_arn

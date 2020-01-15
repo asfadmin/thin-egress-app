@@ -72,13 +72,13 @@ Parameters:
 
   CookieDomain:
     Type: String
-    Default: ".asf.alaska.edu"
-    Description: "The cookies get set to this domain, and any subdomains."
+    Default: ""
+    Description: "The cookies get set to this domain, and any subdomains. (eg '.your.rootdomain.gov')"
 
   DomainCertArn:
     Type: String
-    Default: 'arn:aws:acm:us-east-1:765666652335:certificate/9f6cc382-c06c-4304-81a7-35a3c330f173'
-    Description: 'ARN for cert. Should live in Certificate Manager'
+    Default: ""
+    Description: "Optional SSL Certificate ARN from Certificate Manager. Not applicable in NGAP behind CloudFront."
 
   VPCSecurityGroupIDs:
     Type: String

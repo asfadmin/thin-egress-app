@@ -26,6 +26,12 @@ variable "cookie_domain" {
   description = "Valid domain for cookie."
 }
 
+variable "domain_cert_arn" {
+  type        = string
+  default     = null
+  description = "Certificate Manager SSL Cert ARN if deployed outside NGAP/CloudFront"
+}
+
 variable "domain_name" {
   type        = string
   default     = null

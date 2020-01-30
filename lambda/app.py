@@ -9,7 +9,7 @@ from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
 from rain_api_core.session_util import get_session, delete_session
-from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
+from rain_api_core.x_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -80,7 +80,7 @@ def make_redriect(to_url, headers=None, status_code=301):
     headers['Location'] = to_url
     log.debug('to_url: {}'.format(to_url))
     log.debug('headers: {}'.format(headers))
-    return Response(body='', headers=headers, status_code=status_code)
+    return Response(body='', headers=headers, status_code=status_code)ƒ
 
 
 def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_file:str='root.html'):
@@ -208,7 +208,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if cookievars:
+    if 'usr-user-id' in cookievars:
         user_id = cookievars['urs-user-id']
         urs_access_token = cookievars['urs-access-token']
         delete_session(user_id, urs_access_token)

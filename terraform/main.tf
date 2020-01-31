@@ -23,6 +23,13 @@ resource "aws_s3_bucket_object" "lambda_source" {
   etag   = filemd5("${path.module}/lambda.zip")
 }
 
+resource "aws_s3_bucket_object" "lambda_code_dependency_archive" {
+  bucket = aws_s3_bucket.lambda_source.bucket
+  key    = "dependencylayer.zip"
+  source = "${path.module}/dependencylayer.zip"
+  etag   = filemd5("${path.module}/dependencylayer.zip")
+}
+
 resource "aws_cloudformation_stack" "thin_egress_app" {
   name         = var.stack_name
   template_url = var.template_url
@@ -41,8 +48,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     HtmlTemplateDir                 = var.html_template_dir
     JwtAlgo                         = var.jwt_algo
     JwtKeySecretName                = var.jwt_secret_name
-    LambdaCodeDependencyArchive     = var.lambda_code_dependency_archive_key
-
+    LambdaCodeDependencyArchive     = aws_s3_bucket_object.lambda_code_dependency_archive.key
     LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
     LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout

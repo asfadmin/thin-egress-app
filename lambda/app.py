@@ -208,7 +208,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if cookievars:
+    if 'urs-user-id' and 'urs-access-token' in cookievars:
         user_id = cookievars['urs-user-id']
         urs_access_token = cookievars['urs-access-token']
         delete_session(user_id, urs_access_token)

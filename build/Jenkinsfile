@@ -116,7 +116,7 @@ pipeline {
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
           // Clarify in description that this stack is deployed by Jenkins
-          sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
+          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\";" ./cloudformation/thin-egress-app.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
           sh """ aws cloudformation deploy --profile=jenkins --region=us-east-1 \

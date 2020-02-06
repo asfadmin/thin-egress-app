@@ -1,5 +1,7 @@
 locals {
   vpc_security_group_ids_set = length(var.vpc_security_group_ids) > 0
+  lambda_source_filename     = "${path.module}/lambda.zip"
+  dependency_layer_filename  ="${path.module}/dependencylayer.zip"
 }
 
 resource "aws_security_group" "egress_lambda" {
@@ -18,19 +20,23 @@ resource "aws_s3_bucket" "lambda_source" {
 
 resource "aws_s3_bucket_object" "lambda_source" {
   bucket = aws_s3_bucket.lambda_source.bucket
-  key    = "lambda.zip"
-  source = "${path.module}/lambda.zip"
-  etag   = filemd5("${path.module}/lambda.zip")
+  key    = "${filemd5(local.lambda_source_filename)}.zip"
+  source = local.lambda_source_filename
+  etag   = filemd5(local.lambda_source_filename)
 }
 
 resource "aws_s3_bucket_object" "lambda_code_dependency_archive" {
   bucket = aws_s3_bucket.lambda_source.bucket
-  key    = "dependencylayer.zip"
-  source = "${path.module}/dependencylayer.zip"
-  etag   = filemd5("${path.module}/dependencylayer.zip")
+  key    = "${filemd5(local.dependency_layer_filename)}.zip"
+  source = local.dependency_layer_filename
+  etag   = filemd5(local.dependency_layer_filename)
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
+  depends_on   = [
+    aws_s3_bucket_object.lambda_source,
+    aws_s3_bucket_object.lambda_code_dependency_archive
+  ]
   name         = var.stack_name
   template_url = var.template_url
   capabilities = ["CAPABILITY_NAMED_IAM"]

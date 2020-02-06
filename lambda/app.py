@@ -234,7 +234,7 @@ def login():
 
 @app.route('/version')
 def version():
-    return json.dumps({'version': os.getenv('BUILD_VERSION')})
+    return json.dumps({'version_id': os.getenv('BUILD_VERSION')})
 
 
 def get_range_header_val():

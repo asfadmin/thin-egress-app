@@ -232,6 +232,11 @@ def login():
     return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
+@app.route('/version')
+def version():
+    return json.dumps({'version_id': '<BUILD_ID>'})
+
+
 def get_range_header_val():
 
     if 'Range' in app.current_request.headers:

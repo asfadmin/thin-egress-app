@@ -611,6 +611,14 @@ Resources:
       PathPart: 'profile'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceVersion:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'version'
+      RestApiId: !Ref EgressApiGateway
 
   EgressAPIrootMethod:
     Type: AWS::ApiGateway::Method
@@ -740,7 +748,6 @@ Resources:
       ResourceId: !Ref EgressApiResourceDynamicUrl
       RestApiId: !Ref EgressApiGateway
 
-
   EgressAPIMethodProfile:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -762,6 +769,27 @@ Resources:
       ResourceId: !Ref EgressApiResourceProfile
       RestApiId: !Ref EgressApiGateway
 
+  EgressAPIMethodVersion:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses: #TODO: this, probably
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+      OperationName: 'version method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourceVersion
+      RestApiId: !Ref EgressApiGateway
 
   EgressAPIdeployment:
     Type: AWS::ApiGateway::Deployment

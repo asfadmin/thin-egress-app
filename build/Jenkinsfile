@@ -80,7 +80,9 @@ pipeline {
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
+        
         sh """ cd ${WORKSPACE}/lambda  && \
+               sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \

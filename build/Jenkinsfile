@@ -8,13 +8,12 @@ pipeline {
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"
     TF_ZIP_FILENAME="tea-terraform-${NEWTAG}.zip"
-    TF_DEPENDENCY_ZIP_FILENAME="tea-dependency-terraform-${NEWTAG}.zip"
     CODE_BUCKET="asf.rain.code"
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
     STACKNAME="${APPTAG}-stack"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
-    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer.${env.NEWTAG}.zip"
+    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
@@ -72,10 +71,6 @@ pipeline {
         sh "echo '>> Build Stamping....'"
         sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
 
-        // Zip up terraform
-        //sh "echo '>> Building Terraform Zip....'"
-        //sh "cd ${WORKSPACE}/terraform &&  zip ../${TF_DEPENDENCY_ZIP_FILENAME} *.tf "
-
       }
    }
     // Package code
@@ -100,12 +95,13 @@ pipeline {
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'
-        sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\";" ./cloudformation/thin-egress-app.yaml'
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
-        sh "cd ${WORKSPACE}/terraform && cp ../${CODE_ARCHIVE_FILENAME} ./lambda.zip && zip ../${TF_ZIP_FILENAME} *.tf lambda.zip"
-
+        sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
+        sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
+        sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf lambda.zip dependencylayer.zip"
       }
    }
    // Push packages to AWS and deploy new version
@@ -121,7 +117,7 @@ pipeline {
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
           // Clarify in description that this stack is deployed by Jenkins
-          sh 'sed -i -e "s/^Description:.*/Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\"/" ./cloudformation/thin-egress-app.yaml'
+          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\";" ./cloudformation/thin-egress-app.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
           sh """ aws cloudformation deploy --profile=jenkins --region=us-east-1 \
@@ -201,7 +197,7 @@ pipeline {
           sh "echo '>> Pushing code to Public Code Bucket'"
           sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
           sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ./${TF_DEPENDENCY_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
           sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
           sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \

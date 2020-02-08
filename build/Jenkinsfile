@@ -82,7 +82,7 @@ pipeline {
         sh "echo '>> Building Zipfile....'"
         
         sh """ cd ${WORKSPACE}/lambda  && \
-               sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./app.py && \
+               sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \
@@ -95,9 +95,9 @@ pipeline {
         sh "cd ${WORKSPACE}"
         sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<BUILD_ID>/${NEWTAG}/" ./terraform/variables.tf'
-        sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${NEWTAG}\\";" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./terraform/variables.tf'
+        sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
@@ -119,7 +119,7 @@ pipeline {
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
           // Clarify in description that this stack is deployed by Jenkins
-          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${NEWTAG}\\";" ./cloudformation/thin-egress-app.yaml'
+          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
           sh """ aws cloudformation deploy --profile=jenkins --region=us-east-1 \

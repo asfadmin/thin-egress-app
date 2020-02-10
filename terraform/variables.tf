@@ -64,7 +64,7 @@ variable "jwt_algo" {
 
 variable "jwt_secret_name" {
   type        = string
-  default     = null
+  default     = "jwt_secret_for_tea"
   description = "Name of AWS secret where keys for JWT encode/decode are stored."
 }
 
@@ -165,7 +165,7 @@ variable "template_url" {
 
 variable "urs_auth_creds_secret_name" {
   type        = string
-  default     = null
+  default     = "urs_creds_for_tea"
   description = "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'UrsId' and 'UrsAuth'."
 }
 

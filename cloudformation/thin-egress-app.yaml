@@ -119,8 +119,9 @@ Parameters:
 
   JwtKeySecretName:
     Type: String
-    Default: ''
+    AllowedPattern: '[0-9a-zA-Z\.\-\+\/\_\+\=\.\@\-]+'
     Description: 'Name of secret that contains RSA public and private keys for use in encrypting JWT payload. Secret keys should be named "rsa_priv_key" and "rsa_pub_key" and contents should be base64 encoded.'
+    ConstraintDescription: 'Secret name must contain only alphanumeric characters and the characters /_+=.@-'
 
   JwtAlgo:
     Type: String
@@ -132,8 +133,9 @@ Parameters:
 
   URSAuthCredsSecretName:
     Type: String
-    Default: ''
+    AllowedPattern: '[0-9a-zA-Z\.\-\+\/\_\+\=\.\@\-]+'
     Description: "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'UrsId' and 'UrsAuth'."
+    ConstraintDescription: 'Secret name must contain only alphanumeric characters and the characters /_+=.@-'
 
   AuthBaseUrl:
     Type: String

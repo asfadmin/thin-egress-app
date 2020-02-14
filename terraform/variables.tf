@@ -157,6 +157,12 @@ variable "stage_name" {
   description = "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on."
 }
 
+variable "tags" {
+  description = "Tags to be applied to managed resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "template_url" {
   type        = string
   default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-<BUILD_ID>.yaml"

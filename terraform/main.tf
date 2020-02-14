@@ -13,9 +13,12 @@ resource "aws_security_group" "egress_lambda" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = var.tags
 }
 
 resource "aws_s3_bucket" "lambda_source" {
+  tags = var.tags
 }
 
 resource "aws_s3_bucket_object" "lambda_source" {
@@ -72,6 +75,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     VPCSecurityGroupIDs             = local.vpc_security_group_ids_set ? join(",", var.vpc_security_group_ids) : aws_security_group.egress_lambda[0].id
     VPCSubnetIDs                    = join(",", var.vpc_subnet_ids)
   }
+  tags = var.tags
 }
 
 data "aws_cloudformation_stack" "thin_egress_stack" {

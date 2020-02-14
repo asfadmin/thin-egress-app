@@ -258,11 +258,17 @@ Conditions:
 
 Outputs:
   ExternalEndpoint:
-    Value: !Sub "https://${DomainName}/"
+    Value:
+      !If
+        - DomainNameIsSet
+        - !Sub "https://${DomainName}/"
+        - !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
   URSredirectURI:
-    Value: !Sub "https://${DomainName}/login"
-  URSredirectNoDomainURI:
-    Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
+    Value:
+      !If
+        - DomainNameIsSet
+        - !Sub "https://${DomainName}/login"
+        - !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/login"
   ApiEndpoint:
     Value: !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
   RestApiId:

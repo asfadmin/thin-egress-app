@@ -258,13 +258,13 @@ Conditions:
 
 Outputs:
   ExternalEndpoint:
-    Value: !Sub "https://${DomainName}/"
+    Value:
       !If
         - DomainNameIsSet
         - !Sub "https://${DomainName}/"
-        - !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/
+        - !Sub "https://${EgressApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EgressStage}/"
   URSredirectURI:
-    Value: 
+    Value:
       !If
         - DomainNameIsSet
         - !Sub "https://${DomainName}/login"

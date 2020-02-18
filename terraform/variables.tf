@@ -163,12 +163,6 @@ variable "tags" {
   default     = {}
 }
 
-variable "template_url" {
-  type        = string
-  default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-<BUILD_ID>.yaml"
-  description = "URL of CloudFormation stack template"
-}
-
 variable "urs_auth_creds_secret_name" {
   type        = string
   default     = "urs_creds_for_tea"

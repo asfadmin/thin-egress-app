@@ -89,16 +89,13 @@ pipeline {
         sh "echo '>> Build Stamping....'"
 
         sh "cd ${WORKSPACE}"
-        sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
-        
+                
         // thin-egress-app.yaml
+        sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
-        
-        // terraform/variables.tf
-        sh 'sed -i -e "s/<CF_TEMPLATE_FILENAME>/${CF_TEMPLATE_FILENAME}/" ./terraform/variables.tf'
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"

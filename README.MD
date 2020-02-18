@@ -168,8 +168,8 @@ aws secretsmanager create-secret --name urs_creds_for_tea \
 Create a key pair and b64 encode them:
 ```bash
 ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key
-openssl base64 -in jwtcookie.key -out jwtcookie.key.b64
-openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64
+openssl base64 -in jwtcookie.key -out jwtcookie.key.b64 -A
+openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64 -A
 ```
 Put the base-64 encoded keys into a json file like so: 
 ```json

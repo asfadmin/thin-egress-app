@@ -2,6 +2,7 @@ from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import os
+import json
 from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
@@ -208,7 +209,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if cookievars:
+    if 'urs-user-id' in cookievars and 'urs-access-token' in cookievars:
         user_id = cookievars['urs-user-id']
         urs_access_token = cookievars['urs-access-token']
         delete_session(user_id, urs_access_token)
@@ -230,6 +231,11 @@ def login():
         return Response(body='', status_code=status_code, headers=headers)
 
     return make_html_response(template_vars, headers, status_code, 'error.html')
+
+
+@app.route('/version')
+def version():
+    return json.dumps({'version_id': '<BUILD_ID>'})
 
 
 def get_range_header_val():

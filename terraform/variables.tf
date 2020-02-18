@@ -64,7 +64,7 @@ variable "jwt_algo" {
 
 variable "jwt_secret_name" {
   type        = string
-  default     = null
+  default     = "jwt_secret_for_tea"
   description = "Name of AWS secret where keys for JWT encode/decode are stored."
 }
 
@@ -157,6 +157,12 @@ variable "stage_name" {
   description = "This value will show up as the 'base' of the url path as so: https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on."
 }
 
+variable "tags" {
+  description = "Tags to be applied to managed resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "template_url" {
   type        = string
   default     = "https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-cloudformation-<BUILD_ID>.yaml"
@@ -165,7 +171,7 @@ variable "template_url" {
 
 variable "urs_auth_creds_secret_name" {
   type        = string
-  default     = null
+  default     = "urs_creds_for_tea"
   description = "AWS Secrets Manager name of URS creds. Must consist of two rows, names 'UrsId' and 'UrsAuth'."
 }
 

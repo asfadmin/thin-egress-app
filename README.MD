@@ -163,9 +163,8 @@ aws secretsmanager create-secret --name urs_creds_for_tea \
     --description "URS creds for TEA app" \
     --secret-string file://urscreds.json
 ```
-
-
 #### Setting up the JWT Cookie secrets
+##### Option 1: Manually
 Create a key pair and b64 encode them:
 ```bash
 ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key
@@ -184,6 +183,12 @@ Create the secret in AWS, referencing the json file created above
 aws secretsmanager create-secret --name jwt_secret_for_tea \
     --description "RS256 keys for TEA app JWT cookies" \
     --secret-string file://jwtkeys.json
+```
+
+##### Option 2: Using bash script
+You can create en encoded b64 key pair by running the provided setup_jwt_cookie.sh script :
+```bash
+profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 ```
 
 

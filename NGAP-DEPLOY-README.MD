@@ -48,8 +48,7 @@ module "thin_egress_app" {
 * **session_store** (string) - "DB" for storing sessions in DynamoDB, "S3" for storing sessions in S3. Defaults to "DB".
 * **session_ttl** (number) - time to live for auth session, in hours. Defaults to 168.
 * **stage_name** (string) - this value will show up as the base of the url path as so: `https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on`. Defaults to "API".
-* **template_url** (string) - URL of CloudFormation stack template. This will be set when the Terraform module is built.
-* ***use_reverse_bucket_map** (bool) - standard bucketmaps are not reverse. Defaults to false.
+* **use_reverse_bucket_map** (bool) - standard bucketmaps are not reverse. Defaults to false.
 * **vpc_security_group_ids** (list(string)) - list of security groups for the Lambda function
 * **vpc_subnet_ids** (list(string)) - list of subnets for the lambda function
 

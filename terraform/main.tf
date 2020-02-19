@@ -1,5 +1,6 @@
 locals {
   vpc_security_group_ids_set = length(var.vpc_security_group_ids) > 0
+  cloudformation_template_filename = "${path.module}/thin-egress-app.yaml"
   lambda_source_filename     = "${path.module}/lambda.zip"
   dependency_layer_filename  ="${path.module}/dependencylayer.zip"
 }
@@ -35,13 +36,21 @@ resource "aws_s3_bucket_object" "lambda_code_dependency_archive" {
   etag   = filemd5(local.dependency_layer_filename)
 }
 
+resource "aws_s3_bucket_object" "cloudformation_template" {
+  bucket = aws_s3_bucket.lambda_source.bucket
+  key    = "${filemd5(local.cloudformation_template_filename)}.yaml"
+  source = local.cloudformation_template_filename
+  etag   = filemd5(local.cloudformation_template_filename)
+}
+
 resource "aws_cloudformation_stack" "thin_egress_app" {
   depends_on   = [
     aws_s3_bucket_object.lambda_source,
-    aws_s3_bucket_object.lambda_code_dependency_archive
+    aws_s3_bucket_object.lambda_code_dependency_archive,
+    aws_s3_bucket_object.cloudformation_template
   ]
   name         = var.stack_name
-  template_url = var.template_url
+  template_url = "https://s3.amazonaws.com/${aws_s3_bucket_object.lambda_source.bucket}/${aws_s3_bucket_object.cloudformation_template.key}"
   capabilities = ["CAPABILITY_NAMED_IAM"]
   parameters = {
     AuthBaseUrl                     = var.auth_base_url

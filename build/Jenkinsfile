@@ -67,16 +67,12 @@ pipeline {
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"
 
-        // Swap in BUILD#
-        sh "echo '>> Build Stamping....'"
-        sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
-
+        
       }
    }
     // Package code
     stage('Package Code') {
       steps {
-
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
@@ -93,17 +89,20 @@ pipeline {
         sh "echo '>> Build Stamping....'"
 
         sh "cd ${WORKSPACE}"
+                
+        // thin-egress-app.yaml
         sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./terraform/variables.tf'
+        sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
+        sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/" ./cloudformation/thin-egress-app.yaml'
         sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
 
         // Zip up terraform
         sh "echo '>> Building Terraform Zip....'"
         sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
         sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
-        sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf lambda.zip dependencylayer.zip"
+        sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
+        sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip dependencylayer.zip"
       }
    }
    // Push packages to AWS and deploy new version

@@ -9,7 +9,6 @@ from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
-from rain_api_core.session_util import get_session, delete_session
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
@@ -186,15 +185,12 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
-            # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
-        else:
-            log.warning('jwt cookie not found, falling back to old style')
-            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+            # We have a JWT cookie
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
 
     if user_profile:
-        if os.getenv('MATURITY', '') == 'DEV':
+        if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)

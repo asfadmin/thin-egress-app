@@ -38,13 +38,17 @@ def restore_bucket_vars():
     global public_buckets                                                              #pylint: disable=global-statement
     global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug(
-        'conf bucket: {}, bucket_map_file: {}, public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                                                         bucket_map_file,
-                                                                                                         public_buckets_file,
-                                                                                                         private_buckets_file))
+    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
+              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
+                                                                         bucket_map_file,
+                                                                         public_buckets_file,
+                                                                         private_buckets_file))
     if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, public buckets file: {}, private buckets file: {}'.format(conf_bucket, bucket_map_file, public_buckets_file, private_buckets_file))
+        log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
+                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
+                                                                            bucket_map_file,
+                                                                            public_buckets_file,
+                                                                            private_buckets_file))
         b_map = get_yaml_file(conf_bucket, bucket_map_file)
         log.debug('bucket map: {}'.format(b_map))
         if public_buckets_file:
@@ -134,11 +138,10 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
-        log.warning(
-            "bucket {0} is in region {1}, we are in region {2}! This is double egress in Proxy mode!".format(bucket,
-                                                                                                             bucket_region,
-                                                                                                             os.getenv(
-                                                                                                             'AWS_DEFAULT_REGION')))
+        log.warning("bucket {0} is in region {1}, we are in region {2}! " +
+                    "This is double egress in Proxy mode!".format(bucket,
+                                                                  bucket_region,
+                                                                  os.getenv('AWS_DEFAULT_REGION')))
 
     # now that we know where the bucket is, connect in THAT region
     params['config'] = bc_Config(**bcconfig)
@@ -164,7 +167,6 @@ def try_download_from_bucket(bucket, filename, user_profile):
         log.info("Using REDIRECT because no PROXY in egresslambda")
         return make_redriect(presigned_url, redirheaders, 303)
 
-
     except ClientError as e:
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
 
@@ -175,6 +177,14 @@ def try_download_from_bucket(bucket, filename, user_profile):
         template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
+
+
+def get_jwt_field(cookievar: dict, fieldname: str):
+    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievar:
+        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')]:
+            return cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')][fieldname]
+
+    return None
 
 
 @app.route('/')
@@ -244,17 +254,14 @@ def get_range_header_val():
 
 def get_data_dl_s3_client():
 
-    cookievars = get_cookie_vars(app.current_request.headers)
-    if cookievars:
-        user_id = cookievars['urs-user-id']
-    else:
-        user_id = None
+    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
+
     session = get_role_session(user_id=user_id)
     params = {}
-    BCCONFIG = {'user_agent': "Egress App for userid={0}".format(user_id)}
+    bcconfig = {'user_agent': "Egress App for userid={0}".format(user_id)}
     if os.getenv('S3_SIGNATURE_VERSION'):
-        BCCONFIG['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
-    params['config'] = bc_Config(**BCCONFIG)
+        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
+    params['config'] = bc_Config(**bcconfig)
     client = session.client('s3', **params)
     return client
 
@@ -278,7 +285,6 @@ def try_download_head(bucket, filename):
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
-    #return 'Finish this thing'
 
     response_headers = {'Content-Type': download['ContentType']}
     for header in download['ResponseMetadata']['HTTPHeaders']:
@@ -288,11 +294,7 @@ def try_download_head(bucket, filename):
         response_headers[name] = value
 
     # Try Redirecting to HEAD. There should be a better way.
-    cookievars = get_cookie_vars(app.current_request.headers)
-    if 'urs-user-id' in cookievars:
-        user_id = cookievars['urs-user-id']
-    else:
-        user_id = 'Unknown'
+    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
 
     # Generate URL
     creds = get_role_creds(user_id=user_id)
@@ -305,6 +307,7 @@ def try_download_head(bucket, filename):
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
     return make_redriect(presigned_url, {}, 303)
+
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
@@ -349,12 +352,12 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
         else:
-            log.warning('jwt cookie not found, falling back to old style')
-            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+            log.warning('jwt cookie not found')
+            # Not kicking user out just yet. We might be dealing with a public bucket
 
     # Check for public bucket
     if check_public_bucket(bucket, public_buckets, b_map):
@@ -363,7 +366,9 @@ def dynamic_url():
         return do_auth_and_return(app.current_request.context)
 
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, private_buckets, b_map)
+    private_check = check_private_bucket(bucket, private_buckets, b_map)  # TODO: Is an optimization attempt worth it
+                                                                          # if we're asking for a public file and we
+                                                                          # omit this check?
     log.debug('private check: {}'.format(private_check))
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     if new_user_profile and new_user_profile != user_profile:

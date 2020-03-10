@@ -51,7 +51,6 @@ Metadata:
         Label:
           default: Session Settings
         Parameters:
-          - SessionStore
           - SessionTTL
           - JwtAlgo
           - JwtKeySecretName
@@ -176,14 +175,6 @@ Parameters:
     Default: 168
     Description: "Time to live for auth session, in hours. 168 is a week."
 
-  SessionStore:
-    Type: String
-    AllowedValues:
-      - "DB"
-      - "S3"
-    Default: "DB"
-    Description: "DB for storing sessions in dynamoDB, S3 for storing sessions in S3."
-
   StageName:
     Type: String
     Default: 'API'
@@ -249,8 +240,6 @@ Parameters:
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
   ApiGatewayLogToCloudWatchIsSet: !Equals [ !Ref EnableApiGatewayLogToCloudWatch, "True" ]
-  DBSess: !Equals [ !Ref SessionStore, "DB" ]
-  S3Sess: !Equals [ !Ref SessionStore, "S3" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
@@ -280,79 +269,6 @@ Outputs:
     Condition: ApiGatewayLogToCloudWatchIsSet
 
 Resources:
-
-  EgressLambdaSessionDB:
-    Type: AWS::DynamoDB::Table
-    Condition: DBSess
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: 'id'
-          AttributeType: 'S'
-      BillingMode: 'PAY_PER_REQUEST'
-      KeySchema:
-        - AttributeName: 'id'
-          KeyType: 'HASH'
-      TableName: !Sub "${AWS::StackName}-egress-session-table"
-      TimeToLiveSpecification:
-        AttributeName: 'expires'
-        Enabled: true
-
-  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-s3-bucket.html
-  EgressLambdaSessionS3:
-    Type: "AWS::S3::Bucket"
-    Condition: S3Sess
-    Properties:
-      BucketName: !Sub "${AWS::StackName}-sessions"
-      LifecycleConfiguration:
-        Rules:
-          - ExpirationInDays: 30
-            Status: 'Enabled'
-
-  EgressLambdaSessionIamPolicyS3:
-    Type: AWS::IAM::Policy
-    Condition: S3Sess
-    DependsOn:
-      - EgressLambdaSessionS3
-      - EgressLambdaIamRole
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - s3:* # TODO: tighten this up
-            Resource: !Sub "arn:aws:s3:::${AWS::StackName}-sessions/*"
-      PolicyName: !Sub "${AWS::StackName}-EgressLambdaIamPolicyS3"
-      Roles:
-        - !Sub "${AWS::StackName}-EgressLambdaIamRole"
-
-  EgressLambdaSessionIamPolicyDb:
-    Type: AWS::IAM::Policy
-    Condition: DBSess
-    DependsOn:
-      - EgressLambdaSessionDB
-      - EgressLambdaIamRole
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:PutItem
-              - dynamodb:DescribeTable
-              - dynamodb:DeleteItem
-              - dynamodb:GetItem
-              - dynamodb:Query
-              - dynamodb:UpdateItem
-              - dynamodb:DescribeReservedCapacity
-              - dynamodb:ListTagsOfResource
-              - dynamodb:DescribeLimits
-            Resource: "*" # TODO: tighten this up. This was: !GetAtt EgressLambdaSessionDB.Arn, which doesn't work for whatever reason
-
-      PolicyName: !Sub "${AWS::StackName}-EgressLambdaIamPolicyDb"
-      Roles:
-        - !Sub "${AWS::StackName}-EgressLambdaIamRole"
 
   DownloadRoleInRegion:
     Type: AWS::IAM::Role
@@ -517,10 +433,7 @@ Resources:
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix
-          SESSION_TABLE: !Sub "${AWS::StackName}-egress-session-table"
-          SESSION_BUCKET: !Sub "${AWS::StackName}-sessions"
           SESSION_TTL_HRS: !Ref SessionTTL
-          SESSION_STORE: !Ref SessionStore
           STAGE_NAME: !Ref StageName
           CONFIG_BUCKET: !Ref ConfigBucket
           BUCKET_MAP_FILE: !Ref BucketMapFile

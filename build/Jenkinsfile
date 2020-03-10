@@ -67,7 +67,7 @@ pipeline {
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"
 
-        
+
       }
    }
     // Package code
@@ -76,7 +76,7 @@ pipeline {
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
-        
+
         sh """ cd ${WORKSPACE}/lambda  && \
                sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
@@ -89,7 +89,7 @@ pipeline {
         sh "echo '>> Build Stamping....'"
 
         sh "cd ${WORKSPACE}"
-                
+
         // thin-egress-app.yaml
         sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
@@ -136,7 +136,6 @@ pipeline {
                        DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
                        DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
                        HtmlTemplateDir= \
-                       SessionStore=S3 \
                        StageName=API \
                        Loglevel=DEBUG \
                        Maturity=${env.MATURITY}\

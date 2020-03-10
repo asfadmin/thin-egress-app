@@ -8,8 +8,7 @@ from urllib.parse import urlparse, quote_plus
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
-from rain_api_core.session_util import get_session, delete_session
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
@@ -70,9 +69,9 @@ def do_auth_and_return(ctxt):
         here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
     log.info("here will be {0}".format(here))
     redirect_here = quote_plus(here)
-    URS_URL = get_urs_url(ctxt, redirect_here)
-    log.info("Redirecting for auth: {0}".format(URS_URL))
-    return Response(body='', status_code=302, headers={'Location': URS_URL})
+    urs_url = get_urs_url(ctxt, redirect_here)
+    log.info("Redirecting for auth: {0}".format(urs_url))
+    return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
 def make_redriect(to_url, headers=None, status_code=301):
@@ -84,7 +83,7 @@ def make_redriect(to_url, headers=None, status_code=301):
     return Response(body='', headers=headers, status_code=status_code)
 
 
-def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_file:str='root.html'):
+def make_html_response(t_vars: dict, hdrs: dict, status_code: int=200, template_file: str='root.html'):
     template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
     template_vars.update(t_vars)
 
@@ -111,14 +110,14 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
     params = {}
 
-    BCCONFIG = {"user_agent": "RAIN Egress App for userid={0}".format(user_id),
+    bcconfig = {"user_agent": "RAIN Egress App for userid={0}".format(user_id),
                 "s3": {"addressing_style": "path"},
                 "connect_timeout": 600,
                 "read_timeout": 600,
                 "retries": {"max_attempts": 10}}
 
     if os.getenv('S3_SIGNATURE_VERSION'):
-        BCCONFIG['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
+        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
 
     # Figure out bucket region
     try:
@@ -139,10 +138,10 @@ def try_download_from_bucket(bucket, filename, user_profile):
             "bucket {0} is in region {1}, we are in region {2}! This is double egress in Proxy mode!".format(bucket,
                                                                                                              bucket_region,
                                                                                                              os.getenv(
-                                                                                                                 'AWS_DEFAULT_REGION')))
+                                                                                                             'AWS_DEFAULT_REGION')))
 
     # now that we know where the bucket is, connect in THAT region
-    params['config'] = bc_Config(**BCCONFIG)
+    params['config'] = bc_Config(**bcconfig)
     client = session.client('s3', bucket_region, **params)
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
@@ -186,15 +185,12 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
-            # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
-        else:
-            log.warning('jwt cookie not found, falling back to old style')
-            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+            # We have a JWT cookie
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
 
     if user_profile:
-        if os.getenv('MATURITY', '') == 'DEV':
+        if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
@@ -209,10 +205,8 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if 'urs-user-id' in cookievars and 'urs-access-token' in cookievars:
-        user_id = cookievars['urs-user-id']
-        urs_access_token = cookievars['urs-access-token']
-        delete_session(user_id, urs_access_token)
+    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+
         template_vars['contentstring'] = 'You are logged out.'
     else:
         template_vars['contentstring'] = 'No active login found.'
@@ -220,7 +214,8 @@ def logout():
     headers = {
         'Content-Type': 'text/html',
     }
-    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
+
+    headers.update(make_set_cookie_headers_jwt({}, 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 

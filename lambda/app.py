@@ -7,7 +7,7 @@ from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
-from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
+from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
@@ -22,6 +22,7 @@ public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
 private_buckets = None
+s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 header_map = {'date':           'Date',
@@ -49,15 +50,15 @@ def restore_bucket_vars():
                                                                             bucket_map_file,
                                                                             public_buckets_file,
                                                                             private_buckets_file))
-        b_map = get_yaml_file(conf_bucket, bucket_map_file)
+        b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
         if public_buckets_file:
             log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file)
+            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
         else:
             public_buckets = {}
         if private_buckets_file:
-            private_buckets = get_yaml_file(conf_bucket, private_buckets_file)
+            private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
         else:
             private_buckets = {}
     else:

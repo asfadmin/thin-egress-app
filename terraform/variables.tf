@@ -134,12 +134,6 @@ variable "public_buckets_file" {
   description = "Path and file of public buckets file's location in the ConfigBucket."
 }
 
-variable "session_store" {
-  type        = string
-  default     = null
-  description = "DB for storing sessions in dynamoDB, S3 for storing sessions in S3."
-}
-
 variable "session_ttl" {
   type        = number
   default     = null

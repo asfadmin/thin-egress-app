@@ -367,7 +367,7 @@ def dynamic_url():
         return do_auth_and_return(app.current_request.context)
 
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, private_buckets, b_map)  # TODO: Is an optimization attempt worth it
+    private_check = check_private_bucket(bucket, private_buckets, b_map)  # NOTE: Is an optimization attempt worth it
                                                                           # if we're asking for a public file and we
                                                                           # omit this check?
     log.debug('private check: {}'.format(private_check))

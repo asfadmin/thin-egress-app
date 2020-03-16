@@ -7,7 +7,7 @@ from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
-from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
+from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
@@ -22,6 +22,7 @@ public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
 private_buckets = None
+s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 header_map = {'date':           'Date',
@@ -49,15 +50,15 @@ def restore_bucket_vars():
                                                                             bucket_map_file,
                                                                             public_buckets_file,
                                                                             private_buckets_file))
-        b_map = get_yaml_file(conf_bucket, bucket_map_file)
+        b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
         if public_buckets_file:
             log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file)
+            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
         else:
             public_buckets = {}
         if private_buckets_file:
-            private_buckets = get_yaml_file(conf_bucket, private_buckets_file)
+            private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
         else:
             private_buckets = {}
     else:
@@ -97,6 +98,34 @@ def make_html_response(t_vars: dict, hdrs: dict, status_code: int=200, template_
     return Response(body=get_html_body(template_vars, template_file), status_code=status_code, headers=headers)
 
 
+def get_bcconfig(user_id: str) -> dict:
+    bcconfig = {"user_agent": "Thin Egress App for userid={0}".format(user_id),
+                "s3": {"addressing_style": "path"},
+                "connect_timeout": 600,
+                "read_timeout": 600,
+                "retries": {"max_attempts": 10}}
+
+    if os.getenv('S3_SIGNATURE_VERSION'):
+        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
+
+    return bcconfig
+
+
+def get_bucket_region(session, bucketname) ->str:
+    # Figure out bucket region
+    params = {}
+    try:
+        bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
+        bucket_region = 'us-east-1' if not bucket_region else bucket_region
+        log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
+    except ClientError as e:
+        # We hit here if the download role cannot access a bucket, or if it doesn't exist
+        log.error("Coud not access download bucket {0}: {1}".format(bucketname, e))
+        raise
+
+    return bucket_region
+
+
 def try_download_from_bucket(bucket, filename, user_profile):
 
     # Attempt to pull userid from profile
@@ -110,28 +139,13 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
     creds = get_role_creds(user_id, is_in_region)
+
     session = get_role_session(creds=creds, user_id=user_id)
 
-    params = {}
-
-    bcconfig = {"user_agent": "RAIN Egress App for userid={0}".format(user_id),
-                "s3": {"addressing_style": "path"},
-                "connect_timeout": 600,
-                "read_timeout": 600,
-                "retries": {"max_attempts": 10}}
-
-    if os.getenv('S3_SIGNATURE_VERSION'):
-        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
-
-    # Figure out bucket region
     try:
-        bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucket)['LocationConstraint']
-        bucket_region = 'us-east-1' if not bucket_region else bucket_region
-        log.debug("bucket {0} is in region {1}".format(bucket, bucket_region))
+        bucket_region = get_bucket_region(session, bucket)
     except ClientError as e:
-        # We hit here if the download role cannot access a bucket, or if it doesn't exist
-        log.error("Coud not access download bucket {0}: {1}".format(bucket, e))
-
+        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 500, 'error.html')
@@ -142,9 +156,9 @@ def try_download_from_bucket(bucket, filename, user_profile):
                     "This is double egress in Proxy mode!".format(bucket,
                                                                   bucket_region,
                                                                   os.getenv('AWS_DEFAULT_REGION')))
-
+    params = {}
     # now that we know where the bucket is, connect in THAT region
-    params['config'] = bc_Config(**bcconfig)
+    params['config'] = bc_Config(**get_bcconfig(user_id))
     client = session.client('s3', bucket_region, **params)
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
@@ -258,10 +272,8 @@ def get_data_dl_s3_client():
 
     session = get_role_session(user_id=user_id)
     params = {}
-    bcconfig = {'user_agent': "Egress App for userid={0}".format(user_id)}
-    if os.getenv('S3_SIGNATURE_VERSION'):
-        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
-    params['config'] = bc_Config(**bcconfig)
+
+    params['config'] = bc_Config(**get_bcconfig(user_id))
     client = session.client('s3', **params)
     return client
 
@@ -272,7 +284,6 @@ def try_download_head(bucket, filename):
     # Check for range request
     range_header = get_range_header_val()
     try:
-
         if not range_header:
             download = client.get_object(Bucket=bucket, Key=filename)
         else:
@@ -298,7 +309,6 @@ def try_download_head(bucket, filename):
 
     # Generate URL
     creds = get_role_creds(user_id=user_id)
-    client = get_data_dl_s3_client()
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')

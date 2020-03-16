@@ -144,7 +144,8 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
     try:
         bucket_region = get_bucket_region(session, bucket)
-    except ClientError:
+    except ClientError as e:
+        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 500, 'error.html')

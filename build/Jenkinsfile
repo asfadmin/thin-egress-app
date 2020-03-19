@@ -20,7 +20,6 @@ pipeline {
     DOMAIN_NAME="${DOMAIN_NAME}"
     COOKIE_DOMAIN=".asf.alaska.edu"
     LAMBDA_TIMEOUT=6
-    CODE_BUCKET_SUFFIX=""
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -112,14 +111,14 @@ pipeline {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
 
           // Lambda will fail if code gets put in a different region
-          sh 'if [ "${AWS_DEFAULT_REGION}" == "us-west-2" ]; then CODE_BUCKET_SUFFIX="-usw2"; fi'
+          sh 'if [ "${AWS_DEFAULT_REGION}" == "us-west-2" ]; then CODE_BUCKET_SUFFIX="-usw2"; else CODE_BUCKET_SUFFIX=""; fi'
 
           // Push the code up to private bucket
           sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
           sh "echo '>> Pushing code to ASF Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
+          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
+          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
 
           // Clarify in description that this stack is deployed by Jenkins
@@ -153,7 +152,7 @@ pipeline {
                        CookieDomain=${COOKIE_DOMAIN} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-                       LambdaCodeS3Bucket=${CODE_BUCKET} \
+                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
                        LambdaTimeout=${LAMBDA_TIMEOUT} \
                        JwtAlgo=${JWTALGO} \
                        JwtKeySecretName=${JWTKEYSECRETNAME} \
@@ -187,7 +186,7 @@ pipeline {
                        CookieDomain=${COOKIE_DOMAIN} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-                       LambdaCodeS3Bucket=${CODE_BUCKET} \
+                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
                        LambdaTimeout=${LAMBDA_TIMEOUT} \
                        JwtAlgo=${JWTALGO} \
                        JwtKeySecretName=${JWTKEYSECRETNAME} \

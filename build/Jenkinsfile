@@ -20,7 +20,7 @@ pipeline {
     DOMAIN_NAME="${DOMAIN_NAME}"
     COOKIE_DOMAIN=".asf.alaska.edu"
     LAMBDA_TIMEOUT=6
-    CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then echo "-usw2"; else echo ""; fi', returnStdout: true)}"""
+    CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then echo ".usw2"; else echo ""; fi', returnStdout: true)}"""
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -111,9 +111,6 @@ pipeline {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
 
-
-          // Lambda will fail if code gets put in a different region
-          //sh 'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then export CODE_BUCKET_SUFFIX="-usw2"; else export CODE_BUCKET_SUFFIX=""; fi'
 
           // Push the code up to private bucket
           sh "echo '>> Pushing dependencylayer to ASF Bucket'"

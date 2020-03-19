@@ -112,7 +112,7 @@ pipeline {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
 
           // Lambda will fail if code gets put in a different region
-          sh 'if [ ${AWS_DEFAULT_REGION} != "us-west-2" ]; then CODE_BUCKET_SUFFIX="-usw2" fi'
+          sh 'if [ "${AWS_DEFAULT_REGION}" == "us-west-2" ]; then CODE_BUCKET_SUFFIX="-usw2"; fi'
 
           // Push the code up to private bucket
           sh "echo '>> Pushing dependencylayer to ASF Bucket'"

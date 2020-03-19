@@ -20,6 +20,7 @@ pipeline {
     DOMAIN_NAME="${DOMAIN_NAME}"
     COOKIE_DOMAIN=".asf.alaska.edu"
     LAMBDA_TIMEOUT=6
+    CODE_BUCKET_SUFFIX=""
   }
 
   // Build on a slave with docker (for pre-req?)

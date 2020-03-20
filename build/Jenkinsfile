@@ -17,7 +17,6 @@ pipeline {
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
-    COOKIE_DOMAIN=".asf.alaska.edu"
     LAMBDA_TIMEOUT=6
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
   }
@@ -147,7 +146,7 @@ pipeline {
                        EnableApiGatewayLogToCloudWatch="False" \
                        DomainName=${DOMAIN_NAME-""} \
                        DomainCertArn=${DOMAIN_CERT_ARN-""}  \
-                       CookieDomain=${COOKIE_DOMAIN} \
+                       CookieDomain=${COOKIE_DOMAIN-""} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
                        LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \

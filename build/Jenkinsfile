@@ -17,7 +17,7 @@ pipeline {
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
-    DOMAIN_NAME="${DOMAIN_NAME}"
+    DOMAIN_NAME="""${sh(script:'if [ -z $DOMAIN_NAME ]; then printf %s ""; else printf %s "${DOMAIN_NAME}"; fi', returnStdout: true)}"""
     COOKIE_DOMAIN=".asf.alaska.edu"
     LAMBDA_TIMEOUT=6
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""

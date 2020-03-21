@@ -4,6 +4,8 @@
 #API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)
 #if [ -z $API ];  then echo "Could not figure out API Root URL"; exit 1; fi
 
+#TODO: Put logic for switching between SAME and SCND stackname.
+STACKNAME=${STACKNAME_SAME}
 aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text --region ${AWS_DEFAULT_REGION}
 
 if [ -z $DOMAIN_NAME ];  then API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text --region ${AWS_DEFAULT_REGION}); APIROOT="https://${API}.execute-api.us-east-1.amazonaws.com/API"; else APIROOT="https://${DOMAIN_NAME}"; fi

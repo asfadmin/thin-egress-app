@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "starting looking for api gateways"
-
+STACKNAME=${STACKNAME_SAME}
 echo "domainname: ${DOMAIN_NAME}, aws region: ${AWS_DEFAULT_REGION}, stackname: ${STACKNAME}"
 
 aws apigateway get-rest-apis --output=text --region ${AWS_DEFAULT_REGION}

@@ -48,10 +48,6 @@ pipeline {
     // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
-        // DEV block, to save time:
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-            sh("bash ./build/dev.sh")
-        }
         // Since we can't build a working pycrypto in our Jenkins environment,
         // we'll offload that to a amazonlinux:2 container
 

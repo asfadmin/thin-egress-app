@@ -207,6 +207,8 @@ And if we have a data bucket prefix of `prfx-d-` and our data bucket list looks 
 - prfx-d-pb-pt1
 - prfx-d-pa-pt2
 - prfx-d-pb-pt2
+- prfx-d-private-x
+- prfx-d-private-y
 
 ```
 
@@ -225,7 +227,14 @@ MAP:
     PLATFORM_B:         imgs
     
 PUBLIC_BUCKETS:
-  - imgs 
+  imgs: 'BROWSE IMAGERY'
+
+PRIVATE_BUCKETS:
+  private-x:
+  - urs_group_name_0
+  private-y:
+  - urs_group_name_1
+
 ```
 
 ### HTML templates 
@@ -270,23 +279,23 @@ Child template that displays profile info. Only used for debugging in dev.
 ### Cloudformation parameters
 It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
-### Deployiny the app in NGAP
+### Deploying the app in NGAP
 
 To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` section of the CloudFormation Template.
 
 Use the following bash script to determine appropriate compliance paramaters.
 
 ```bash
-export AWSENV='--profile=cumulus --region=us-east-1'
+export AWS_REGION='us-west-2'
+export AWS_PROFILE='default'
+export AWSENV="--profile=${AWS_PROFILE} --region=${AWS_REGION}"
 export VPCID=$(aws $AWSENV ec2 describe-vpcs --query "Vpcs[*].VpcId" --filters "Name=tag:Name,Values=Application VPC" --output text)
 export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query "Subnets[?VpcId=='$VPCID'].{ID:SubnetId}[0]" --filters "Name=tag:Name,Values=Private*" --output=text)
 export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query "SecurityGroups[?VpcId=='$VPCID'].{ID:GroupId}" --filters "Name=tag:Name,Values=Application Default*" --output=text)
 echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;"
-```
 
-Its also important to be aware that if an API Gateway VPC Endpoint will need to setup prior to deployment. You can check to see if your account has the appropriate VPCE by runing this command:
 
-```
+# Its also important to be aware that if an API Gateway VPC Endpoint will need to setup prior to deployment. You can check to see if your account has the appropriate VPCE by runing this command:
 aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' && ServiceName=='com.amazonaws.us-east-1.execute-api')].{ID:VpcEndpointId}" --output=text
 ```
 
@@ -297,30 +306,45 @@ The easiest way to deploy a Thin Egress App is by using one of the YAML files in
 
 ```bash
 # Set some vars
+CF_TEMPLATE_FILE=/absolute/path/to/tea-cloudformation-build.XX.yaml
+
 # See the Cloudformation parameters section above for a description of these params.
 STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
                   # because the CF template may create buckets using this name.
+AWS_REGION=us-west-2 # Or another region if desired.
+AWS_PROFILE=default  # Or whichever profile gives you the write access necessary.
 BUCKETMAP_FILENAME=my_bucketmap.yaml
 BUCKET_PREFIX=asf-tea-
 CFG_BUCKETNAME=asf-tea-cfg
-COOKIE_DOMAIN=.asf.alaska.edu
+
+# Set these three to empty string if no domain is to be used. 
+DOMAIN_NAME=a-domain.something.tld 
+COOKIE_DOMAIN=.something.tld
 DOMAINCERTARN=arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-0000-000000000000
-DOMAIN_NAME=filedownloads.asf.alaska.edu
+
+# Use these if your data buckets are in a different region than 
+# your TEA stack. Set to empty string otherwise
 DOWNLOAD_ROLE_ARN=arn:aws:iam::000000000000:role/AccessToFiles
-DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion
-HTML_TEMPLATE_DIR=html # Omit if using default templates.
+DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion 
+
+# Set to empty string if using default templates.
+HTML_TEMPLATE_DIR=html 
+
 JWTALGO=RS256
 JWTKEYSECRETNAME=jwt_secret_for_tea
-CODE_BUCKET=code-bucket # Omit this if using build-specific YAML from ASF's public code bucket
-CODE_DIR=code-dir
+
+# Omit CODE_BUCKET if using build-specific YAML from ASF's public code bucket
+# Must be in same region as this stack.
+CODE_BUCKET=asf.public.code
+CODE_DIR=thin-egress-app
 DEPENDENCYLAYERFILENAME=tea-dependencylayer.zip
 CODE_ARCHIVE_FILENAME=tea-code.zip
 URS_CREDS_SECRET_NAME=urs_creds_for_tea
 
 # Deploy the stack
-aws cloudformation deploy --profile=default --region=us-east-1 \
+aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
   --stack-name ${STACK_NAME} \
-  --template-file ./egress-lambda.yaml \
+  --template-file ${CF_TEMPLATE_FILE} \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
         AuthBaseUrl=https://urs.earthdata.nasa.gov \
@@ -332,33 +356,32 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
         DomainName=${DOMAIN_NAME} \
         DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
         DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
-        EnableApiGatewayLogToCloudWatch=True \ # Valid values are "True" and "False" (default)
+        EnableApiGatewayLogToCloudWatch="False" \ 
         HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
         JwtAlgo=${JWTALGO} \
         JwtKeySecretName=${JWTKEYSECRETNAME} \
         LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-        LambdaCodeS3Bucket=${CODE_BUCKET} \ 
+        LambdaCodeS3Bucket=${CODE_BUCKET} \
         LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
         LambdaTimeout=6 \
-        Loglevel=DEBUG \
-        Maturity=DEV
+        Loglevel=INFO \
+        Maturity=DEV \
         PermissionsBoundaryName= \
-        PrivateBucketsFile=private_buckets_TEA.yaml \
+        PrivateBucketsFile= \
+        PublicBucketsFile= \
         PrivateVPC= \
-        PublicBucketsFile=public_buckets_TEA.yaml \
-        SessionStore=S3 \
         SessionTTL=168 \
         StageName=API \
         URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-        UseReverseBucketMap="False" # Valid values are "True" and "False"
+        UseReverseBucketMap="False" 
         VPCSecurityGroupIDs= \
-        VPCSubnetIDs= \
+        VPCSubnetIDs= 
 
 ```
 ### Post-deploy action
 After the Cloudformation has been deployed, we need to add the new endpoint to the URS Redirect URI list. Get the necessary value like so:
 
 ```bash
-aws cloudformation --region=us-east-1 describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
+aws cloudformation --region=${AWS_REGION} --profile=${AWS_PROFILE} describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
 ```
 Add it here: `https://urs.earthdata.nasa.gov/apps/<NAME OF YOUR URS APP>/redirect_uris`

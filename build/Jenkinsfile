@@ -118,13 +118,14 @@ pipeline {
           sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
 
-          // Clarify in description that this stack is deployed by Jenkins
-          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
+          // Clarify in description that this stack is deployed by Jenkins,
+          sh 'cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml'
+          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app-deployed.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
           sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
                      --stack-name ${STACKNAME_SAME} \
-                     --template-file cloudformation/thin-egress-app.yaml \
+                     --template-file cloudformation/thin-egress-app-deployed.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
                      --parameter-overrides \
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
@@ -158,7 +159,7 @@ pipeline {
           // This will be the stack for downloading from 2nd account.
           /*sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
                      --stack-name ${STACKNAME_SCND} \
-                     --template-file cloudformation/thin-egress-app.yaml \
+                     --template-file cloudformation/thin-egress-app-deployed.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
                      --parameter-overrides \
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \

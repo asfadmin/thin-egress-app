@@ -29,7 +29,7 @@ Optional:
 * A domain name and SSL cert for the service.
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets. One will be created if not provided.
 * An IAM Role that allows for only in-region access the lambda can assume to read the files in the data buckets. One will be created if not provided.
-
+* An IAM Role that allows the API gateway to write to CloudWatch, if `EnableApiGatewayLogToCloudWatch` is set to `True`. 
 
 ### Getting the software
 
@@ -121,14 +121,14 @@ Its payload looks something like this:
   "urs-access-token": "<A URS access token string>",
   "urs-groups": [
     {
-      "app_uid": "<UID of URS app>",
-      "client_id": "<Client ID string>",
-      "name": "<Name of group>"
+      "app_uid": "<UID of URS app #1>",
+      "client_id": "<Client ID string #1>",
+      "name": "<Name of group #1>"
     },
     {
-      "app_uid": "<UID of URS app>",
-      "client_id": "<Client ID string>",
-      "name": "<Name of group>"
+      "app_uid": "<UID of URS app #2>",
+      "client_id": "<Client ID string #2>",
+      "name": "<Name of group #2>"
     }
   ],
   "iat": 1565294120,
@@ -186,7 +186,7 @@ aws secretsmanager create-secret --name jwt_secret_for_tea \
 ```
 
 ##### Option 2: Using bash script
-You can create en encoded b64 key pair by running the provided setup_jwt_cookie.sh script :
+You can create en encoded b64 key pair by running the provided [setup_jwt_cookie.sh](https://github.com/asfadmin/thin-egress-app/blob/devel/setup_jwt_cookie.sh) script :
 ```bash
 profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 ```
@@ -313,6 +313,7 @@ STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower ca
                   # because the CF template may create buckets using this name.
 AWS_REGION=us-west-2 # Or another region if desired.
 AWS_PROFILE=default  # Or whichever profile gives you the write access necessary.
+
 BUCKETMAP_FILENAME=my_bucketmap.yaml
 BUCKET_PREFIX=asf-tea-
 CFG_BUCKETNAME=asf-tea-cfg
@@ -327,14 +328,14 @@ DOMAINCERTARN=arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-
 DOWNLOAD_ROLE_ARN=arn:aws:iam::000000000000:role/AccessToFiles
 DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion 
 
-# Set to empty string if using default templates.
+# If using the generic, default templates included with the Lambda, set to empty string. 
 HTML_TEMPLATE_DIR=html 
 
 JWTALGO=RS256
 JWTKEYSECRETNAME=jwt_secret_for_tea
 
+# CODE_BUCKET must be in same region as this stack.
 # Omit CODE_BUCKET if using build-specific YAML from ASF's public code bucket
-# Must be in same region as this stack.
 CODE_BUCKET=asf.public.code
 CODE_DIR=thin-egress-app
 DEPENDENCYLAYERFILENAME=tea-dependencylayer.zip
@@ -385,3 +386,19 @@ After the Cloudformation has been deployed, we need to add the new endpoint to t
 aws cloudformation --region=${AWS_REGION} --profile=${AWS_PROFILE} describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
 ```
 Add it here: `https://urs.earthdata.nasa.gov/apps/<NAME OF YOUR URS APP>/redirect_uris`
+
+## Troubleshooting.
+Something went wrong. Here are some solutions:
+
+### Deploy failures: 
+
+#### Error message: 
+> CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
+
+#### Solution:
+
+`EnableApiGatewayLogToCloudWatch` is set to `True`. If you don't need API Gateway logging to cloudwatch, set to `False`. If you do, you must create a role with write access to Cloudwatch Logs and add its ARN here: https://console.aws.amazon.com/apigateway/home?region=<REGION>#/settings
+
+#### Error message: 
+
+#### Solution:

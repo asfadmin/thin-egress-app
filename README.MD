@@ -1,4 +1,5 @@
 # TEA (Thin Egress App)
+![TEA](https://github.com/asfadmin/thin-egress-app/blob/bb.img/tea.png)
 ## About
 The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration. It provides a lightweight egress solution for when you don't need to throttle or cut off egress.
 

@@ -234,7 +234,7 @@ Parameters:
     AllowedValues:
       - "False"
       - "True"
-    Description: 'Optional flag to enable (true) Api Gateway logging to CloudWatch.'
+    Description: 'Optional flag to enable (True) Api Gateway logging to CloudWatch. If "True", you must add an ARN for a role with write access to CloudWatch Logs in your account here: https://console.aws.amazon.com/apigateway/home?region=[REGION]#/settings'
 
 
 Conditions:

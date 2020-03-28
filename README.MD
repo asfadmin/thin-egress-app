@@ -35,8 +35,13 @@ Optional:
 ### Getting the software
 
 #### Option 1: Using pre-packaged lambda code
+Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want and follow the instructions below depending which region you're deploying to.
 
-Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
+##### Option 1a: You are deploying in us-east-1:
+When deploying, use the default `LambdaCodeDependencyArchive`, `LambdaCodeS3Bucket`, and `LambdaCodeS3Key` values.
+
+##### Option 1b: You are deploying outside of us-east-1:
+If you are deploying in another region, you must upload the lambda and dependency layer zip files to a bucket in your region and make sure the `LambdaCodeDependencyArchive`, `LambdaCodeS3Bucket`, and `LambdaCodeS3Key` values point to your zip files.
 
 
 #### Option 2: Packaging lambda code yourself

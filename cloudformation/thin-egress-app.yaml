@@ -206,12 +206,12 @@ Parameters:
   PublicBucketsFile:
     Type: String
     Default: ''
-    Description: "Path and file of public buckets file's location in the ConfigBucket."
+    Description: "Deprecated, will be removed in a near-future version of TEA. Path and file of public buckets file's location in the ConfigBucket."
 
   PrivateBucketsFile:
     Type: String
     Default: ''
-    Description: "Path and file of private buckets file's location in the ConfigBucket."
+    Description: "Deprecated, will be removed in a near-future version of TEA. Path and file of private buckets file's location in the ConfigBucket."
 
   DownloadRoleArn:
     Type: String

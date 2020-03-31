@@ -21,9 +21,9 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
   * These need not be in the same account as the egress app.
   * It would help if there were some data in them.
 * A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
-  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
+  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`. This is described in more detail below.
 * A secret in the AWS Secrets manager for the JWT keys:
-  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key.
+  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key. This is described in more detail below.
 
 
 Optional:
@@ -49,7 +49,7 @@ If you are deploying in another region, you must upload the lambda and dependenc
 If you prefer to roll your own zip for the lambda code:
 
 #### Dependency Layer
-We've found that the if the dependency layer isn't built in an `amazonlinux` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+We've found that the if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
 ```bash
 
 # Make up a filename for code archive:
@@ -105,47 +105,10 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
 
-### Cookies / JWT
-
-TEA now uses JWT cookies. 
-#### Cookies
-When logging in, rain-api-core sets a few cookies:
-
-##### urs-user-id
-This contains the logged in user's URS user ID. This cookie will be deprecated soon, please use the value in the JWT cookie.
-
-##### urs-access-token 
-This contains the logged in user's URS access token. This cookie will be deprecated soon, please use the value in the JWT cookie.
-
-##### JWT cookie
-The JWT cookie's default name is `asf-urs` It contains various information about the logged in user. New development should use this cookie.
-
-Its payload looks something like this:
-```json
-{
-  "urs-user-id": "<User's URS ID>",
-  "urs-access-token": "<A URS access token string>",
-  "urs-groups": [
-    {
-      "app_uid": "<UID of URS app #1>",
-      "client_id": "<Client ID string #1>",
-      "name": "<Name of group #1>"
-    },
-    {
-      "app_uid": "<UID of URS app #2>",
-      "client_id": "<Client ID string #2>",
-      "name": "<Name of group #2>"
-    }
-  ],
-  "iat": 1565294120,
-  "exp": 1565299000
-}
-
-```
 
 ### AWS Secrets
 
-### Setting up the URS client secrets:
+#### Setting up the URS client secrets:
 `UrsId` can be found on your appication's URS home page as `Client ID`. 
 
 `UrsAuth` is the `Client ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
@@ -242,6 +205,8 @@ PRIVATE_BUCKETS:
   - urs_group_name_1
 
 ```
+### Config bucket
+You will need a bucket for config and optionally the html templates. This should be in the same region as the stack.
 
 ### HTML templates 
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html templates.
@@ -285,7 +250,7 @@ Child template that displays profile info. Only used for debugging in dev.
 ### Cloudformation parameters
 It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
-### Deploying the app in NGAP
+### Deploying the app in NGAP (option)
 
 To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` section of the CloudFormation Template.
 
@@ -305,10 +270,10 @@ echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNE
 aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' && ServiceName=='com.amazonaws.us-east-1.execute-api')].{ID:VpcEndpointId}" --output=text
 ```
 
-Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value above. If you get a return value like `vpce-0123456789abcdef0`, you're good to go. 
+If you get a return value like `vpce-0123456789abcdef0`, you're good to go, proceed to the "Deploying the app" section below. 
 
 ### Deploying the app
-The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.
+The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code. Some of the vars set below duplicate those in the NGAP procedure above, be sure to not overwrite the correct values if you're cutting and pasting from here.
 
 ```bash
 # Set some vars
@@ -318,7 +283,7 @@ CF_TEMPLATE_FILE=/absolute/path/to/tea-cloudformation-build.XX.yaml
 STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
                   # because the CF template may create buckets using this name.
 AWS_REGION=us-west-2 # Or another region if desired.
-AWS_PROFILE=default  # Or whichever profile gives you the write access necessary.
+AWS_PROFILE=default  # Or whichever aws cli profile gives you the write access necessary.
 
 BUCKETMAP_FILENAME=my_bucketmap.yaml
 BUCKET_PREFIX=asf-tea-
@@ -388,10 +353,45 @@ aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
 ### Post-deploy action
 After the Cloudformation has been deployed, we need to add the new endpoint to the URS Redirect URI list. Get the necessary value like so:
 
-```bash
-aws cloudformation --region=${AWS_REGION} --profile=${AWS_PROFILE} describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
-```
+
 Add it here: `https://urs.earthdata.nasa.gov/apps/<NAME OF YOUR URS APP>/redirect_uris`
+
+Now you can go to the API Endpoint and test login. API endpoint can be retrieved with this command:
+```bash
+aws cloudformation --region=${AWS_REGION} --profile=${AWS_PROFILE} describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`ExternalEndpoint`].OutputValue' --output text
+```
+
+
+
+## Cookies / JWT
+
+TEA now uses JWT cookies. 
+
+#### JWT cookie
+The JWT cookie's default name is `asf-urs` It contains various information about the logged in user.
+
+Its payload looks something like this:
+```json
+{
+  "urs-user-id": "<User's URS ID>",
+  "urs-access-token": "<A URS access token string>",
+  "urs-groups": [
+    {
+      "app_uid": "<UID of URS app #1>",
+      "client_id": "<Client ID string #1>",
+      "name": "<Name of group #1>"
+    },
+    {
+      "app_uid": "<UID of URS app #2>",
+      "client_id": "<Client ID string #2>",
+      "name": "<Name of group #2>"
+    }
+  ],
+  "iat": 1565294120,
+  "exp": 1565299000
+}
+
+```
 
 ## Troubleshooting.
 Something went wrong. Here are some solutions:
@@ -399,6 +399,7 @@ Something went wrong. Here are some solutions:
 ### Deploy failures: 
 
 #### Error message: 
+If you see an error message in the Cloudformation Events like this: 
 > CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
 
 #### Solution:

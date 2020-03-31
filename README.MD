@@ -399,6 +399,7 @@ Something went wrong. Here are some solutions:
 ### Deploy failures: 
 
 #### Error message: 
+If you see an error message in the Cloudformation Events like this: 
 > CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
 
 #### Solution:

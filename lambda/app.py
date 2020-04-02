@@ -7,9 +7,8 @@ from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
-from rain_api_core.aws_util import get_yaml_file, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers
-from rain_api_core.session_util import get_session, delete_session
+from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
 from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
@@ -23,6 +22,7 @@ public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
 private_buckets = None
+s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 header_map = {'date':           'Date',
@@ -39,22 +39,26 @@ def restore_bucket_vars():
     global public_buckets                                                              #pylint: disable=global-statement
     global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug(
-        'conf bucket: {}, bucket_map_file: {}, public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                                                         bucket_map_file,
-                                                                                                         public_buckets_file,
-                                                                                                         private_buckets_file))
+    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
+              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
+                                                                         bucket_map_file,
+                                                                         public_buckets_file,
+                                                                         private_buckets_file))
     if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, public buckets file: {}, private buckets file: {}'.format(conf_bucket, bucket_map_file, public_buckets_file, private_buckets_file))
-        b_map = get_yaml_file(conf_bucket, bucket_map_file)
+        log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
+                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
+                                                                            bucket_map_file,
+                                                                            public_buckets_file,
+                                                                            private_buckets_file))
+        b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
         if public_buckets_file:
             log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file)
+            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
         else:
             public_buckets = {}
         if private_buckets_file:
-            private_buckets = get_yaml_file(conf_bucket, private_buckets_file)
+            private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
         else:
             private_buckets = {}
     else:
@@ -70,9 +74,9 @@ def do_auth_and_return(ctxt):
         here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
     log.info("here will be {0}".format(here))
     redirect_here = quote_plus(here)
-    URS_URL = get_urs_url(ctxt, redirect_here)
-    log.info("Redirecting for auth: {0}".format(URS_URL))
-    return Response(body='', status_code=302, headers={'Location': URS_URL})
+    urs_url = get_urs_url(ctxt, redirect_here)
+    log.info("Redirecting for auth: {0}".format(urs_url))
+    return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
 def make_redriect(to_url, headers=None, status_code=301):
@@ -84,7 +88,7 @@ def make_redriect(to_url, headers=None, status_code=301):
     return Response(body='', headers=headers, status_code=status_code)
 
 
-def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_file:str='root.html'):
+def make_html_response(t_vars: dict, hdrs: dict, status_code: int=200, template_file: str='root.html'):
     template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
     template_vars.update(t_vars)
 
@@ -92,6 +96,34 @@ def make_html_response(t_vars:dict, hdrs:dict, status_code:int=200, template_fil
     headers.update(hdrs)
 
     return Response(body=get_html_body(template_vars, template_file), status_code=status_code, headers=headers)
+
+
+def get_bcconfig(user_id: str) -> dict:
+    bcconfig = {"user_agent": "Thin Egress App for userid={0}".format(user_id),
+                "s3": {"addressing_style": "path"},
+                "connect_timeout": 600,
+                "read_timeout": 600,
+                "retries": {"max_attempts": 10}}
+
+    if os.getenv('S3_SIGNATURE_VERSION'):
+        bcconfig['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
+
+    return bcconfig
+
+
+def get_bucket_region(session, bucketname) ->str:
+    # Figure out bucket region
+    params = {}
+    try:
+        bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
+        bucket_region = 'us-east-1' if not bucket_region else bucket_region
+        log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
+    except ClientError as e:
+        # We hit here if the download role cannot access a bucket, or if it doesn't exist
+        log.error("Coud not access download bucket {0}: {1}".format(bucketname, e))
+        raise
+
+    return bucket_region
 
 
 def try_download_from_bucket(bucket, filename, user_profile):
@@ -107,42 +139,26 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
     creds = get_role_creds(user_id, is_in_region)
+
     session = get_role_session(creds=creds, user_id=user_id)
 
-    params = {}
-
-    BCCONFIG = {"user_agent": "RAIN Egress App for userid={0}".format(user_id),
-                "s3": {"addressing_style": "path"},
-                "connect_timeout": 600,
-                "read_timeout": 600,
-                "retries": {"max_attempts": 10}}
-
-    if os.getenv('S3_SIGNATURE_VERSION'):
-        BCCONFIG['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
-
-    # Figure out bucket region
     try:
-        bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucket)['LocationConstraint']
-        bucket_region = 'us-east-1' if not bucket_region else bucket_region
-        log.debug("bucket {0} is in region {1}".format(bucket, bucket_region))
+        bucket_region = get_bucket_region(session, bucket)
     except ClientError as e:
-        # We hit here if the download role cannot access a bucket, or if it doesn't exist
-        log.error("Coud not access download bucket {0}: {1}".format(bucket, e))
-
+        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 500, 'error.html')
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
-        log.warning(
-            "bucket {0} is in region {1}, we are in region {2}! This is double egress in Proxy mode!".format(bucket,
-                                                                                                             bucket_region,
-                                                                                                             os.getenv(
-                                                                                                                 'AWS_DEFAULT_REGION')))
-
+        log.warning("bucket {0} is in region {1}, we are in region {2}! " +
+                    "This is double egress in Proxy mode!".format(bucket,
+                                                                  bucket_region,
+                                                                  os.getenv('AWS_DEFAULT_REGION')))
+    params = {}
     # now that we know where the bucket is, connect in THAT region
-    params['config'] = bc_Config(**BCCONFIG)
+    params['config'] = bc_Config(**get_bcconfig(user_id))
     client = session.client('s3', bucket_region, **params)
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
@@ -165,7 +181,6 @@ def try_download_from_bucket(bucket, filename, user_profile):
         log.info("Using REDIRECT because no PROXY in egresslambda")
         return make_redriect(presigned_url, redirheaders, 303)
 
-
     except ClientError as e:
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
 
@@ -178,6 +193,14 @@ def try_download_from_bucket(bucket, filename, user_profile):
         return make_html_response(template_vars, headers, 404, 'error.html')
 
 
+def get_jwt_field(cookievar: dict, fieldname: str):
+    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievar:
+        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')]:
+            return cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')][fieldname]
+
+    return None
+
+
 @app.route('/')
 def root():
 
@@ -186,15 +209,12 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
-            # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
-        else:
-            log.warning('jwt cookie not found, falling back to old style')
-            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+            # We have a JWT cookie
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
 
     if user_profile:
-        if os.getenv('MATURITY', '') == 'DEV':
+        if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
@@ -209,10 +229,8 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if 'urs-user-id' in cookievars and 'urs-access-token' in cookievars:
-        user_id = cookievars['urs-user-id']
-        urs_access_token = cookievars['urs-access-token']
-        delete_session(user_id, urs_access_token)
+    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+
         template_vars['contentstring'] = 'You are logged out.'
     else:
         template_vars['contentstring'] = 'No active login found.'
@@ -220,7 +238,8 @@ def logout():
     headers = {
         'Content-Type': 'text/html',
     }
-    headers.update(make_set_cookie_headers('deleted', 'deleted', 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
+
+    headers.update(make_set_cookie_headers_jwt({}, 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
@@ -249,17 +268,12 @@ def get_range_header_val():
 
 def get_data_dl_s3_client():
 
-    cookievars = get_cookie_vars(app.current_request.headers)
-    if cookievars:
-        user_id = cookievars['urs-user-id']
-    else:
-        user_id = None
+    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
+
     session = get_role_session(user_id=user_id)
     params = {}
-    BCCONFIG = {'user_agent': "Egress App for userid={0}".format(user_id)}
-    if os.getenv('S3_SIGNATURE_VERSION'):
-        BCCONFIG['signature_version'] = os.getenv('S3_SIGNATURE_VERSION')
-    params['config'] = bc_Config(**BCCONFIG)
+
+    params['config'] = bc_Config(**get_bcconfig(user_id))
     client = session.client('s3', **params)
     return client
 
@@ -270,7 +284,6 @@ def try_download_head(bucket, filename):
     # Check for range request
     range_header = get_range_header_val()
     try:
-
         if not range_header:
             download = client.get_object(Bucket=bucket, Key=filename)
         else:
@@ -283,7 +296,6 @@ def try_download_head(bucket, filename):
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
-    #return 'Finish this thing'
 
     response_headers = {'Content-Type': download['ContentType']}
     for header in download['ResponseMetadata']['HTTPHeaders']:
@@ -293,15 +305,10 @@ def try_download_head(bucket, filename):
         response_headers[name] = value
 
     # Try Redirecting to HEAD. There should be a better way.
-    cookievars = get_cookie_vars(app.current_request.headers)
-    if 'urs-user-id' in cookievars:
-        user_id = cookievars['urs-user-id']
-    else:
-        user_id = 'Unknown'
+    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
 
     # Generate URL
     creds = get_role_creds(user_id=user_id)
-    client = get_data_dl_s3_client()
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')
@@ -310,6 +317,7 @@ def try_download_head(bucket, filename):
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
     return make_redriect(presigned_url, {}, 303)
+
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
@@ -354,12 +362,12 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME','asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME','asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
         else:
-            log.warning('jwt cookie not found, falling back to old style')
-            user_profile = get_session(cookievars['urs-user-id'], cookievars['urs-access-token'])
+            log.warning('jwt cookie not found')
+            # Not kicking user out just yet. We might be dealing with a public bucket
 
     # Check for public bucket
     if check_public_bucket(bucket, public_buckets, b_map):
@@ -368,7 +376,9 @@ def dynamic_url():
         return do_auth_and_return(app.current_request.context)
 
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, private_buckets, b_map)
+    private_check = check_private_bucket(bucket, private_buckets, b_map)  # NOTE: Is an optimization attempt worth it
+                                                                          # if we're asking for a public file and we
+                                                                          # omit this check?
     log.debug('private check: {}'.format(private_check))
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     if new_user_profile and new_user_profile != user_profile:

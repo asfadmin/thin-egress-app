@@ -2,7 +2,6 @@ pipeline {
 
   // Environment Setup
   environment {
-    AWS_DEFAULT_REGION="us-east-1"
     AWSENV=""
     BUILDTAG="${APPTAG}-${NEWTAG}"
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
@@ -11,15 +10,15 @@ pipeline {
     CODE_BUCKET="asf.rain.code"
     CODE_PUBLIC_BUCKETNAME="asf.public.code"
     CODE_DIR="thin-egress-app"
-    STACKNAME="${APPTAG}-stack"
+    STACKNAME_SAME="${APPTAG}-jenk-same"
+    STACKNAME_SCND="${APPTAG}-jenk-scnd"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
-    DOMAIN_NAME="${DOMAIN_NAME}"
-    DOMAINCERTARN="arn:aws:acm:us-east-1:765666652335:certificate/9f6cc382-c06c-4304-81a7-35a3c330f173"
-    COOKIE_DOMAIN=".asf.alaska.edu"
+    LAMBDA_TIMEOUT=6
+    CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
   }
 
   // Build on a slave with docker (for pre-req?)
@@ -67,7 +66,7 @@ pipeline {
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"
 
-        
+
       }
    }
     // Package code
@@ -76,7 +75,7 @@ pipeline {
 
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
-        
+
         sh """ cd ${WORKSPACE}/lambda  && \
                sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
@@ -89,7 +88,7 @@ pipeline {
         sh "echo '>> Build Stamping....'"
 
         sh "cd ${WORKSPACE}"
-                
+
         // thin-egress-app.yaml
         sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
         sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
@@ -109,21 +108,58 @@ pipeline {
    stage('Push to AWS') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+
+
           // Push the code up to private bucket
-
           sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
           sh "echo '>> Pushing code to ASF Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/${CODE_DIR}/"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
+          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
+          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
-          // Clarify in description that this stack is deployed by Jenkins
-          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
+
+          // Clarify in description that this stack is deployed by Jenkins,
+          sh 'cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml'
+          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app-deployed.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
-          sh """ aws cloudformation deploy --profile=jenkins --region=us-east-1 \
-                     --stack-name ${STACKNAME} \
-                     --template-file cloudformation/thin-egress-app.yaml \
+          sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+                     --stack-name ${STACKNAME_SAME} \
+                     --template-file cloudformation/thin-egress-app-deployed.yaml \
+                     --capabilities CAPABILITY_NAMED_IAM \
+                     --parameter-overrides \
+                       URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+                       ConfigBucket=${BUCKETNAME_PREFIX}config \
+                       PermissionsBoundaryName= \
+                       BucketMapFile=bucket_map.yaml \
+                       PublicBucketsFile=public_buckets.yaml \
+                       PrivateBucketsFile=private_buckets.yaml \
+                       BucketnamePrefix=${BUCKETNAME_PREFIX} \
+                       DownloadRoleArn="" \
+                       DownloadRoleInRegionArn="" \
+                       HtmlTemplateDir= \
+                       StageName=API \
+                       Loglevel=DEBUG \
+                       Maturity=${MATURITY}\
+                       PrivateVPC= \
+                       VPCSecurityGroupIDs= \
+                       VPCSubnetIDs= \
+                       EnableApiGatewayLogToCloudWatch="False" \
+                       DomainName=${DOMAIN_NAME-""} \
+                       DomainCertArn=${DOMAIN_CERT_ARN-""}  \
+                       CookieDomain=${COOKIE_DOMAIN-""} \
+                       LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                       LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
+                       LambdaTimeout=${LAMBDA_TIMEOUT} \
+                       JwtAlgo=${JWTALGO} \
+                       JwtKeySecretName=${JWTKEYSECRETNAME} \
+                       UseReverseBucketMap="False" """
+
+          // This will be the stack for downloading from 2nd account.
+          /*sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+                     --stack-name ${STACKNAME_SCND} \
+                     --template-file cloudformation/thin-egress-app-deployed.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
                      --parameter-overrides \
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
@@ -132,11 +168,10 @@ pipeline {
                        BucketMapFile=bucket_map_TEST_ngap2.yaml \
                        PublicBucketsFile=public_buckets_TEA.yaml \
                        PrivateBucketsFile=private_buckets_TEA.yaml \
-                       BucketnamePrefix=asf-ngap2-t- \
+                       BucketnamePrefix=${BUCKETNAME_PREFIX_SCND} \
                        DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
                        DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
                        HtmlTemplateDir= \
-                       SessionStore=S3 \
                        StageName=API \
                        Loglevel=DEBUG \
                        Maturity=${env.MATURITY}\
@@ -145,15 +180,16 @@ pipeline {
                        VPCSubnetIDs= \
                        EnableApiGatewayLogToCloudWatch="False" \
                        DomainName=${DOMAIN_NAME} \
-                       DomainCertArn=${DOMAINCERTARN}  \
+                       DomainCertArn=${DOMAIN_CERT_ARN}  \
                        CookieDomain=${COOKIE_DOMAIN} \
                        LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                        LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-                       LambdaCodeS3Bucket=${CODE_BUCKET} \
-                       LambdaTimeout=6 \
+                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
+                       LambdaTimeout=${LAMBDA_TIMEOUT} \
                        JwtAlgo=${JWTALGO} \
                        JwtKeySecretName=${JWTKEYSECRETNAME} \
                        UseReverseBucketMap="False" """
+          */
         }
       }
     }
@@ -236,6 +272,8 @@ pipeline {
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                          --recursive /tmp/buildreport/ \
                          s3://asf.public.code/thin-egress-app/ --acl public-read """
+      sh 'tree'
+      sh 'printenv'
       }
     }
   }

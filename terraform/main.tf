@@ -76,7 +76,6 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     PrivateBucketsFile              = var.private_buckets_file
     PrivateVPC                      = var.private_vpc
     PublicBucketsFile               = var.public_buckets_file
-    SessionStore                    = var.session_store
     SessionTTL                      = var.session_ttl
     StageName                       = var.stage_name
     URSAuthCredsSecretName          = var.urs_auth_creds_secret_name

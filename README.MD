@@ -1,4 +1,5 @@
 # TEA (Thin Egress App)
+![TEA](https://github.com/asfadmin/thin-egress-app/blob/bb.img/tea.png)
 ## About
 The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration. It provides a lightweight egress solution for when you don't need to throttle or cut off egress.
 
@@ -20,22 +21,27 @@ The Thin Egress App is an app running in lambda that creates temporary S3 links 
   * These need not be in the same account as the egress app.
   * It would help if there were some data in them.
 * A secret in the [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/managing-secrets.html) containing URS client ID and auth
-  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`
+  * This secret should have two rows, one with key `UrsId` and the other `UrsAuth`. This is described in more detail below.
 * A secret in the AWS Secrets manager for the JWT keys:
-  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key.
+  * This secret should have two rows, `rsa_priv_key` containing the base-64 encoded RSA private key and `rsa_pub_key` containing the base-64 encoded RSA public key. This is described in more detail below.
 
 
 Optional:
 * A domain name and SSL cert for the service.
 * An [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) the lambda can assume to read the files in the data buckets. One will be created if not provided.
 * An IAM Role that allows for only in-region access the lambda can assume to read the files in the data buckets. One will be created if not provided.
-
+* An IAM Role that allows the API gateway to write to CloudWatch, if `EnableApiGatewayLogToCloudWatch` is set to `True`. 
 
 ### Getting the software
 
 #### Option 1: Using pre-packaged lambda code
+Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want and follow the instructions below depending which region you're deploying to.
 
-Pre-packaged versions of the lambda code and associated cloudformation YAML are in S3 in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). To use this, download the YAML for the build you want and deploy it. The correct lambda zipfile will be the default.
+##### Option 1a: You are deploying in us-east-1:
+When deploying, use the default `LambdaCodeDependencyArchive`, `LambdaCodeS3Bucket`, and `LambdaCodeS3Key` values.
+
+##### Option 1b: You are deploying outside of us-east-1:
+If you are deploying in another region, you must upload the lambda and dependency layer zip files to a bucket in your region and make sure the `LambdaCodeDependencyArchive`, `LambdaCodeS3Bucket`, and `LambdaCodeS3Key` values point to your zip files.
 
 
 #### Option 2: Packaging lambda code yourself
@@ -43,7 +49,7 @@ Pre-packaged versions of the lambda code and associated cloudformation YAML are 
 If you prefer to roll your own zip for the lambda code:
 
 #### Dependency Layer
-We've found that the if the dependency layer isn't built in an `amazonlinux` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+We've found that the if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
 ```bash
 
 # Make up a filename for code archive:
@@ -99,47 +105,10 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 
 ```
 
-### Cookies / JWT
-
-TEA now uses JWT cookies. 
-#### Cookies
-When logging in, rain-api-core sets a few cookies:
-
-##### urs-user-id
-This contains the logged in user's URS user ID. This cookie will be deprecated soon, please use the value in the JWT cookie.
-
-##### urs-access-token 
-This contains the logged in user's URS access token. This cookie will be deprecated soon, please use the value in the JWT cookie.
-
-##### JWT cookie
-The JWT cookie's default name is `asf-urs` It contains various information about the logged in user. New development should use this cookie.
-
-Its payload looks something like this:
-```json
-{
-  "urs-user-id": "<User's URS ID>",
-  "urs-access-token": "<A URS access token string>",
-  "urs-groups": [
-    {
-      "app_uid": "<UID of URS app>",
-      "client_id": "<Client ID string>",
-      "name": "<Name of group>"
-    },
-    {
-      "app_uid": "<UID of URS app>",
-      "client_id": "<Client ID string>",
-      "name": "<Name of group>"
-    }
-  ],
-  "iat": 1565294120,
-  "exp": 1565299000
-}
-
-```
 
 ### AWS Secrets
 
-### Setting up the URS client secrets:
+#### Setting up the URS client secrets:
 `UrsId` can be found on your appication's URS home page as `Client ID`. 
 
 `UrsAuth` is the `Client ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
@@ -186,15 +155,15 @@ aws secretsmanager create-secret --name jwt_secret_for_tea \
 ```
 
 ##### Option 2: Using bash script
-You can create en encoded b64 key pair by running the provided setup_jwt_cookie.sh script :
+You can create en encoded b64 key pair by running the provided [setup_jwt_cookie.sh](https://github.com/asfadmin/thin-egress-app/blob/devel/setup_jwt_cookie.sh) script :
 ```bash
 profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 ```
 
 
-### Bucket map
+### Buckets and Bucket map
 
-The bucket map allows the app to determine in which bucket to look when given the path from the URL. 
+The bucket map allows the app to determine in which bucket to look when given the path from the URL. It's possible to separate the maps into bucket, public and private, but this functionality is deprecated and will be removed in a future version of TEA.
 
 If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```
@@ -207,6 +176,8 @@ And if we have a data bucket prefix of `prfx-d-` and our data bucket list looks 
 - prfx-d-pb-pt1
 - prfx-d-pa-pt2
 - prfx-d-pb-pt2
+- prfx-d-private-x
+- prfx-d-private-y
 
 ```
 
@@ -225,8 +196,17 @@ MAP:
     PLATFORM_B:         imgs
     
 PUBLIC_BUCKETS:
-  - imgs 
+  imgs: 'BROWSE IMAGERY'
+
+PRIVATE_BUCKETS:
+  private-x:
+  - urs_group_name_0
+  private-y:
+  - urs_group_name_1
+
 ```
+### Config bucket
+You will need a bucket for config and optionally the html templates. This should be in the same region as the stack.
 
 ### HTML templates 
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html templates.
@@ -270,57 +250,73 @@ Child template that displays profile info. Only used for debugging in dev.
 ### Cloudformation parameters
 It's best to look at the parameter section of the [Cloudformation template](https://github.com/asfadmin/thin-egress-app/blob/master/cloudformation/thin-egress-app.yaml) itself to get the most up to date details.
 
-### Deployiny the app in NGAP
+### Deploying the app in NGAP (option)
 
 To deploy into NGAP, there are a few extra params. Check the `NGAP Integration` section of the CloudFormation Template.
 
 Use the following bash script to determine appropriate compliance paramaters.
 
 ```bash
-export AWSENV='--profile=cumulus --region=us-east-1'
+export AWS_REGION='us-west-2'
+export AWS_PROFILE='default'
+export AWSENV="--profile=${AWS_PROFILE} --region=${AWS_REGION}"
 export VPCID=$(aws $AWSENV ec2 describe-vpcs --query "Vpcs[*].VpcId" --filters "Name=tag:Name,Values=Application VPC" --output text)
 export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query "Subnets[?VpcId=='$VPCID'].{ID:SubnetId}[0]" --filters "Name=tag:Name,Values=Private*" --output=text)
 export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query "SecurityGroups[?VpcId=='$VPCID'].{ID:GroupId}" --filters "Name=tag:Name,Values=Application Default*" --output=text)
 echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;"
-```
 
-Its also important to be aware that if an API Gateway VPC Endpoint will need to setup prior to deployment. You can check to see if your account has the appropriate VPCE by runing this command:
 
-```
+# Its also important to be aware that if an API Gateway VPC Endpoint will need to setup prior to deployment. You can check to see if your account has the appropriate VPCE by runing this command:
 aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' && ServiceName=='com.amazonaws.us-east-1.execute-api')].{ID:VpcEndpointId}" --output=text
 ```
 
-Keep in mind, if you're not in **US-EAST-1**, you'll need to change that value above. If you get a return value like `vpce-0123456789abcdef0`, you're good to go. 
+If you get a return value like `vpce-0123456789abcdef0`, you're good to go, proceed to the "Deploying the app" section below. 
 
 ### Deploying the app
-The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code.
+The easiest way to deploy a Thin Egress App is by using one of the YAML files in [ASF's public code bucket](https://s3.amazonaws.com/asf.public.code/index.html). Download the YAML for the build you want, the values for `LambdaCodeS3Bucket` and `LambdaCodeS3Key` will have default values for deploying that build's lambda code. Some of the vars set below duplicate those in the NGAP procedure above, be sure to not overwrite the correct values if you're cutting and pasting from here.
 
 ```bash
 # Set some vars
+CF_TEMPLATE_FILE=/absolute/path/to/tea-cloudformation-build.XX.yaml
+
 # See the Cloudformation parameters section above for a description of these params.
 STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
                   # because the CF template may create buckets using this name.
+AWS_REGION=us-west-2 # Or another region if desired.
+AWS_PROFILE=default  # Or whichever aws cli profile gives you the write access necessary.
+
 BUCKETMAP_FILENAME=my_bucketmap.yaml
 BUCKET_PREFIX=asf-tea-
 CFG_BUCKETNAME=asf-tea-cfg
-COOKIE_DOMAIN=.asf.alaska.edu
+
+# Set these three to empty string if no domain is to be used. 
+DOMAIN_NAME=a-domain.something.tld 
+COOKIE_DOMAIN=.something.tld
 DOMAINCERTARN=arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-0000-000000000000
-DOMAIN_NAME=filedownloads.asf.alaska.edu
+
+# Use these if your data buckets are in a different region than 
+# your TEA stack. Set to empty string otherwise
 DOWNLOAD_ROLE_ARN=arn:aws:iam::000000000000:role/AccessToFiles
-DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion
-HTML_TEMPLATE_DIR=html # Omit if using default templates.
+DOWNLOAD_ROLE_ARN_INREGION=arn:aws:iam::000000000000:role/AccessToFilesInRegion 
+
+# If using the generic, default templates included with the Lambda, set to empty string. 
+HTML_TEMPLATE_DIR=html 
+
 JWTALGO=RS256
 JWTKEYSECRETNAME=jwt_secret_for_tea
-CODE_BUCKET=code-bucket # Omit this if using build-specific YAML from ASF's public code bucket
-CODE_DIR=code-dir
+
+# CODE_BUCKET must be in same region as this stack.
+# Omit CODE_BUCKET if using build-specific YAML from ASF's public code bucket
+CODE_BUCKET=asf.public.code
+CODE_DIR=thin-egress-app
 DEPENDENCYLAYERFILENAME=tea-dependencylayer.zip
 CODE_ARCHIVE_FILENAME=tea-code.zip
 URS_CREDS_SECRET_NAME=urs_creds_for_tea
 
 # Deploy the stack
-aws cloudformation deploy --profile=default --region=us-east-1 \
+aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
   --stack-name ${STACK_NAME} \
-  --template-file ./egress-lambda.yaml \
+  --template-file ${CF_TEMPLATE_FILE} \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
         AuthBaseUrl=https://urs.earthdata.nasa.gov \
@@ -332,33 +328,84 @@ aws cloudformation deploy --profile=default --region=us-east-1 \
         DomainName=${DOMAIN_NAME} \
         DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
         DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
-        EnableApiGatewayLogToCloudWatch=True \ # Valid values are "True" and "False" (default)
+        EnableApiGatewayLogToCloudWatch="False" \ 
         HtmlTemplateDir=${HTML_TEMPLATE_DIR} \
         JwtAlgo=${JWTALGO} \
         JwtKeySecretName=${JWTKEYSECRETNAME} \
         LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-        LambdaCodeS3Bucket=${CODE_BUCKET} \ 
+        LambdaCodeS3Bucket=${CODE_BUCKET} \
         LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
         LambdaTimeout=6 \
-        Loglevel=DEBUG \
-        Maturity=DEV
+        Loglevel=INFO \
+        Maturity=DEV \
         PermissionsBoundaryName= \
-        PrivateBucketsFile=private_buckets_TEA.yaml \
+        PrivateBucketsFile= \
+        PublicBucketsFile= \
         PrivateVPC= \
-        PublicBucketsFile=public_buckets_TEA.yaml \
-        SessionStore=S3 \
         SessionTTL=168 \
         StageName=API \
         URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-        UseReverseBucketMap="False" # Valid values are "True" and "False"
+        UseReverseBucketMap="False" 
         VPCSecurityGroupIDs= \
-        VPCSubnetIDs= \
+        VPCSubnetIDs= 
 
 ```
 ### Post-deploy action
 After the Cloudformation has been deployed, we need to add the new endpoint to the URS Redirect URI list. Get the necessary value like so:
 
-```bash
-aws cloudformation --region=us-east-1 describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' --output text
-```
+
 Add it here: `https://urs.earthdata.nasa.gov/apps/<NAME OF YOUR URS APP>/redirect_uris`
+
+Now you can go to the API Endpoint and test login. API endpoint can be retrieved with this command:
+```bash
+aws cloudformation --region=${AWS_REGION} --profile=${AWS_PROFILE} describe-stacks --stack-name=${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`ExternalEndpoint`].OutputValue' --output text
+```
+
+
+
+## Cookies / JWT
+
+TEA now uses JWT cookies. 
+
+#### JWT cookie
+The JWT cookie's default name is `asf-urs` It contains various information about the logged in user.
+
+Its payload looks something like this:
+```json
+{
+  "urs-user-id": "<User's URS ID>",
+  "urs-access-token": "<A URS access token string>",
+  "urs-groups": [
+    {
+      "app_uid": "<UID of URS app #1>",
+      "client_id": "<Client ID string #1>",
+      "name": "<Name of group #1>"
+    },
+    {
+      "app_uid": "<UID of URS app #2>",
+      "client_id": "<Client ID string #2>",
+      "name": "<Name of group #2>"
+    }
+  ],
+  "iat": 1565294120,
+  "exp": 1565299000
+}
+
+```
+
+## Troubleshooting.
+Something went wrong. Here are some solutions:
+
+### Deploy failures: 
+
+#### Error message: 
+If you see an error message in the Cloudformation Events like this: 
+> CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
+
+#### Solution:
+
+`EnableApiGatewayLogToCloudWatch` is set to `True`. If you don't need API Gateway logging to cloudwatch, set to `False`. If you do, you must create a role with write access to Cloudwatch Logs and add its ARN here: https://console.aws.amazon.com/apigateway/home?region=<REGION>#/settings
+
+#### Error message: 
+
+#### Solution:

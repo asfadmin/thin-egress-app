@@ -126,11 +126,6 @@ def get_bucket_region(session, bucketname) ->str:
 
     return bucket_region
 
-#Lambda that on-demand Creates and Re-Creates the in-region download role based and pulls in the fresh ip-ranges.json file each time.
-def create_in_region_download_role(filename):
-
-    return None;
-
 def try_download_from_bucket(bucket, filename, user_profile):
 
     # Attempt to pull userid from profile

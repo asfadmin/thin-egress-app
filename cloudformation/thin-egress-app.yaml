@@ -385,6 +385,38 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
+  UpdatePolicyLambdaIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-UpdatePolicyLambdaIamRole"
+      PermissionsBoundary:
+        !If
+        - UsePermissionsBoundary
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  -'iam:PutRolePolicy'
+                Resource: "arn:aws:logs:us-west-2:117169578524:log-group:/aws/lambda/update_region_lambda:*"
+              - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: "arn:aws:logs:*:*:*"
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -410,14 +442,12 @@ Resources:
             RawMessageDelivery: 'true'
       Environment:
         Variables:
-          iam_role_name: "bb-tea-test-DownloadRoleInRegion"
-          policy_name: "bb-tea-test-IamPolicyDownload"
-          prefix: "rain-uw2-d-s1-"
+          iam_role_name: !GetAtt DownloadRoleInRegion.RoleName
+          policy_name: !GetAtt DownloadRoleInRegion.PolicyName
+          prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
       Timeout: !Ref LambdaTimeout
       Handler: update_lamda.py
       Runtime: 'python3.7'
-      Layers:
-        - !Ref UpdatePolicyLambda
       #MemorySize: 128
 
   EgressLambdaDependencyLayer:

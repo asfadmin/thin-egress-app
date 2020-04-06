@@ -446,7 +446,7 @@ Resources:
           policy_name: !GetAtt DownloadRoleInRegion.PolicyName
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
       Timeout: !Ref LambdaTimeout
-      Handler: update_lamda.py
+      Handler: update_lamda.lambda_handler
       Runtime: 'python3.7'
       #MemorySize: 128
 

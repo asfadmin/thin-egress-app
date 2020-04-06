@@ -433,18 +433,19 @@ Resources:
           SubnetIds:
             !Split [ ',', !Ref VPCSubnetIDs ]
         - !Ref "AWS::NoValue"
-      Subscription:
-        Type: 'AWS::SNS::Subscription'
-          Properties:
-            TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-            Endpoint: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-            Protocol: lamda
-            RawMessageDelivery: 'true'
       Environment:
         Variables:
           iam_role_name: !GetAtt DownloadRoleInRegion.RoleName
           policy_name: !GetAtt DownloadRoleInRegion.PolicyName
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
+      Resources:
+        Subscription:
+            Type: 'AWS::SNS::Subscription'
+              Properties:
+                TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+                Endpoint: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+                Protocol: lamda
+                RawMessageDelivery: 'true'
       Timeout: !Ref LambdaTimeout
       Handler: update_lamda.lambda_handler
       Runtime: 'python3.7'
@@ -786,6 +787,18 @@ Resources:
       RestApiId: !Ref EgressApiGateway
 
   ApiGatewayCloudWatchLogGroupEgress:
+    Type: AWS::Logs::LogGroup
+    Condition: ApiGatewayLogToCloudWatchIsSet
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ""
+          - - "API-Gateway-Execution-Logs_"
+            - !Ref EgressApiGateway
+            - !Sub "/${StageName}"
+      RetentionInDays: 30
+
+UpdateInRegionLogGroup:
     Type: AWS::Logs::LogGroup
     Condition: ApiGatewayLogToCloudWatchIsSet
     Properties:

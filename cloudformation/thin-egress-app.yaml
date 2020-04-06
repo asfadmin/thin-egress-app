@@ -385,6 +385,40 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
+  UpdatePolicyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Role: !GetAtt DownloadRoleInRegion.Arn
+      FunctionName: !Sub "${AWS::StackName}-UpdatePolicyLambda"
+      VpcConfig:
+        !If
+        - UsePrivateVPC
+        - SecurityGroupIds:
+            !Split [ ',', !Ref VPCSecurityGroupIDs ]
+          SubnetIds:
+            !Split [ ',', !Ref VPCSubnetIDs ]
+        - !Ref "AWS::NoValue"
+      Subscription:
+        Type: 'AWS::SNS::Subscription'
+          Properties:
+            TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+            Endpoint: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+            Protocol: lamda
+            RawMessageDelivery: 'true'
+      Environment:
+        Variables:
+          iam_role_name: "bb-tea-test-DownloadRoleInRegion"
+          policy_name: "bb-tea-test-IamPolicyDownload"
+          prefix: "rain-uw2-d-s1-"
+      Timeout: !Ref LambdaTimeout
+      Handler: update_lamda.py
+      Runtime: 'python3.7'
+      Layers:
+        - !Ref UpdatePolicyLambda
+      #MemorySize: 128
 
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion

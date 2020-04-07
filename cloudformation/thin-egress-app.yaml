@@ -387,6 +387,7 @@ Resources:
                 Resource: "arn:aws:logs:*:*:*"
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-UpdatePolicyLambdaIamRole"
       PermissionsBoundary:
@@ -419,6 +420,7 @@ Resources:
                   Resource: "arn:aws:logs:*:*:*"
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
+    Condition: CreateDownloadRole
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
@@ -441,6 +443,7 @@ Resources:
     Resources:
         Subscription:
             Type: 'AWS::SNS::Subscription'
+              Condition: CreateDownloadRole
               Properties:
                 TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
                 Endpoint: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
@@ -800,7 +803,7 @@ Resources:
 
 UpdateInRegionLogGroup:
     Type: AWS::Logs::LogGroup
-    Condition: ApiGatewayLogToCloudWatchIsSet
+    Condition: CreateDownloadRole
     Properties:
       LogGroupName:
         Fn::Join:

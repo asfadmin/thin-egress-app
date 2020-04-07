@@ -274,7 +274,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
     Properties:
-      RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
+      RoleName: !Sub "${AWS::StackName}-IamPolicyDownload"
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary
@@ -410,7 +410,7 @@ Resources:
               - Effect: Allow
                 Action:
                   -'iam:PutRolePolicy'
-                Resource: "arn:aws:logs:us-west-2:117169578524:log-group:/aws/lambda/update_region_lambda:*"
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/update_region_lambda:*"
               - Effect: Allow
                   Action:
                     - logs:CreateLogGroup
@@ -435,10 +435,10 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
-          iam_role_name: !GetAtt DownloadRoleInRegion.RoleName
-          policy_name: !GetAtt DownloadRoleInRegion.PolicyName
+          iam_role_name: !Ref DownloadRoleInRegion
+          policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
-      Resources:
+    Resources:
         Subscription:
             Type: 'AWS::SNS::Subscription'
               Properties:
@@ -804,10 +804,7 @@ UpdateInRegionLogGroup:
     Properties:
       LogGroupName:
         Fn::Join:
-          - ""
-          - - "API-Gateway-Execution-Logs_"
-            - !Ref EgressApiGateway
-            - !Sub "/${StageName}"
+          - ${AWS::StackName}-UpdateRole
       RetentionInDays: 30
 
   EgressStage:

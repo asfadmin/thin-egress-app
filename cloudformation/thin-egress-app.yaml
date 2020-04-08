@@ -411,7 +411,7 @@ Resources:
               - Effect: Allow
                 Action:
                   -'iam:PutRolePolicy'
-                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/update_region_lambda:*"
+                Resource: !GetAtt DownloadRoleInRegion.Arn
               - Effect: Allow
                   Action:
                     - logs:CreateLogGroup
@@ -440,19 +440,20 @@ Resources:
           iam_role_name: !Ref DownloadRoleInRegion
           policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
-    Resources:
-        Subscription:
-            Type: 'AWS::SNS::Subscription'
-              Condition: CreateDownloadRole
-              Properties:
-                TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-                Endpoint: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-                Protocol: lamda
-                RawMessageDelivery: 'true'
       Timeout: !Ref LambdaTimeout
       Handler: update_lamda.lambda_handler
       Runtime: 'python3.7'
       #MemorySize: 128
+
+  RegionUpdateSnsSubscription:
+    Type: 'AWS::SNS::Subscription'
+      Condition: CreateDownloadRole
+      Properties:
+        TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+        Endpoint:Lambda ARN: !Ref UpdatePolicyLambda.Arn
+        Protocol: lambda
+        RawMessageDelivery: 'true'
+
 
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion
@@ -807,7 +808,7 @@ UpdateInRegionLogGroup:
     Properties:
       LogGroupName:
         Fn::Join:
-          - ${AWS::StackName}-UpdateRole
+          - !Sub: "${AWS::StackName}-UpdateRole"
       RetentionInDays: 30
 
   EgressStage:

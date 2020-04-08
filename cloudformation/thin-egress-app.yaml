@@ -274,7 +274,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
     Properties:
-      RoleName: !Sub "${AWS::StackName}-IamPolicyDownload"
+      RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary

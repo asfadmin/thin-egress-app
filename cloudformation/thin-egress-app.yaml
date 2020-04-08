@@ -450,7 +450,7 @@ Resources:
       Condition: CreateDownloadRole
       Properties:
         TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-        Endpoint:Lambda ARN: !Ref UpdatePolicyLambda.Arn
+        Endpoint: !Ref UpdatePolicyLambda.Arn
         Protocol: lambda
         RawMessageDelivery: 'true'
 

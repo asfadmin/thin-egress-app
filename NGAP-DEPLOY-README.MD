@@ -63,6 +63,7 @@ module "thin_egress_app" {
 
 * **api_endpoint** (string) - the API Gateway endpoint of the deployment
 * **urs_redirect_uri** (string) - the URS redirect URI to be configured for the app in Earthdata Login
+* **egress_log_group** (string) - API Gateway Access logs LogGroup, if enabled
 
 ## Pre-deployment configuration steps
 

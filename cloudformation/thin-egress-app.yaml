@@ -425,7 +425,7 @@ Resources:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
         S3Key: !Ref LambdaCodeS3Key
-      Role: !GetAtt DownloadRoleInRegion.Arn
+      Role: !GetAtt UpdatePolicyLambdaIamRole.Arn
       FunctionName: !Sub "${AWS::StackName}-UpdatePolicyLambda"
       VpcConfig:
         !If
@@ -437,7 +437,7 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
-          iam_role_name: !Ref DownloadRoleInRegion
+          iam_role_name: !Ref UpdatePolicyLambdaIamRole
           policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
       Timeout: !Ref LambdaTimeout

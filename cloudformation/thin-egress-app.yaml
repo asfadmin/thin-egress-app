@@ -806,9 +806,7 @@ UpdateInRegionLogGroup:
     Type: AWS::Logs::LogGroup
     Condition: CreateDownloadRole
     Properties:
-      LogGroupName:
-        Fn::Join:
-          - !Sub: "${AWS::StackName}-UpdateRole"
+      LogGroupName: !Sub: "${AWS::StackName}-UpdateRole"
       RetentionInDays: 30
 
   EgressStage:

@@ -385,7 +385,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-                
+
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
@@ -419,7 +419,7 @@ Resources:
                     - logs:CreateLogStream
                     - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-                
+
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
     DependsOn:
@@ -814,7 +814,7 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-UpdatePolicyLambda"
       RetentionInDays: 30
-      
+
   EgressStage:
     Type: AWS::ApiGateway::Stage
     DependsOn:
@@ -854,11 +854,11 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${EgressApiGateway}/*"
-      
+
   TriggerInRegionCIDRUpdate:
     Type: AWS::CloudFormation::CustomResource
     Condition: CreateDownloadRole
     Version: "1.0"
     Properties:
       ServiceToken: !GetAtt UpdatePolicyLambda.Arn
-      
+

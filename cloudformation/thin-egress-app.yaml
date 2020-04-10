@@ -385,6 +385,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
+
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
@@ -413,11 +414,12 @@ Resources:
                   -'iam:PutRolePolicy'
                 Resource: !GetAtt DownloadRoleInRegion.Arn
               - Effect: Allow
-                  Action:
+                Action:
                     - logs:CreateLogGroup
                     - logs:CreateLogStream
                     - logs:PutLogEvents
-                  Resource: "arn:aws:logs:*:*:*"
+                Resource: "arn:aws:logs:*:*:*"
+
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
     Condition: CreateDownloadRole
@@ -446,11 +448,11 @@ Resources:
       #MemorySize: 128
 
   RegionUpdateSnsSubscription:
-    Type: 'AWS::SNS::Subscription'
+      Type: 'AWS::SNS::Subscription'
       Condition: CreateDownloadRole
       Properties:
         TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
-        Endpoint: !Ref UpdatePolicyLambda.Arn
+        Endpoint: !GetAtt UpdatePolicyLambda.Arn
         Protocol: lambda
         RawMessageDelivery: 'true'
 
@@ -802,11 +804,11 @@ Resources:
             - !Sub "/${StageName}"
       RetentionInDays: 30
 
-UpdateInRegionLogGroup:
+  UpdateInRegionLogGroup:
     Type: AWS::Logs::LogGroup
     Condition: CreateDownloadRole
     Properties:
-      LogGroupName: !Sub: "${AWS::StackName}-UpdateRole"
+      LogGroupName: !Sub "${AWS::StackName}-UpdateRole"
       RetentionInDays: 30
 
   EgressStage:

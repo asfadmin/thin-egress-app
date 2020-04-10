@@ -419,7 +419,6 @@ Resources:
                     - logs:CreateLogStream
                     - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
     Condition: CreateDownloadRole
@@ -428,7 +427,7 @@ Resources:
         S3Bucket: !Ref LambdaCodeS3Bucket
         S3Key: !Ref LambdaCodeS3Key
       Role: !GetAtt UpdatePolicyLambdaIamRole.Arn
-      FunctionName: !Sub "${AWS::StackName} -UpdatePolicyLambda"
+      FunctionName: !Sub "${AWS::StackName}-UpdatePolicyLambda"
       VpcConfig:
         !If
         - UsePrivateVPC
@@ -454,6 +453,8 @@ Resources:
         TopicArn: !Sub 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
         Endpoint: !GetAtt UpdatePolicyLambda.Arn
         Protocol: lambda
+        Region: !Sub 'us-east-1'
+
 
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion

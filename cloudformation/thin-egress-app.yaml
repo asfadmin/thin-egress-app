@@ -422,6 +422,8 @@ Resources:
                 
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
     Condition: CreateDownloadRole
     Properties:
       Code:
@@ -445,6 +447,8 @@ Resources:
       Timeout: !Ref LambdaTimeout
       Handler: update_lambda.lambda_handler
       Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
 
   RegionUpdateSnsSubscription:

@@ -8,4 +8,5 @@ netaddr==0.7.19
 cryptography==2.8
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.1.0
+cfnresponse==1.0.2
 

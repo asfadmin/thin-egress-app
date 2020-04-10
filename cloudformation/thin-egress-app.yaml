@@ -385,7 +385,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-
+                
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role
     Condition: CreateDownloadRole
@@ -405,7 +405,7 @@ Resources:
               - lambda.amazonaws.com
           Effect: Allow
       Policies:
-        - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
+        - PolicyName: !Sub "${AWS::StackName}-UpdateLambdaIamPolicy"
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -419,8 +419,11 @@ Resources:
                     - logs:CreateLogStream
                     - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
+                
   UpdatePolicyLambda:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
     Condition: CreateDownloadRole
     Properties:
       Code:
@@ -438,12 +441,14 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
-          iam_role_name: !Ref UpdatePolicyLambdaIamRole
+          iam_role_name: !Ref DownloadRoleInRegion
           policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
           prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
       Timeout: !Ref LambdaTimeout
-      Handler: update_lamda.lambda_handler
+      Handler: update_lambda.lambda_handler
       Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
 
   RegionUpdateSnsSubscription:
@@ -807,9 +812,9 @@ Resources:
     Type: AWS::Logs::LogGroup
     Condition: CreateDownloadRole
     Properties:
-      LogGroupName: !Sub "${AWS::StackName}-UpdateRole"
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-UpdatePolicyLambda"
       RetentionInDays: 30
-
+      
   EgressStage:
     Type: AWS::ApiGateway::Stage
     DependsOn:
@@ -849,3 +854,11 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${EgressApiGateway}/*"
+      
+  TriggerInRegionCIDRUpdate:
+    Type: AWS::CloudFormation::CustomResource
+    Condition: CreateDownloadRole
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt UpdatePolicyLambda.Arn
+      

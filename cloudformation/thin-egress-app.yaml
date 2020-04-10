@@ -411,7 +411,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  -'iam:PutRolePolicy'
+                  - 'iam:PutRolePolicy'
                 Resource: !GetAtt DownloadRoleInRegion.Arn
               - Effect: Allow
                 Action:
@@ -428,7 +428,7 @@ Resources:
         S3Bucket: !Ref LambdaCodeS3Bucket
         S3Key: !Ref LambdaCodeS3Key
       Role: !GetAtt UpdatePolicyLambdaIamRole.Arn
-      FunctionName: !Sub "${AWS::StackName}-UpdatePolicyLambda"
+      FunctionName: !Sub "${AWS::StackName} -UpdatePolicyLambda"
       VpcConfig:
         !If
         - UsePrivateVPC
@@ -451,11 +451,9 @@ Resources:
       Type: 'AWS::SNS::Subscription'
       Condition: CreateDownloadRole
       Properties:
-        TopicArn: arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged
+        TopicArn: !Sub 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
         Endpoint: !GetAtt UpdatePolicyLambda.Arn
         Protocol: lambda
-        RawMessageDelivery: 'true'
-
 
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion

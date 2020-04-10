@@ -92,6 +92,9 @@ zip -r9 ./${CODE_ARCHIVE_FILENAME} ./lambda
 # Add the egress python code
 zip -g ./${CODE_ARCHIVE_FILENAME} ./app.py
 
+# Add the update lambda
+zip -g ./${CODE_ARCHIVE_FILENAME} ./update_lambda.py
+
 # Add the html templates
 zip -g -r2 ./${CODE_ARCHIVE_FILENAME} ./templates
 

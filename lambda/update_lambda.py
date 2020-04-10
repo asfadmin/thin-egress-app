@@ -43,7 +43,8 @@ def lambda_handler(event, context):
     return False
  
 def get_region_cidrs(current_region):
-    output = urllib.request.urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json').read().decode('utf-8')
+    # Bandit complains with B310 on the line below. We know the URL, this is safe!
+    output = urllib.request.urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json').read().decode('utf-8') #nosec
     ip_ranges = json.loads(output)['prefixes']
     in_region_amazon_ips = [item['ip_prefix'] for item in ip_ranges if
                             item["service"] == "AMAZON" and item["region"] == current_region]

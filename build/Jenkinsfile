@@ -79,6 +79,7 @@ pipeline {
         sh """ cd ${WORKSPACE}/lambda  && \
                sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
+               zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \
                cd rain-api-core  && \

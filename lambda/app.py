@@ -3,6 +3,7 @@ from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import os
 import json
+
 from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
@@ -120,11 +121,10 @@ def get_bucket_region(session, bucketname) ->str:
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
-        log.error("Coud not access download bucket {0}: {1}".format(bucketname, e))
+        log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
         raise
 
     return bucket_region
-
 
 def try_download_from_bucket(bucket, filename, user_profile):
 

@@ -808,13 +808,6 @@ Resources:
             - !Sub "/${StageName}"
       RetentionInDays: 30
 
-  UpdateInRegionLogGroup:
-    Type: AWS::Logs::LogGroup
-    Condition: CreateDownloadRole
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-UpdatePolicyLambda"
-      RetentionInDays: 30
-
   EgressStage:
     Type: AWS::ApiGateway::Stage
     DependsOn:

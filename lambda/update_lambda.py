@@ -64,8 +64,8 @@ def get_base_policy(prefix):
                 "s3:GetBucketLocation"
             ],
             "Resource": [
-                "arn:aws:s3:::{prefix}*/*",
-                "arn:aws:s3:::{prefix}*/*"
+                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
+                """ + f'"arn:aws:s3:::{prefix}' + """*"
             ],
             "Effect": "Allow"
         }

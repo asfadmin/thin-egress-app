@@ -443,7 +443,7 @@ Resources:
         Variables:
           iam_role_name: !Ref DownloadRoleInRegion
           policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
-          prefix: !Sub "arn:aws:s3:::${BucketnamePrefix}*/*"
+          prefix: !Sub "${BucketnamePrefix}"
       Timeout: !Ref LambdaTimeout
       Handler: update_lambda.lambda_handler
       Runtime: 'python3.7'

@@ -21,6 +21,8 @@ def lambda_handler(event, context):
         new_policy["Statement"][0]["Condition"] = {"IpAddress": {"aws:SourceIp": cidr_list}}
 
         client = boto3.client('iam')
+        # Delete and replace Policy
+        response = client.delete_role_policy(RoleName=os.getenv('iam_role_name'), PolicyName=os.getenv('policy_name'))
         response = client.put_role_policy(RoleName=os.getenv('iam_role_name'), PolicyName=os.getenv('policy_name'),
                                           PolicyDocument=json.dumps(new_policy))
 

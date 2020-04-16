@@ -413,6 +413,7 @@ Resources:
                 Action:
                   - 'iam:PutRolePolicy'
                   - 'iam:DeleteRolePolicy'
+                  - 'iam:ListRolePolicies'
                 Resource: !GetAtt DownloadRoleInRegion.Arn
               - Effect: Allow
                 Action:

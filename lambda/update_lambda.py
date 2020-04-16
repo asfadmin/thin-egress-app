@@ -12,6 +12,7 @@ def lambda_handler(event, context):
         # Get current region
         session = boto3.session.Session()
         current_region = session.region_name
+        client = boto3.client('iam')
 
         print(f"Current reigon in {current_region}")
         cidr_list = get_region_cidrs(current_region)
@@ -20,10 +21,16 @@ def lambda_handler(event, context):
         new_policy = get_base_policy(os.getenv("prefix"))
         new_policy["Statement"][0]["Condition"] = {"IpAddress": {"aws:SourceIp": cidr_list}}
 
-        client = boto3.client('iam')
-        # Delete and replace Policy
-        response = client.delete_role_policy(RoleName=os.getenv('iam_role_name'), PolicyName=os.getenv('policy_name'))
-        response = client.put_role_policy(RoleName=os.getenv('iam_role_name'), PolicyName=os.getenv('policy_name'),
+        # Clear out any pre-existing roles:
+        RoleName=os.getenv('iam_role_name')
+        response = client.list_role_policies(RoleName=RoleName)
+        if 'PolicyNames' in response:
+            for PolicyName in response['PolicyNames']:
+                print(f"Removing old Policy {PolicyName} from Role {RoleName}")
+                response = client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
+                 
+        # Put the new policy
+        response = client.put_role_policy(RoleName=RoleName, PolicyName=os.getenv('policy_name'),
                                           PolicyDocument=json.dumps(new_policy))
 
         # Check if response is coming from CloudFormation

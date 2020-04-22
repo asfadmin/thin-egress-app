@@ -5,7 +5,7 @@ pyjwt==1.7.1
 chalice==1.13.1
 jwcrypto==0.7
 netaddr==0.7.19
-cryptography==2.9
+cryptography==2.9.2
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.1.0
 cfnresponse==1.0.2

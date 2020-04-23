@@ -167,10 +167,10 @@ def try_download_from_bucket(bucket, filename, user_profile):
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
         if not range_header:
-            client.get_object(Bucket=bucket, Key=filename)
+            client.head_object(Bucket=bucket, Key=filename)
             redirheaders = {}
         else:
-            client.get_object(Bucket=bucket, Key=filename, Range=range_header)
+            client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
         # Generate URL

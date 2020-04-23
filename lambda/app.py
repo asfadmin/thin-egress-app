@@ -80,7 +80,7 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
-def make_redriect(to_url, headers=None, status_code=301):
+def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
@@ -182,7 +182,7 @@ def try_download_from_bucket(bucket, filename, user_profile):
         log.debug("Presigned URL host was {0}".format(s3_host))
 
         log.info("Using REDIRECT because no PROXY in egresslambda")
-        return make_redriect(presigned_url, redirheaders, 303)
+        return make_redirect(presigned_url, redirheaders, 303)
 
     except ClientError as e:
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
@@ -319,7 +319,7 @@ def try_download_head(bucket, filename):
 
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
-    return make_redriect(presigned_url, {}, 303)
+    return make_redirect(presigned_url, {}, 303)
 
 
 # Attempt to validate HEAD request

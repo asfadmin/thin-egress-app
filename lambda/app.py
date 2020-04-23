@@ -173,8 +173,11 @@ def try_download_from_bucket(bucket, filename, user_profile):
             client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
+        expires_in = 24 * 3600
+        redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
+
         # Generate URL
-        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id)
+        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
 

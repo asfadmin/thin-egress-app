@@ -84,8 +84,8 @@ def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    log.debug('to_url: {}'.format(to_url))
-    log.debug('headers: {}'.format(headers))
+    log.info(f'TEA success {status_code}. Redirect created. to_url: {to_url}')  # cumulus uses this log message
+                                                                                # for metrics purposes.
     return Response(body='', headers=headers, status_code=status_code)
 
 
@@ -145,7 +145,8 @@ def try_download_from_bucket(bucket, filename, user_profile):
     try:
         bucket_region = get_bucket_region(session, bucket)
     except ClientError as e:
-        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
+        # cumulus uses this log message for metrics purposes.
+        log.error(f'TEA failure 500. ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 500, 'error.html')
@@ -181,16 +182,17 @@ def try_download_from_bucket(bucket, filename, user_profile):
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
 
-        log.info("Using REDIRECT because no PROXY in egresslambda")
         return make_redirect(presigned_url, redirheaders, 303)
 
     except ClientError as e:
-        log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-
         # Watch for bad range request:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
+            # cumulus uses this log message for metrics purposes.
+            log.error("TEA failure 416. Invalid Range, Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
             return Response(body='Invalid Range', status_code=416, headers={})
 
+        # cumulus uses this log message for metrics purposes.
+        log.warning("TEA failure 404. Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
@@ -293,7 +295,8 @@ def try_download_head(bucket, filename):
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
     except ClientError as e:
-        log.warning("Could get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
+        # cumulus uses this log message for metrics purposes.
+        log.warning("TEA failure 404. Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'File not found',
                          'title': 'File not found'}
         headers = {}

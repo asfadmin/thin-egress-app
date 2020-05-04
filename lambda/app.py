@@ -34,14 +34,14 @@ header_map = {'date':           'Date',
               'content-length': 'Content-Length'}
 
 
-def cumulus_log_message(type: str, code: int, http_method:str, k_v: dict):
-    if type == 'success':
+def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
+    if outcome == 'success':
         logkey = 'successes'
-    elif type == 'failure':
+    elif outcome == 'failure':
         logkey = 'failures'
     else:
         logkey = 'other'
-    k_v.update({'code': code, 'http_method': http_method, 'status': type})
+    k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
     jsonstr = json.dumps(k_v)
     log.info(f'`{logkey}` {jsonstr}')
 

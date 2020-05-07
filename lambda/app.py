@@ -9,8 +9,8 @@ from urllib.parse import urlparse, quote_plus
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
-from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
+from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -214,9 +214,9 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievar:
-        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')]:
-            return cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')][fieldname]
+    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievar:
+        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]:
+            return cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)][fieldname]
 
     return None
 
@@ -229,9 +229,9 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
             # We have a JWT cookie
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
 
     if user_profile:
         if os.getenv('MATURITY') == 'DEV':
@@ -249,7 +249,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
 
         template_vars['contentstring'] = 'You are logged out.'
     else:
@@ -350,7 +350,7 @@ def dynamic_url_head():
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename = process_varargs(app.current_request.uri_params['proxy'], b_map)
+        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
 
         process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
         log.debug(process_results)
@@ -372,7 +372,7 @@ def dynamic_url():
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename = process_varargs(app.current_request.uri_params['proxy'], b_map)
+        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
         log.debug('path, bucket, filename: {}'.format(( path, bucket, filename)))
         if not bucket:
             template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
@@ -385,9 +385,9 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket

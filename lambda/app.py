@@ -98,7 +98,7 @@ def make_redirect(to_url, headers=None, status_code=301):
     headers['Location'] = to_url
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
-
+    log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
 
 
@@ -139,7 +139,8 @@ def get_bucket_region(session, bucketname) ->str:
 
     return bucket_region
 
-def try_download_from_bucket(bucket, filename, user_profile):
+
+def try_download_from_bucket(bucket, filename, user_profile, headers: list):
 
     # Attempt to pull userid from profile
     user_id = None
@@ -189,6 +190,9 @@ def try_download_from_bucket(bucket, filename, user_profile):
 
         expires_in = 24 * 3600
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
+        if isinstance(headers, list):
+            log.debug(f'adding {headers} to redirheaders {redirheaders}')
+            redirheaders.update(headers)
 
         # Generate URL
         presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
@@ -367,13 +371,13 @@ def dynamic_url_head():
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-
+    custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename: {}'.format(( path, bucket, filename)))
+        log.debug('path, bucket, filename, custom_headers: {}'.format(( path, bucket, filename, custom_headers)))
         if not bucket:
             template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
             headers = {}
@@ -419,8 +423,8 @@ def dynamic_url():
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
-
-    return try_download_from_bucket(bucket, filename, user_profile)
+    log.debug(f'custom headers before try download from bucket: {custom_headers}')
+    return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
 @app.route('/profile')

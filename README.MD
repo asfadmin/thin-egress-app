@@ -166,7 +166,7 @@ profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 
 ### Buckets and Bucket map
 
-The bucket map allows the app to determine in which bucket to look when given the path from the URL. It's possible to separate the maps into bucket, public and private, but this functionality is deprecated and will be removed in a future version of TEA.
+The bucket map allows the app to determine in which bucket to look when given the path from the URL. It's possible to separate the maps into separate files for bucket, public and private, but this functionality is deprecated and will be removed in a future version of TEA.
 
 If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```
@@ -179,6 +179,10 @@ And if we have a data bucket prefix of `prfx-d-` and our data bucket list looks 
 - prfx-d-pb-pt1
 - prfx-d-pa-pt2
 - prfx-d-pb-pt2
+- prfx-d-pa-pt3a
+- prfx-d-pb-pt3b
+- prfx-d-pa-pt3a
+- prfx-d-pb-pt3b
 - prfx-d-private-x
 - prfx-d-private-y
 
@@ -191,9 +195,29 @@ MAP:
   PROCESSING_TYPE_1:
     PLATFORM_A:         pa-pt1
     PLATFORM_B:         pb-pt1
+  
+  # Custom response headers for the redirect are supported:
   PROCESSING_TYPE_2:
-    PLATFORM_A:         pa-pt2
-    PLATFORM_B:         pb-pt2
+    PLATFORM_A:
+      bucket:           pa-pt2
+      headers:
+        x-custom-header-1: "custom header 1 value"
+        x-custom-header-2: "custom header 2 value"
+    PLATFORM_B:         
+      bucket:           pb-pt2
+      headers:
+        x-custom-header-1: "custom header 1 value"
+        x-custom-header-2: "custom header 2 value"
+  
+  # arbritary number of "subdirectories" are supported:
+  PROCESSING_TYPE_3:
+    SUB_PROCESSING_TYPE_3A:
+      PLATFORM_A:       pa-pt3a
+      PLATFORM_B:       pb-pt3a
+    SUB_PROCESSING_TYPE_3B:
+      PLATFORM_A:       pa-pt3b
+      PLATFORM_B:       pb-pt3b
+        
   THUMBNAIL:
     PLATFORM_A:         imgs
     PLATFORM_B:         imgs
@@ -202,12 +226,19 @@ PUBLIC_BUCKETS:
   imgs: 'BROWSE IMAGERY'
 
 PRIVATE_BUCKETS:
-  private-x:
+  pa-pt1:
   - urs_group_name_0
-  private-y:
+  pa-pt2:
   - urs_group_name_1
 
 ```
+
+Given this bucketmap and a bucket prefix of `prfx-d-`: 
+* A URL like `http://domain.com/PROCESSING_TYPE_1/PLATFORM_A/file.dat` would cause TEA to look for `file.dat` in a bucket named `prfx-d-pa-pt1`. Additionally, because that bucket is listed in the `PRIVATE_BUCKETS` section, it will only be available to users belonging to a URS group named `urs_group_name_0`.
+* A URL like `http://domain.com/PROCESSING_TYPE_2/PLATFORM_A/file.dat` would cause TEA to look for `file.dat` in a bucket named `prfx-d-pa-pt2`. It will send response headers defined in that section with the redirect. 
+* A URL like `http://domain.com/THUMBNAIL/PLATFORM_A/file.dat` would cause TEA to look for `file.dat` in a bucket named `prfx-d-imgs`. Because `imgs` is listed under `PUBLIC_BUCKETS`, the file would be public and available to all.
+
+
 ### Config bucket
 You will need a bucket for config and optionally the html templates. This should be in the same region as the stack.
 

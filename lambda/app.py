@@ -140,7 +140,7 @@ def get_bucket_region(session, bucketname) ->str:
     return bucket_region
 
 
-def try_download_from_bucket(bucket, filename, user_profile, headers: list):
+def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
     # Attempt to pull userid from profile
     user_id = None
@@ -190,7 +190,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: list):
 
         expires_in = 24 * 3600
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
-        if isinstance(headers, list):
+        if isinstance(headers, dict):
             log.debug(f'adding {headers} to redirheaders {redirheaders}')
             redirheaders.update(headers)
 

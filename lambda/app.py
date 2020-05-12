@@ -11,7 +11,7 @@ from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
-from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
+from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -285,12 +285,16 @@ def version():
 
 @app.route('/locate')
 def locate():
-    search_field = app.current_request.query_params['bucket_name']
+    prefix = prepend_bucketname('')
+    bucket_name = app.current_request.query_params['bucket_name']
+    if bucket_name.startswith(prefix):
+        bucket_name = bucket_name[len(prefix):]
     search_map = flatdict.FlatDict(get_yaml_file(conf_bucket, bucket_map_file, s3_resource)['MAP'], delimiter='/')
-    matching_paths = [key for key, value in search_map.items() if value == search_field]
+    matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if(len(matching_paths) > 0):
         return json.dumps(matching_paths)
-    return Response(body=f'No route defined for {search_field}',status_code=404,headers={'Content-Type': 'text/plain'})
+    return Response(body=f'No route defined for {bucket_name}',status_code=404,headers={'Content-Type': 'text/plain'})
+
 
 
 def get_range_header_val():

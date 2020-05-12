@@ -89,8 +89,8 @@ if [ $? -ne 0 ]; then echo; echo " >> Could not verify prefixed file access (TES
 
 # Validating custom headers
 echo " >>> Validating custom headers"
-echo " > curl -s -o /dev/null -b /tmp/urscookie.txt -c /tmp/urscookie.txt -D - $METADATA_FILE_CH | grep 'x-rainheader'"
-curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt 2>&1 &> /tmp/test10
+echo " > curl -s -o /dev/null -b /tmp/urscookie.txt -c /tmp/urscookie.txt -D - $APIROOT/$METADATA_FILE_CH | grep 'x-rainheader'"
+curl -s -o /dev/null -b /tmp/urscookie.txt -c /tmp/urscookie.txt -D - $APIROOT/$METADATA_FILE_CH 2>&1 &> /tmp/test10
 cat /tmp/test10 && grep -q 'x-rainheader' /tmp/test10
 if [ $? -ne 0 ]; then echo; echo " >> Could not custom headers (TEST10) << "; echo; FC=$((FC+1)); else echo " >>> TEST 10 PASSED"; fi
 

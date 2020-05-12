@@ -1,6 +1,7 @@
 from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
+import flatdict
 import os
 import json
 
@@ -139,6 +140,7 @@ def get_bucket_region(session, bucketname) ->str:
 
     return bucket_region
 
+
 def try_download_from_bucket(bucket, filename, user_profile):
 
     # Attempt to pull userid from profile
@@ -275,6 +277,16 @@ def login():
 @app.route('/version')
 def version():
     return json.dumps({'version_id': '<BUILD_ID>'})
+
+
+@app.route('/locate')
+def locate():
+    search_field = app.current_request.query_params['bucket_name']
+    search_map = flatdict.FlatDict(get_yaml_file(conf_bucket, bucket_map_file, s3_resource)['MAP'], delimiter='/')
+    matching_paths = [key for key, value in search_map.items() if value == search_field]
+    if(len(matching_paths) > 0):
+        return json.dumps(matching_paths)
+    return Response(body=f'No route defined for {search_field}',status_code=404,headers={'Content-Type': 'text/plain'})
 
 
 def get_range_header_val():

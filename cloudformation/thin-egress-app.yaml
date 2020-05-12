@@ -615,6 +615,15 @@ Resources:
       PathPart: 'profile'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceLocate:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'locate'
+      RestApiId: !Ref EgressApiGateway
+
   EgressApiResourceVersion:
     Type: AWS::ApiGateway::Resource
     DependsOn:
@@ -622,6 +631,29 @@ Resources:
     Properties:
       ParentId: !GetAtt EgressApiGateway.RootResourceId
       PathPart: 'version'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodLocate:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses:
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+      OperationName: 'locate method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourceLocate
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIrootMethod:

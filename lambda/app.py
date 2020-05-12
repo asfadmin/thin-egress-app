@@ -78,6 +78,7 @@ def restore_bucket_vars():
         log.info('reusing old bucket configs')
 
 
+
 def do_auth_and_return(ctxt):
 
     log.debug('context: {}'.format(ctxt))

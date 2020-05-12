@@ -52,25 +52,27 @@ def restore_bucket_vars():
     global public_buckets                                                              #pylint: disable=global-statement
     global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
-              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                         bucket_map_file,
-                                                                         public_buckets_file,
-                                                                         private_buckets_file))
+    log.debug(f'conf bucket: {conf_bucket}, bucket_map_file: {bucket_map_file}, public_buckets_file: {public_buckets_file}, private buckets file: {private_buckets_file}')
     if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
-                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                            bucket_map_file,
-                                                                            public_buckets_file,
-                                                                            private_buckets_file))
+        log.info(f'downloading various bucket configs from {conf_bucket}: bucketmapfile: {bucket_map_file}, public buckets file: {public_buckets_file}, private buckets file: {private_buckets_file}')
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
-        if public_buckets_file:
+
+        if 'PUBLIC_BUCKETS' in b_map:
+            public_buckets = {'PUBLIC_BUCKETS': None}
+            public_buckets['PUBLIC_BUCKETS'] = b_map['PUBLIC_BUCKETS']
+            log.debug(f'This is public_buckets: {public_buckets}')
+        elif public_buckets_file:
             log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
             public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
         else:
             public_buckets = {}
-        if private_buckets_file:
+
+        if 'PRIVATE' in b_map:
+            private_buckets = {'PRIVATE': None}
+            private_buckets['PRIVATE'] = b_map['PRIVATE']
+            log.debug(f'This is private_buckets: {private_buckets}')
+        elif private_buckets_file:
             private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
         else:
             private_buckets = {}

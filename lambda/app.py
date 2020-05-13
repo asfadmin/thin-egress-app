@@ -285,17 +285,13 @@ def version():
 
 @app.route('/locate')
 def locate():
-    prefix = prepend_bucketname('')
     bucket_name = app.current_request.query_params['bucket_name']
-    if bucket_name.startswith(prefix):
-        bucket_name = bucket_name[len(prefix):]
     bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file, s3_resource)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if(len(matching_paths) > 0):
         return json.dumps(matching_paths)
     return Response(body=f'No route defined for {bucket_name}',status_code=404,headers={'Content-Type': 'text/plain'})
-
 
 
 def collapse_bucket_configuration(bucket_map):

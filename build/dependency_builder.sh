@@ -11,6 +11,7 @@ mkdir -p /depbuild/pkg/python
 
 cd /depbuild/pkg/python || exit
 
+pip3 install --upgrade setuptools
 pip3 install -r /depbuild/in/requirements_tea.txt --target .
 pip3 install -r /depbuild/in/requirements_rain-api-core.txt --target .
 

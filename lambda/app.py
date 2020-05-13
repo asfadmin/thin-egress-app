@@ -1,6 +1,7 @@
 from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
+import flatdict
 import os
 import json
 
@@ -10,7 +11,7 @@ from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
-from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
+from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -142,6 +143,7 @@ def get_bucket_region(session, bucketname) ->str:
 
 
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
+
 
     # Attempt to pull userid from profile
     user_id = None
@@ -280,6 +282,28 @@ def login():
 @app.route('/version')
 def version():
     return json.dumps({'version_id': '<BUILD_ID>'})
+
+
+@app.route('/locate')
+def locate():
+    bucket_name = app.current_request.query_params['bucket_name']
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file, s3_resource)['MAP'])
+    search_map = flatdict.FlatDict(bucket_map, delimiter='/')
+    matching_paths = [key for key, value in search_map.items() if value == bucket_name]
+    if(len(matching_paths) > 0):
+        return json.dumps(matching_paths)
+    return Response(body=f'No route defined for {bucket_name}',status_code=404,headers={'Content-Type': 'text/plain'})
+
+
+def collapse_bucket_configuration(bucket_map):
+    for k, v in bucket_map.items():
+        if isinstance(v, dict):
+            if 'bucket' in v:
+                bucket_map[k] = v['bucket']
+            else:
+                collapse_bucket_configuration(v)
+
+    return bucket_map
 
 
 def get_range_header_val():

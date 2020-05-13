@@ -87,7 +87,6 @@ curl -s -L $APIROOT/SA/BROWSE/dir1/dir2/deepfile.txt 2>&1 &> /tmp/test9
 cat /tmp/test9 && grep -q 'The file was successfully downloaded' /tmp/test9
 if [ $? -ne 0 ]; then echo; echo " >> Could not verify prefixed file access (TEST9) << "; echo; FC=$((FC+1)); else echo " >>> TEST 9 PASSED"; fi
 
-
 # Validating custom headers
 echo " >>> Validating custom headers"
 echo " > curl -s -o /dev/null -b /tmp/urscookie.txt -c /tmp/urscookie.txt -D - $APIROOT/$METADATA_FILE_CH | grep 'x-rainheader'"
@@ -96,14 +95,6 @@ cat /tmp/test10 && grep -q 'x-rainheader' /tmp/test10
 if [ $? -ne 0 ]; then echo; echo " >> Could not custom headers (TEST10) << "; echo; FC=$((FC+1)); else echo " >>> TEST 10 PASSED"; fi
 
 #curl -s -o /dev/null -b ./urscookie.txt -c ./urscookie.txt -D - $METADATA_FILE_CH
-
-# Validate /locate handles complex configuration keys
-# LOCATE_OUTPUT should be set e.g. '["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]'
-# LOCATE_BUCKET should be set
-echo " >>> Validating /locate endpoint handles complex bucket map configuration"
-echo " > curl $APIROOT/locate?bucket_name=$LOCATE_BUCKET |grep -F \"$LOCATE_OUTPUT\""
-curl -sv $APIROOT/locate?bucket_name=$LOCATE_BUCKET |grep -F "$LOCATE_OUTPUT"
-if [ $? -ne 0 ]; then echo; echo " >> Could not validate $LOCATE_BUCKET mapping on /locate endpoint"; else echo " >>> TEST 11 PASSED"; fi
 
 # Build Summary
 if [ $FC -le 0 ]; then

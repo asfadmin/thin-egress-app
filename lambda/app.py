@@ -251,7 +251,6 @@ def root():
 
 @app.route('/logout')
 def logout():
-
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
@@ -285,13 +284,24 @@ def version():
 
 @app.route('/locate')
 def locate():
-    bucket_name = app.current_request.query_params['bucket_name']
-    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file, s3_resource)['MAP'])
+    query_params = app.current_request.query_params
+    if query_params is None or query_params.get('bucket_name') is None:
+        return Response(body='Required "bucket_name" query paramater not specified',
+                        status_code=400,
+                        headers={'Content-Type': 'text/plain'})
+    bucket_name = app.current_request.query_params.get('bucket_name', None)
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,
+                                                             bucket_map_file,
+                                                             s3_resource)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if(len(matching_paths) > 0):
-        return json.dumps(matching_paths)
-    return Response(body=f'No route defined for {bucket_name}',status_code=404,headers={'Content-Type': 'text/plain'})
+        return Response(body=json.dumps(matching_paths),
+                        status_code=200,
+                        headers={'Content-Type': 'application/json'})
+    return Response(body=f'No route defined for {bucket_name}',
+                    status_code=404,
+                    headers={'Content-Type': 'text/plain'})
 
 
 def collapse_bucket_configuration(bucket_map):
@@ -301,7 +311,6 @@ def collapse_bucket_configuration(bucket_map):
                 bucket_map[k] = v['bucket']
             else:
                 collapse_bucket_configuration(v)
-
     return bucket_map
 
 

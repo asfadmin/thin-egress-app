@@ -386,6 +386,89 @@ Resources:
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
 
+  UpdatePolicyLambdaIamRole:
+    Type: AWS::IAM::Role
+    Condition: CreateDownloadRole
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-UpdatePolicyLambdaIamRole"
+      PermissionsBoundary:
+        !If
+        - UsePermissionsBoundary
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-UpdateLambdaIamPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'iam:PutRolePolicy'
+                  - 'iam:DeleteRolePolicy'
+                  - 'iam:ListRolePolicies'
+                Resource: !GetAtt DownloadRoleInRegion.Arn
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  UpdatePolicyLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
+    Condition: CreateDownloadRole
+    Properties:
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Role: !GetAtt UpdatePolicyLambdaIamRole.Arn
+      FunctionName: !Sub "${AWS::StackName}-UpdatePolicyLambda"
+      VpcConfig:
+        !If
+        - UsePrivateVPC
+        - SecurityGroupIds:
+            !Split [ ',', !Ref VPCSecurityGroupIDs ]
+          SubnetIds:
+            !Split [ ',', !Ref VPCSubnetIDs ]
+        - !Ref "AWS::NoValue"
+      Environment:
+        Variables:
+          iam_role_name: !Ref DownloadRoleInRegion
+          policy_name: !Sub "${AWS::StackName}-IamPolicyDownload"
+          prefix: !Sub "${BucketnamePrefix}"
+      Timeout: !Ref LambdaTimeout
+      Handler: update_lambda.lambda_handler
+      Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
+      #MemorySize: 128
+
+  RegionUpdateSnsSubscription:
+      Type: 'AWS::SNS::Subscription'
+      Condition: CreateDownloadRole
+      Properties:
+        TopicArn: !Sub 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
+        Endpoint: !GetAtt UpdatePolicyLambda.Arn
+        Protocol: lambda
+        Region: !Sub 'us-east-1'
+
+
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion
     Properties:
@@ -532,6 +615,15 @@ Resources:
       PathPart: 'profile'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceLocate:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'locate'
+      RestApiId: !Ref EgressApiGateway
+
   EgressApiResourceVersion:
     Type: AWS::ApiGateway::Resource
     DependsOn:
@@ -539,6 +631,29 @@ Resources:
     Properties:
       ParentId: !GetAtt EgressApiGateway.RootResourceId
       PathPart: 'version'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodLocate:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 404
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      MethodResponses:
+        - ResponseParameters:
+            'method.response.header.Set-Cookie': true
+          StatusCode: 200
+      OperationName: 'locate method'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourceLocate
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIrootMethod:
@@ -772,3 +887,11 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${EgressApiGateway}/*"
+
+  TriggerInRegionCIDRUpdate:
+    Type: AWS::CloudFormation::CustomResource
+    Condition: CreateDownloadRole
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt UpdatePolicyLambda.Arn
+

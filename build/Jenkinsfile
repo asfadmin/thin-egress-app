@@ -79,6 +79,7 @@ pipeline {
         sh """ cd ${WORKSPACE}/lambda  && \
                sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
+               zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
                zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                cd .. && \
                cd rain-api-core  && \
@@ -131,9 +132,9 @@ pipeline {
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
                        ConfigBucket=${BUCKETNAME_PREFIX}config \
                        PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map.yaml \
-                       PublicBucketsFile=public_buckets.yaml \
-                       PrivateBucketsFile=private_buckets.yaml \
+                       BucketMapFile=bucket_map_customheaders.yaml \
+                       PublicBucketsFile="" \
+                       PrivateBucketsFile="" \
                        BucketnamePrefix=${BUCKETNAME_PREFIX} \
                        DownloadRoleArn="" \
                        DownloadRoleInRegionArn="" \
@@ -165,9 +166,9 @@ pipeline {
                        URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
                        ConfigBucket=rain-t-config \
                        PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map_TEST_ngap2.yaml \
-                       PublicBucketsFile=public_buckets_TEA.yaml \
-                       PrivateBucketsFile=private_buckets_TEA.yaml \
+                       BucketMapFile=bucket_map_customheaders.yaml \
+                       PublicBucketsFile="" \
+                       PrivateBucketsFile="" \
                        BucketnamePrefix=${BUCKETNAME_PREFIX_SCND} \
                        DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
                        DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \

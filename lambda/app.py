@@ -1,15 +1,17 @@
 from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
+import flatdict
 import os
 import json
+
 from urllib.parse import urlparse, quote_plus
 
 from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt
-from rain_api_core.egress_util import get_presigned_url, process_varargs, check_private_bucket, check_public_bucket
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
+from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -31,6 +33,18 @@ header_map = {'date':           'Date',
               'etag':           'ETag',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
+
+
+def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
+    if outcome == 'success':
+        logkey = 'successes'
+    elif outcome == 'failure':
+        logkey = 'failures'
+    else:
+        logkey = 'other'
+    k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
+    jsonstr = json.dumps(k_v)
+    log.info(f'`{logkey}` {jsonstr}')
 
 
 def restore_bucket_vars():
@@ -65,6 +79,7 @@ def restore_bucket_vars():
         log.info('reusing old bucket configs')
 
 
+
 def do_auth_and_return(ctxt):
 
     log.debug('context: {}'.format(ctxt))
@@ -79,12 +94,13 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
-def make_redriect(to_url, headers=None, status_code=301):
+def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    log.debug('to_url: {}'.format(to_url))
-    log.debug('headers: {}'.format(headers))
+    log.info(f'Redirect created. to_url: {to_url}')
+    cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
+    log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
 
 
@@ -120,13 +136,14 @@ def get_bucket_region(session, bucketname) ->str:
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
-        log.error("Coud not access download bucket {0}: {1}".format(bucketname, e))
+        log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
         raise
 
     return bucket_region
 
 
-def try_download_from_bucket(bucket, filename, user_profile):
+def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
+
 
     # Attempt to pull userid from profile
     user_id = None
@@ -146,6 +163,7 @@ def try_download_from_bucket(bucket, filename, user_profile):
         bucket_region = get_bucket_region(session, bucket)
     except ClientError as e:
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
+        cumulus_log_message('failure', 500, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
         return make_html_response(template_vars, headers, 500, 'error.html')
@@ -167,36 +185,45 @@ def try_download_from_bucket(bucket, filename, user_profile):
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
         if not range_header:
-            client.get_object(Bucket=bucket, Key=filename)
+            client.head_object(Bucket=bucket, Key=filename)
             redirheaders = {}
         else:
-            client.get_object(Bucket=bucket, Key=filename, Range=range_header)
+            client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
+        expires_in = 24 * 3600
+        redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
+        if isinstance(headers, dict):
+            log.debug(f'adding {headers} to redirheaders {redirheaders}')
+            redirheaders.update(headers)
+
         # Generate URL
-        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id)
+        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
 
-        log.info("Using REDIRECT because no PROXY in egresslambda")
-        return make_redriect(presigned_url, redirheaders, 303)
+        return make_redirect(presigned_url, redirheaders, 303)
 
     except ClientError as e:
-        log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-
         # Watch for bad range request:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
+            # cumulus uses this log message for metrics purposes.
+            log.error("Invalid Range 416, Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
+            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range', 's3': f'{bucket}/{filename}'})
             return Response(body='Invalid Range', status_code=416, headers={})
 
+        # cumulus uses this log message for metrics purposes.
+        log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}
         headers = {}
+        cumulus_log_message('failure', 404, 'GET', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievar:
-        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')]:
-            return cookievar[os.getenv('JWT_COOKIENAME', 'asf-urs')][fieldname]
+    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievar:
+        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]:
+            return cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)][fieldname]
 
     return None
 
@@ -209,9 +236,9 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
             # We have a JWT cookie
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
 
     if user_profile:
         if os.getenv('MATURITY') == 'DEV':
@@ -225,11 +252,10 @@ def root():
 
 @app.route('/logout')
 def logout():
-
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
 
         template_vars['contentstring'] = 'You are logged out.'
     else:
@@ -255,6 +281,38 @@ def login():
 @app.route('/version')
 def version():
     return json.dumps({'version_id': '<BUILD_ID>'})
+
+
+@app.route('/locate')
+def locate():
+    query_params = app.current_request.query_params
+    if query_params is None or query_params.get('bucket_name') is None:
+        return Response(body='Required "bucket_name" query paramater not specified',
+                        status_code=400,
+                        headers={'Content-Type': 'text/plain'})
+    bucket_name = app.current_request.query_params.get('bucket_name', None)
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,
+                                                             bucket_map_file,
+                                                             s3_resource)['MAP'])
+    search_map = flatdict.FlatDict(bucket_map, delimiter='/')
+    matching_paths = [key for key, value in search_map.items() if value == bucket_name]
+    if(len(matching_paths) > 0):
+        return Response(body=json.dumps(matching_paths),
+                        status_code=200,
+                        headers={'Content-Type': 'application/json'})
+    return Response(body=f'No route defined for {bucket_name}',
+                    status_code=404,
+                    headers={'Content-Type': 'text/plain'})
+
+
+def collapse_bucket_configuration(bucket_map):
+    for k, v in bucket_map.items():
+        if isinstance(v, dict):
+            if 'bucket' in v:
+                bucket_map[k] = v['bucket']
+            else:
+                collapse_bucket_configuration(v)
+    return bucket_map
 
 
 def get_range_header_val():
@@ -290,10 +348,13 @@ def try_download_head(bucket, filename):
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
     except ClientError as e:
-        log.warning("Could get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
+        log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
+        # cumulus uses this log message for metrics purposes.
+
         template_vars = {'contentstring': 'File not found',
                          'title': 'File not found'}
         headers = {}
+        cumulus_log_message('failure', 404, 'HEAD', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
 
@@ -316,7 +377,7 @@ def try_download_head(bucket, filename):
 
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
-    return make_redriect(presigned_url, {}, 303)
+    return make_redirect(presigned_url, {}, 303)
 
 
 # Attempt to validate HEAD request
@@ -327,7 +388,7 @@ def dynamic_url_head():
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename = process_varargs(app.current_request.uri_params['proxy'], b_map)
+        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
 
         process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
         log.debug(process_results)
@@ -344,13 +405,13 @@ def dynamic_url_head():
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-
+    custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename = process_varargs(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename: {}'.format(( path, bucket, filename)))
+        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+        log.debug('path, bucket, filename, custom_headers: {}'.format(( path, bucket, filename, custom_headers)))
         if not bucket:
             template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
             headers = {}
@@ -362,9 +423,9 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME', 'asf-urs') in cookievars:
+        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', 'asf-urs')]
+            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
@@ -396,8 +457,8 @@ def dynamic_url():
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
-
-    return try_download_from_bucket(bucket, filename, user_profile)
+    log.debug(f'custom headers before try download from bucket: {custom_headers}')
+    return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
 @app.route('/profile')

@@ -1,11 +1,12 @@
-jinja2==2.11.1
-PyYAML==5.3.1
 aws-requests-auth==0.4.2
-pyjwt==1.7.1
-chalice==1.13.0
+cfnresponse==1.0.2
+chalice==1.14.1
+cryptography==2.9.2
+flatdict==4.0.1
+jinja2==2.11.2
 jwcrypto==0.7
 netaddr==0.7.19
-cryptography==2.8
+pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.1.0
-
+PyYAML==5.3.1

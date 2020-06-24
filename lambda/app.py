@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 import flatdict
 import os
 import json
+import time
 
 from urllib.parse import urlparse, quote_plus
 
@@ -154,13 +155,17 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             user_id = user_profile['uid']
     log.info("User Id for download is {0}".format(user_id))
 
+    t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
+    t1 = time.time()
     creds = get_role_creds(user_id, is_in_region)
-
+    t2 = time.time()
     session = get_role_session(creds=creds, user_id=user_id)
+    t3 = time.time()
 
     try:
         bucket_region = get_bucket_region(session, bucket)
+        t4 = time.time()
     except ClientError as e:
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         cumulus_log_message('failure', 500, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
@@ -178,6 +183,14 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     # now that we know where the bucket is, connect in THAT region
     params['config'] = bc_Config(**get_bcconfig(user_id))
     client = session.client('s3', bucket_region, **params)
+
+    log.debug('timing for try_download_from_bucket(): ')
+    log.debug('  check_in_region_request(): {}s'.format(t1 - t0))
+    log.debug('  get_role_creds(): {}s'.format(t2 - t1))
+    log.debug('  get_role_session(): {}s'.format(t3 - t2))
+    log.debug('  get_bucket_region(): {}s'.format(t4 - t3))
+    log.debug('  total: {}'.format(t4 - t0))
+
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
 

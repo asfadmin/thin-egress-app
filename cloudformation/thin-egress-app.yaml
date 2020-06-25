@@ -101,7 +101,7 @@ Parameters:
 
   LambdaCodeS3Bucket:
     Type: String
-    Default: "asf.public.code.usw2"
+    Default: "asf.public.code"
     Description: "S3 Bucket of packaged lambda egress code."
 
   LambdaCodeDependencyArchive:

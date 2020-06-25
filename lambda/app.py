@@ -357,8 +357,10 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-
+    t = list()
+    t.append(time.time())
     client = get_data_dl_s3_client()
+    t.append(time.time())
     # Check for range request
     range_header = get_range_header_val()
     try:
@@ -367,6 +369,7 @@ def try_download_head(bucket, filename):
         else:
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
+        t.append(time.time())
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         # cumulus uses this log message for metrics purposes.
@@ -389,26 +392,39 @@ def try_download_head(bucket, filename):
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
 
     # Generate URL
+    t.append(time.time())
     creds = get_role_creds(user_id=user_id)
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
+    t.append(time.time())
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')
+    t.append(time.time())
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
+    log.debug('timing for try_download_head()')
+    log.debug('ET for get_data_dl_s3_client(): {}s'.format(t[1] - t[0]))
+    log.debug('ET for client.get_object(): {}s'.format(t[2] - t[1]))
+    log.debug('ET for get_role_creds(): {}s'.format(t[4] - t[3]))
+    log.debug('ET for get_presigned_url(): {}s'.format(t[5] - t[4]))
+
+
     return make_redirect(presigned_url, {}, 303)
 
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
-
+    t = list()
+    t.append(time.time())
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
+    t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+        t.append(time.time())
 
         process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
         log.debug(process_results)
@@ -418,6 +434,11 @@ def dynamic_url_head():
                              'title': 'Bucket not available'}
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
+        t.append(time.time())
+        log.debug('timing for dynamic_url_head()')
+        log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
+        log.debug('ET for process_request(): {}s'.format(t[2] - t[1]))
+        log.debug('ET for total: {}s'.format(t[3] - t[0]))
 
         return try_download_head(bucket, filename)
     return Response(body='HEAD failed', headers={}, status_code=400)
@@ -425,9 +446,12 @@ def dynamic_url_head():
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
+    t = list()
+    t.append(time.time())
     custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
+    t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
@@ -449,19 +473,22 @@ def dynamic_url():
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
-
+    t.append(time.time()) # 2
     # Check for public bucket
     if check_public_bucket(bucket, public_buckets, b_map):
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         return do_auth_and_return(app.current_request.context)
-
+    t.append(time.time())  # 3
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, private_buckets, b_map)  # NOTE: Is an optimization attempt worth it
                                                                           # if we're asking for a public file and we
                                                                           # omit this check?
     log.debug('private check: {}'.format(private_check))
+    t.append(time.time())  # 4
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    t.append(time.time())  # 5
+
     if new_user_profile and new_user_profile != user_profile:
         log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
         user_profile = new_user_profile
@@ -471,13 +498,21 @@ def dynamic_url():
         headers = {}
         return make_html_response(template_vars, headers, 403, 'error.html')
 
-    if not filename:
+    if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
+    t.append(time.time())  # 6
+
+    log.debug('timing for dynamic_url()')
+    log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
+    log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
+    log.debug('ET for user_in_group(): {}s'.format(t[5] - t[4]))
+    log.debug('ET for total: {}s'.format(t[6] - t[0]))
+
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 

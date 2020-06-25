@@ -21,6 +21,7 @@ conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 # Here's a lifetime-of lambda cache of these values:
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
+b_region_map = {}
 public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
@@ -131,14 +132,20 @@ def get_bcconfig(user_id: str) -> dict:
 def get_bucket_region(session, bucketname) ->str:
     # Figure out bucket region
     params = {}
+    if bucketname in b_region_map:
+        return b_region_map[bucketname]
+
     try:
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
+
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
         log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
         raise
+
+    b_region_map[bucketname] = bucket_region
 
     return bucket_region
 

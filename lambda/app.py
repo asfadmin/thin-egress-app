@@ -185,11 +185,11 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     client = session.client('s3', bucket_region, **params)
 
     log.debug('timing for try_download_from_bucket(): ')
-    log.debug('  check_in_region_request(): {}s'.format(t1 - t0))
-    log.debug('  get_role_creds(): {}s'.format(t2 - t1))
-    log.debug('  get_role_session(): {}s'.format(t3 - t2))
-    log.debug('  get_bucket_region(): {}s'.format(t4 - t3))
-    log.debug('  total: {}'.format(t4 - t0))
+    log.debug('ET for check_in_region_request(): {}s'.format(t1 - t0))
+    log.debug('ET for get_role_creds(): {}s'.format(t2 - t1))
+    log.debug('ET for get_role_session(): {}s'.format(t3 - t2))
+    log.debug('ET for get_bucket_region(): {}s'.format(t4 - t3))
+    log.debug('ET for total: {}'.format(t4 - t0))
 
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))

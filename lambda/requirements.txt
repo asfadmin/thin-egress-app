@@ -5,7 +5,7 @@ cryptography==2.9.2
 flatdict==4.0.1
 jinja2==2.11.2
 jwcrypto==0.7
-netaddr==0.7.19
+netaddr==0.7.20
 pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.1.0

@@ -203,7 +203,7 @@ Parameters:
       - "False"
       - "True"
     Description: "Standard bucketmaps are not reverse."
-    
+
   SuppressHeadCheck:
     Type: String
     Default: "False"
@@ -518,8 +518,8 @@ Resources:
               - DomainNameIsSet
               - !Ref DomainName
               - !Ref AWS::NoValue
-          SUPPRESS_HEAD: 
-            !If 
+          SUPPRESS_HEAD:
+            !If
               - SuppressHead
               - 'True'
               - !Ref AWS::NoValue

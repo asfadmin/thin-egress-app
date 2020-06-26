@@ -22,6 +22,7 @@ conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
+bc_client_cache = {}
 public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
@@ -186,10 +187,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                     "This is double egress in Proxy mode!".format(bucket,
                                                                   bucket_region,
                                                                   os.getenv('AWS_DEFAULT_REGION')))
-    params = {}
-    # now that we know where the bucket is, connect in THAT region
-    params['config'] = bc_Config(**get_bcconfig(user_id))
-    client = session.client('s3', bucket_region, **params)
+    client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
     log.debug('ET for check_in_region_request(): {}s'.format(t1 - t0))
@@ -205,10 +203,12 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
         if not range_header:
-            client.head_object(Bucket=bucket, Key=filename)
+            if not os.getenv("SUPPRESS_HEAD"):
+                client.head_object(Bucket=bucket, Key=filename)
             redirheaders = {}
         else:
-            client.head_object(Bucket=bucket, Key=filename, Range=range_header)
+            if not os.getenv("SUPPRESS_HEAD"):
+                client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
         expires_in = 24 * 3600
@@ -343,18 +343,17 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+def get_bc_config_client(user_id):
+    params = {}
+    if user_id not in bc_client_cache:
+        params['config'] = bc_Config(**get_bcconfig(user_id))
+        session = get_role_session(user_id=user_id)
+        bc_client_cache[user_id] = session.client('s3', **params)
+    return bc_client_cache[user_id]
 
 def get_data_dl_s3_client():
-
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
-
-    session = get_role_session(user_id=user_id)
-    params = {}
-
-    params['config'] = bc_Config(**get_bcconfig(user_id))
-    client = session.client('s3', **params)
-    return client
-
+    return get_bc_config_client(user_id)
 
 def try_download_head(bucket, filename):
     t = [time.time()]

@@ -78,6 +78,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     PublicBucketsFile               = var.public_buckets_file
     SessionTTL                      = var.session_ttl
     StageName                       = var.stage_name
+    SuppressHeadCheck               = var.suppress_head_check ? "True" : "False"
     URSAuthCredsSecretName          = var.urs_auth_creds_secret_name
     UseReverseBucketMap             = var.use_reverse_bucket_map ? "True" : "False"
     VPCSecurityGroupIDs             = local.vpc_security_group_ids_set ? join(",", var.vpc_security_group_ids) : aws_security_group.egress_lambda[0].id

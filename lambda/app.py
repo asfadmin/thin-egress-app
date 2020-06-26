@@ -22,6 +22,7 @@ conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
+bc_client_cache = {}
 public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
@@ -343,6 +344,12 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+def get_bc_config_client(user_id):
+    if user_id not in bc_client_cache:
+        params['config'] = bc_Config(**get_bcconfig(user_id))
+        session.client('s3', **params)
+        bc_client_cache[user_id] = session.client('s3', **params)
+    return bc_client_cache[user_id]
 
 def get_data_dl_s3_client():
 

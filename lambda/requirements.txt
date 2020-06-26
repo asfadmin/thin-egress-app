@@ -10,4 +10,3 @@ pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.1.0
 PyYAML==5.3.1
-flatdict==4.0.1

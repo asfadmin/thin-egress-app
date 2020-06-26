@@ -344,7 +344,6 @@ def get_range_header_val():
     return None
 
 def get_bc_config_client(user_id):
-    global bc_client_cache
     params = {}
     if user_id not in bc_client_cache:
         params['config'] = bc_Config(**get_bcconfig(user_id))

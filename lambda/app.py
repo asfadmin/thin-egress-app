@@ -357,7 +357,7 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-    t = list()
+    t = []
     t.append(time.time())
     client = get_data_dl_s3_client()
     t.append(time.time())
@@ -416,7 +416,7 @@ def try_download_head(bucket, filename):
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
-    t = list()
+    t = []
     t.append(time.time())
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
@@ -446,7 +446,7 @@ def dynamic_url_head():
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-    t = list()
+    t = []
     t.append(time.time())
     custom_headers = {}
     log.debug('attempting to GET a thing')

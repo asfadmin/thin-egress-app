@@ -98,6 +98,12 @@ variable "log_api_gateway_to_cloudwatch" {
   description = "Switch that will enable logging of api gateway request/response to cloudwatch."
 }
 
+variable "suppress_head_check" {
+  type        = bool
+  default     = false
+  description = "Do not validate if a file exists before creating pre-signed URL."
+}
+
 variable "log_level" {
   type        = string
   default     = null

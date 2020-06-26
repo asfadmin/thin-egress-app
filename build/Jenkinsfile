@@ -42,6 +42,25 @@ pipeline {
         sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
         sh "git config user.name 'jenkins'"
         sh "git submodule update --init --recursive"
+
+        // show us the params:
+        echo "params.APPTAG: ${params.APPTAG}"
+        echo "params.NEWTAG: ${params.NEWTAG}"
+        echo "params.AWSCREDS: ${params.AWSCREDS}"
+        echo "params.URS_ACCT: ${params.URS_ACCT}"
+        echo "params.CHATHOST: ${params.CHATHOST}"
+        echo "params.CHAT_ROOM: ${params.CHAT_ROOM}"
+        echo "params.MATURITY: ${params.MATURITY}"
+        echo "params.URS_CREDS_SECRET_NAME: ${params.URS_CREDS_SECRET_NAME}"
+        echo "params.JWTKEYSECRETNAME: ${params.JWTKEYSECRETNAME}"
+        echo "params.DOMAIN_NAME: ${params.DOMAIN_NAME}"
+        echo "params.DOWNLOAD_ROLE_ARN: ${params.DOWNLOAD_ROLE_ARN}"
+        echo "params.DOWNLOAD_ROLE_ARN_INREGION: ${params.DOWNLOAD_ROLE_ARN_INREGION}"
+        echo "params.BUCKETNAME_PREFIX: ${params.BUCKETNAME_PREFIX}"
+        echo "params.AWS_DEFAULT_REGION: ${params.AWS_DEFAULT_REGION}"
+        echo "params.DOMAIN_CERT_ARN: ${params.DOMAIN_CERT_ARN}"
+        echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
+        echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
       }
     }
 

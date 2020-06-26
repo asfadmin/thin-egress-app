@@ -47,6 +47,7 @@ Metadata:
           - PrivateBucketsFile
           - DownloadRoleArn
           - DownloadRoleInRegionArn
+          - SuppressHeadCheck
       -
         Label:
           default: Session Settings
@@ -202,6 +203,14 @@ Parameters:
       - "False"
       - "True"
     Description: "Standard bucketmaps are not reverse."
+    
+  SuppressHeadCheck:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: "Do not validate if a file exists before creating pre-signed URL. "
 
   PublicBucketsFile:
     Type: String
@@ -244,6 +253,7 @@ Conditions:
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
+  SuppressHead: !Equals [ !Ref SuppressHeadCheck, "True" ]
 
 Outputs:
   ExternalEndpoint:
@@ -507,6 +517,11 @@ Resources:
             !If
               - DomainNameIsSet
               - !Ref DomainName
+              - !Ref AWS::NoValue
+          SUPPRESS_HEAD: 
+            !If 
+              - SuppressHead
+              - 'True'
               - !Ref AWS::NoValue
           COOKIE_DOMAIN: !Ref CookieDomain
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName

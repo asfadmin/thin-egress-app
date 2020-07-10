@@ -142,6 +142,8 @@ Parameters:
     AllowedValues:
       - 'https://urs.earthdata.nasa.gov'
       - 'https://uat.urs.earthdata.nasa.gov'
+      - 'https://sit.urs.earthdata.nasa.gov'
+      - 'https://sbx.urs.earthdata.nasa.gov'
     Default: 'https://urs.earthdata.nasa.gov'
     Description: "Is the 'AUTH_BASE_URL' env var in the lambda."
 

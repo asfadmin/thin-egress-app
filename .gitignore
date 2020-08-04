@@ -9,3 +9,5 @@
 bucket_map.yaml
 terraform.tfstate*
 *.tfvars
+build/requirements_dev.txt
+build/tea-dev.Dockerfile

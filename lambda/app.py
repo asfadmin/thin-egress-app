@@ -23,7 +23,6 @@ bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
 bc_client_cache = {}
-public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
 public_buckets = None
 private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
 private_buckets = None
@@ -56,24 +55,16 @@ def restore_bucket_vars():
     global public_buckets                                                              #pylint: disable=global-statement
     global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
-              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
+    log.debug('conf bucket: {}, bucket_map_file: {}, ' + 'private buckets file: {}'.format(conf_bucket,
                                                                          bucket_map_file,
-                                                                         public_buckets_file,
                                                                          private_buckets_file))
     if b_map is None or public_buckets is None or private_buckets is None:
         log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
                  'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
                                                                             bucket_map_file,
-                                                                            public_buckets_file,
                                                                             private_buckets_file))
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
-        if public_buckets_file:
-            log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
-        else:
-            public_buckets = {}
         if private_buckets_file:
             private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
         else:

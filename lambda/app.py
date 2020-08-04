@@ -4,12 +4,14 @@ from botocore.exceptions import ClientError
 import flatdict
 import os
 import json
+
 import time
 
-from urllib.parse import urlparse, quote_plus
+from urllib import request
+from urllib.parse import urlparse, quote_plus, urlencode
 
 from rain_api_core.general_util import get_log
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
 from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
@@ -36,6 +38,19 @@ header_map = {'date':           'Date',
               'etag':           'ETag',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
+
+
+def get_user_from_token(token):
+
+    params = {
+        'client_id': get_urs_creds()['UrsId'],  # The client_id of the non SSO application you registered with Earthdata Login
+        'token': token,
+        'on_behalf_of': '',  # UID of the SSO application
+    }
+    url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
+                                           urlencode(params))
+    headers = {}
+    req = request.Request(url, headers=headers, method='POST')
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):

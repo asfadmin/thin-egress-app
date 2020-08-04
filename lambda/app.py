@@ -60,9 +60,8 @@ def restore_bucket_vars():
                                                                          private_buckets_file))
     if b_map is None or public_buckets is None or private_buckets is None:
         log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
-                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                            bucket_map_file,
-                                                                            private_buckets_file))
+                 'private buckets file: {}'.format(conf_bucket,bucket_map_file,private_buckets_file))
+
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
         if private_buckets_file:

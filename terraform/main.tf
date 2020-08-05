@@ -73,7 +73,6 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     Loglevel                        = var.log_level
     Maturity                        = var.maturity
     PermissionsBoundaryName         = var.permissions_boundary_name
-    PrivateBucketsFile              = var.private_buckets_file
     PrivateVPC                      = var.private_vpc
     PublicBucketsFile               = var.public_buckets_file
     SessionTTL                      = var.session_ttl

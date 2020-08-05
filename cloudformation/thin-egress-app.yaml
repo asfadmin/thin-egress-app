@@ -536,8 +536,6 @@ Resources:
           CONFIG_BUCKET: !Ref ConfigBucket
           BUCKET_MAP_FILE: !Ref BucketMapFile
           USE_REVERSE_BUCKET_MAP: !Ref UseReverseBucketMap
-          PUBLIC_BUCKETS_FILE: !Ref PublicBucketsFile
-          PRIVATE_BUCKETS_FILE: !Ref PrivateBucketsFile
           EGRESS_APP_DOWNLOAD_ROLE_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleLocal.Arn, !Ref DownloadRoleArn ]
           EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN: !If [ CreateDownloadRole, !GetAtt DownloadRoleInRegion.Arn, !Ref DownloadRoleInRegionArn ]
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir

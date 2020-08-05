@@ -43,8 +43,6 @@ Metadata:
           - BucketnamePrefix
           - BucketMapFile
           - UseReverseBucketMap
-          - PublicBucketsFile
-          - PrivateBucketsFile
           - DownloadRoleArn
           - DownloadRoleInRegionArn
           - SuppressHeadCheck
@@ -212,15 +210,6 @@ Parameters:
       - "True"
     Description: "Do not validate if a file exists before creating pre-signed URL. "
 
-  PublicBucketsFile:
-    Type: String
-    Default: ''
-    Description: "Deprecated, will be removed in a near-future version of TEA. Path and file of public buckets file's location in the ConfigBucket."
-
-  PrivateBucketsFile:
-    Type: String
-    Default: ''
-    Description: "Deprecated, will be removed in a near-future version of TEA. Path and file of private buckets file's location in the ConfigBucket."
 
   DownloadRoleArn:
     Type: String

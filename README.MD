@@ -166,7 +166,7 @@ profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 
 ### Buckets and Bucket map
 
-The bucket map allows the app to determine in which bucket to look when given the path from the URL. It's possible to separate the maps into separate files for bucket, public and private, but this functionality is deprecated and will be removed in a future version of TEA.
+The bucket map allows the app to determine in which bucket to look when given the path from the URL.
 
 If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```

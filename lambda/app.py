@@ -56,7 +56,7 @@ def restore_bucket_vars():
 
     log.debug('conf bucket: {}, bucket_map_file: {}, ' + 'private buckets file: {}'.format(conf_bucket,
                                                                          bucket_map_file))
-    if b_map is None or public_buckets is None or private_buckets is None:
+    if b_map is None:
         log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
                  'private buckets file: {}'.format(conf_bucket,bucket_map_file))
 

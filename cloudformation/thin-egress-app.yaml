@@ -342,6 +342,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub "${AWS::StackName}-EgressLambdaIamRole"
+      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
           - UsePermissionsBoundary

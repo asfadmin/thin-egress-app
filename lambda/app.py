@@ -189,7 +189,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                 client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
-        expires_in = (12 * 3600) - offset
+        expires_in = 3600 - offset
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
         if isinstance(headers, dict):
             log.debug(f'adding {headers} to redirheaders {redirheaders}')
@@ -370,7 +370,7 @@ def try_download_head(bucket, filename):
     # Generate URL
     t.append(time.time())
     creds, offset = get_role_creds(user_id=user_id)
-    url_lifespan = (12 * 3600) - offset
+    url_lifespan = 3600 - offset
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
     t.append(time.time())

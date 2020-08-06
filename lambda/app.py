@@ -23,10 +23,6 @@ bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
 bc_client_cache = {}
-public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
-public_buckets = None
-private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
-private_buckets = None
 s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
@@ -53,31 +49,13 @@ def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
 def restore_bucket_vars():
 
     global b_map                                                                       #pylint: disable=global-statement
-    global public_buckets                                                              #pylint: disable=global-statement
-    global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
-              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                         bucket_map_file,
-                                                                         public_buckets_file,
-                                                                         private_buckets_file))
-    if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
-                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                            bucket_map_file,
-                                                                            public_buckets_file,
-                                                                            private_buckets_file))
+    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket,bucket_map_file))
+    if b_map is None:
+        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket,bucket_map_file))
+
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
-        if public_buckets_file:
-            log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
-        else:
-            public_buckets = {}
-        if private_buckets_file:
-            private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
-        else:
-            private_buckets = {}
     else:
         log.info('reusing old bucket configs')
 
@@ -471,13 +449,13 @@ def dynamic_url():
             # Not kicking user out just yet. We might be dealing with a public bucket
     t.append(time.time()) # 2
     # Check for public bucket
-    if check_public_bucket(bucket, public_buckets, b_map):
+    if check_public_bucket(bucket, b_map):
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         return do_auth_and_return(app.current_request.context)
     t.append(time.time())  # 3
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, private_buckets, b_map)  # NOTE: Is an optimization attempt worth it
+    private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
                                                                           # if we're asking for a public file and we
                                                                           # omit this check?
     log.debug('private check: {}'.format(private_check))

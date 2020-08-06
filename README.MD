@@ -114,7 +114,7 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 #### Setting up the URS client secrets:
 `UrsId` can be found on your appication's URS home page as `Client ID`. 
 
-`UrsAuth` is the `User ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
+`UrsAuth` is the `UID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
 
 
 ```bash

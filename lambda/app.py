@@ -144,7 +144,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
     t1 = time.time()
-    creds = get_role_creds(user_id, is_in_region)
+    creds, offset = get_role_creds(user_id, is_in_region)
     t2 = time.time()
     session = get_role_session(creds=creds, user_id=user_id)
     t3 = time.time()
@@ -189,7 +189,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                 client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
-        expires_in = 24 * 3600
+        expires_in = (12 * 3600) - offset
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
         if isinstance(headers, dict):
             log.debug(f'adding {headers} to redirheaders {redirheaders}')
@@ -369,11 +369,12 @@ def try_download_head(bucket, filename):
 
     # Generate URL
     t.append(time.time())
-    creds = get_role_creds(user_id=user_id)
+    creds, offset = get_role_creds(user_id=user_id)
+    url_lifespan = (12 * 3600) - offset
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
     t.append(time.time())
-    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')
+    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
     t.append(time.time())
     s3_host = urlparse(presigned_url).netloc
 

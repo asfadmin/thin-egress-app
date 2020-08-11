@@ -8,10 +8,11 @@ import json
 import time
 
 from urllib import request
+from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
 from rain_api_core.general_util import get_log
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, get_profile, user_profile_2_jwt_payload
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
@@ -36,17 +37,44 @@ header_map = {'date':           'Date',
               'content-length': 'Content-Length'}
 
 
-def get_user_from_token(token):
 
+
+
+def get_user_from_token(token):
+    """
+    This will be moved to rain-api-core.urs_util.py once things stabilize.
+    Will query URS for user ID of requesting user based on token sent with request
+
+    :param token: token received in request for data
+    :return: user ID of requesting user.
+    """
     params = {
         'client_id': get_urs_creds()['UrsId'],  # The client_id of the non SSO application you registered with Earthdata Login
         'token': token,
-        'on_behalf_of': '',  # UID of the SSO application
+        'on_behalf_of': 'x',  # UID of the SSO application # It seems that this param will be removed?
     }
     url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
                                            urlencode(params))
     headers = {}
     req = request.Request(url, headers=headers, method='POST')
+    try:
+        response = request.urlopen(req)
+    except HTTPError as e:
+        if e.code == 400 or e.code == 403:
+            msg = json.loads(e.read())
+            if 'error' in msg:
+                errtxt = msg["error"]
+            else:
+                errtxt = f''
+            log.error(f'Error getting URS userid from token: {errtxt}')
+            log.debug(f'url: {url}, params: {params}, ')
+            return ''
+    try:
+        return json.loads(response.read())['uid']
+    except (KeyError, json.decoder.JSONDecodeError) as e:
+        log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
+        return ''
+
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -471,7 +499,18 @@ def dynamic_url():
     if check_public_bucket(bucket, b_map):
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
-        return do_auth_and_return(app.current_request.context)
+        if 'Authorization' in app.current_request.headers: # are we going to have capitalization issues here?
+            # TODO: move much of this into a function that lives in urs_util
+            token = app.current_request.headers['Authorization'].split(' ')[1]
+            user_id = get_user_from_token(token)
+            if user_id:
+                user_profile = get_profile(user_id, token) # I think (hope!) this token works for this
+                jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
+            else:
+                return do_auth_and_return(app.current_request.context) # I think?
+        else:
+            return do_auth_and_return(app.current_request.context)
+
     t.append(time.time())  # 3
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it

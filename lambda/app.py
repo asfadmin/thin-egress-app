@@ -14,7 +14,7 @@ from rain_api_core.general_util import get_log
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
-from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
+from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -234,9 +234,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievar:
-        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]:
-            return cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)][fieldname]
+    if JWT_COOKIE_NAME in cookievar:
+        if fieldname in cookievar[JWT_COOKIE_NAME]:
+            return cookievar[JWT_COOKIE_NAME][fieldname]
 
     return None
 
@@ -249,9 +249,9 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+        if JWT_COOKIE_NAME in cookievars:
             # We have a JWT cookie
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
+            user_profile = cookievars[JWT_COOKIE_NAME]
 
     if user_profile:
         if os.getenv('MATURITY') == 'DEV':
@@ -268,7 +268,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+    if JWT_COOKIE_NAME in cookievars:
 
         template_vars['contentstring'] = 'You are logged out.'
     else:
@@ -336,6 +336,7 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+
 def get_bc_config_client(user_id):
     params = {}
     if user_id not in bc_client_cache:
@@ -344,9 +345,11 @@ def get_bc_config_client(user_id):
         bc_client_cache[user_id] = session.client('s3', **params)
     return bc_client_cache[user_id]
 
+
 def get_data_dl_s3_client():
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
     return get_bc_config_client(user_id)
+
 
 def try_download_head(bucket, filename):
     t = [time.time()]
@@ -457,9 +460,9 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+        if JWT_COOKIE_NAME in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
+            user_profile = cookievars[JWT_COOKIE_NAME]
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket

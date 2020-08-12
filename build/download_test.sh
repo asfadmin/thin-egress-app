@@ -1,4 +1,4 @@
-#!/bin/bash
+pip #!/bin/bash
 
 # Calculate the API Gateway path
 #API=$(aws apigateway get-rest-apis --query "items[?name=='${STACKNAME}-EgressGateway'].id" --output=text)

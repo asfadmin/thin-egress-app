@@ -37,44 +37,70 @@ header_map = {'date':           'Date',
               'content-length': 'Content-Length'}
 
 
-
-
-
 def get_user_from_token(token):
     """
-    This will be moved to rain-api-core.urs_util.py once things stabilize.
+    This may be moved to rain-api-core.urs_util.py once things stabilize.
     Will query URS for user ID of requesting user based on token sent with request
 
     :param token: token received in request for data
     :return: user ID of requesting user.
     """
+
     params = {
-        'client_id': get_urs_creds()['UrsId'],  # The client_id of the non SSO application you registered with Earthdata Login
-        'token': token,
-        'on_behalf_of': 'x',  # UID of the SSO application # It seems that this param will be removed?
+        'client_id': get_urs_creds()['UrsId'],
+        # The client_id of the non SSO application you registered with Earthdata Login
+        'token': token
     }
     url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
                                            urlencode(params))
-    headers = {}
+
+    authval = "basic {}".format(get_urs_creds()['UrsAuth'])
+    headers = {'Authorization': authval}
+
+    log.debug(f'headers: {headers}, params: {params}')
+
     req = request.Request(url, headers=headers, method='POST')
     try:
         response = request.urlopen(req)
     except HTTPError as e:
-        if e.code == 400 or e.code == 403:
-            msg = json.loads(e.read())
-            if 'error' in msg:
-                errtxt = msg["error"]
-            else:
-                errtxt = f''
-            log.error(f'Error getting URS userid from token: {errtxt}')
-            log.debug(f'url: {url}, params: {params}, ')
+        response = e
+        log.debug(e)
+
+    payload = response.read()
+
+    try:
+        msg = json.loads(payload)
+    except json.JSONDecodeError as e:
+        log.error(f'could not get json message from payload: {payload}')
+        msg = {}
+
+    log.debug(f'raw payload: {payload}')
+    log.debug(f'json loads: {msg}')
+    log.debug(f'code: {response.code}')
+
+    if response.code == 403:
+        if 'error_description' in msg and msg['error_description'] == 'EULA Acceptance Failure':
+            # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
+            log.warning('user needs to sign the EULA')
+            # TODO:
             return ''
+
+    elif response.code == 400:
+        msg = json.loads(response.read())
+        if 'error' in msg:
+            errtxt = msg["error"]
+        else:
+            errtxt = f''
+        if 'error_description' in msg:
+            errtxt = errtxt + ' ' + msg['error_description']
+        log.error(f'Error getting URS userid from token: {errtxt}')
+        log.debug(f'url: {url}, params: {params}, ')
+        return ''
     try:
         return json.loads(response.read())['uid']
     except (KeyError, json.decoder.JSONDecodeError) as e:
         log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
         return ''
-
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -472,6 +498,7 @@ def dynamic_url():
     custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
+    log.debug(f'b_map: {b_map}')
     t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
@@ -496,18 +523,22 @@ def dynamic_url():
             # Not kicking user out just yet. We might be dealing with a public bucket
     t.append(time.time()) # 2
     # Check for public bucket
-    if check_public_bucket(bucket, b_map):
+    pubbucket = check_public_bucket(bucket, b_map)
+    if pubbucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         if 'Authorization' in app.current_request.headers: # are we going to have capitalization issues here?
             # TODO: move much of this into a function that lives in urs_util
-            token = app.current_request.headers['Authorization'].split(' ')[1]
+            log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
+            token = app.current_request.headers['Authorization'].split()[1]
             user_id = get_user_from_token(token)
             if user_id:
                 user_profile = get_profile(user_id, token) # I think (hope!) this token works for this
+                log.debug(f'user_profie: {user_profile}')
                 jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
+                custom_headers['Set-Cookie'] = f'{jwt_payload}'
             else:
-                return do_auth_and_return(app.current_request.context) # I think?
+                return do_auth_and_return(app.current_request.context)  # I think?
         else:
             return do_auth_and_return(app.current_request.context)
 

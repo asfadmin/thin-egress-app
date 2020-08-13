@@ -43,8 +43,12 @@ class TeaException(Exception):
 
 
 class EulaException(TeaException):
-    def __init__(self, resolution_url):
-        self.resolution_url = resolution_url
+    def __init__(self, payload:dict):
+        self.payload = payload
+
+
+def check_for_browser(hdrs):
+    return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
 
 
 def get_user_from_token(token):
@@ -96,10 +100,11 @@ def get_user_from_token(token):
             log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
             return ''
     elif response.code == 403:
-        if 'error_description' in msg and msg['error_description'] == 'EULA Acceptance Failure':
+        if 'error_description' in msg and 'eula' in msg['error_description'].lower():
+
             # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
             log.warning('user needs to sign the EULA')
-            raise EulaException(msg['resolution_url'])
+            raise EulaException(msg)
     elif response.code > 300:
         msg = json.loads(response.read())
         if 'error' in msg:
@@ -540,16 +545,22 @@ def dynamic_url():
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         if 'Authorization' in app.current_request.headers: # are we going to have capitalization issues here?
-            # TODO: move much of this into a function that lives in urs_util
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
             try:
                 user_id = get_user_from_token(token)
             except EulaException as e:
-                # TODO handle this for real
+
                 log.warning('user has not accepted EULA')
-                body = f'Please accept EULA here: {e.resolution_url}'
-                return Response(body=body, status_code=403, headers={})
+                if check_for_browser(app.current_request.headers):
+                    template_vars = {'title': e.payload['error_description'],
+                                     'status_code': 403,
+                                     'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                                     }
+
+                    return make_html_response(template_vars, {}, 403, 'error.html')
+                else:
+                    return Response(body=e.payload, status_code=403, headers={})
 
             if user_id:
                 user_profile = get_profile(user_id, token) # I think (hope!) this token works for this

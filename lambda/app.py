@@ -37,6 +37,16 @@ header_map = {'date':           'Date',
               'content-length': 'Content-Length'}
 
 
+class TeaException(Exception):
+    """ base exception for TEA """
+    pass
+
+
+class EulaException(TeaException):
+    def __init__(self, resolution_url):
+        self.resolution_url = resolution_url
+
+
 def get_user_from_token(token):
     """
     This may be moved to rain-api-core.urs_util.py once things stabilize.
@@ -51,6 +61,7 @@ def get_user_from_token(token):
         # The client_id of the non SSO application you registered with Earthdata Login
         'token': token
     }
+
     url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
                                            urlencode(params))
 
@@ -78,14 +89,18 @@ def get_user_from_token(token):
     log.debug(f'json loads: {msg}')
     log.debug(f'code: {response.code}')
 
-    if response.code == 403:
+    if response.code == 200:
+        try:
+            return json.loads(response.read())['uid']
+        except (KeyError, json.decoder.JSONDecodeError) as e:
+            log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
+            return ''
+    elif response.code == 403:
         if 'error_description' in msg and msg['error_description'] == 'EULA Acceptance Failure':
             # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
             log.warning('user needs to sign the EULA')
-            # TODO:
-            return ''
-
-    elif response.code == 400:
+            raise EulaException(msg['resolution_url'])
+    elif response.code > 300:
         msg = json.loads(response.read())
         if 'error' in msg:
             errtxt = msg["error"]
@@ -96,11 +111,8 @@ def get_user_from_token(token):
         log.error(f'Error getting URS userid from token: {errtxt}')
         log.debug(f'url: {url}, params: {params}, ')
         return ''
-    try:
-        return json.loads(response.read())['uid']
-    except (KeyError, json.decoder.JSONDecodeError) as e:
-        log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
-        return ''
+
+
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -531,7 +543,14 @@ def dynamic_url():
             # TODO: move much of this into a function that lives in urs_util
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
-            user_id = get_user_from_token(token)
+            try:
+                user_id = get_user_from_token(token)
+            except EulaException as e:
+                # TODO handle this for real
+                log.warning('user has not accepted EULA')
+                body = f'Please accept EULA here: {e.resolution_url}'
+                return Response(body=body, status_code=403, headers={})
+
             if user_id:
                 user_profile = get_profile(user_id, token) # I think (hope!) this token works for this
                 log.debug(f'user_profie: {user_profile}')

@@ -508,6 +508,29 @@ def dynamic_url_head():
     return Response(body='HEAD failed', headers={}, status_code=400)
 
 
+def handle_auth_header(token):
+
+    try:
+        user_id = get_user_from_token(token)
+    except EulaException as e:
+
+        log.warning('user has not accepted EULA')
+        if check_for_browser(app.current_request.headers):
+            template_vars = {'title': e.payload['error_description'],
+                             'status_code': 403,
+                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                             }
+
+            return 'return', make_html_response(template_vars, {}, 403, 'error.html')
+        return 'return', Response(body=e.payload, status_code=403, headers={})
+
+    if user_id:
+
+        return 'user_id', user_id
+    else:
+        return 'return', do_auth_and_return(app.current_request.context)  # I think?
+
+
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]
@@ -537,48 +560,37 @@ def dynamic_url():
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
-    t.append(time.time()) # 2
+    t.append(time.time())  # 2
     # Check for public bucket
-    pubbucket = check_public_bucket(bucket, b_map)
-    if pubbucket:
+    pub_bucket = check_public_bucket(bucket, b_map)
+    t.append(time.time())  # 3
+    if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         if 'Authorization' in app.current_request.headers: # are we going to have capitalization issues here?
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
-            try:
-                user_id = get_user_from_token(token)
-            except EulaException as e:
-
-                log.warning('user has not accepted EULA')
-                if check_for_browser(app.current_request.headers):
-                    template_vars = {'title': e.payload['error_description'],
-                                     'status_code': 403,
-                                     'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
-                                     }
-
-                    return make_html_response(template_vars, {}, 403, 'error.html')
-                return Response(body=e.payload, status_code=403, headers={})
-
-            if user_id:
-                user_profile = get_profile(user_id, token) # I think (hope!) this token works for this
-                log.debug(f'user_profie: {user_profile}')
-                jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
-                custom_headers['Set-Cookie'] = f'{jwt_payload}'
+            action, data = handle_auth_header(token)
+            if action == 'return':
+                # Not a successful event.
+                return data
             else:
-                return do_auth_and_return(app.current_request.context)  # I think?
+                user_profile = get_profile(data, token)
+                log.debug(f'user_profie: {user_profile}')
+                jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
+                custom_headers['Set-Cookie'] = f'{jwt_payload}'
         else:
             return do_auth_and_return(app.current_request.context)
 
-    t.append(time.time())  # 3
+    t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
                                                                           # if we're asking for a public file and we
                                                                           # omit this check?
     log.debug('private check: {}'.format(private_check))
-    t.append(time.time())  # 4
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     t.append(time.time())  # 5
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    t.append(time.time())  # 6
 
     if new_user_profile and new_user_profile != user_profile:
         log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
@@ -596,13 +608,14 @@ def dynamic_url():
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
-    t.append(time.time())  # 6
+    t.append(time.time())  # 7
 
     log.debug('timing for dynamic_url()')
     log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
     log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
-    log.debug('ET for user_in_group(): {}s'.format(t[5] - t[4]))
-    log.debug('ET for total: {}s'.format(t[6] - t[0]))
+    log.debug('ET for possible auth header handling: {}s'.format(t[4] - t[3]))
+    log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
+    log.debug('ET for total: {}s'.format(t[7] - t[0]))
 
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 

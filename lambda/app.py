@@ -525,10 +525,9 @@ def handle_auth_header(token):
         return 'return', Response(body=e.payload, status_code=403, headers={})
 
     if user_id:
-
         return 'user_id', user_id
-    else:
-        return 'return', do_auth_and_return(app.current_request.context)  # I think?
+
+    return 'return', do_auth_and_return(app.current_request.context)
 
 
 @app.route('/{proxy+}', methods=['GET'])
@@ -571,14 +570,15 @@ def dynamic_url():
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
             action, data = handle_auth_header(token)
+
             if action == 'return':
                 # Not a successful event.
                 return data
-            else:
-                user_profile = get_profile(data, token)
-                log.debug(f'user_profie: {user_profile}')
-                jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
-                custom_headers['Set-Cookie'] = f'{jwt_payload}'
+
+            user_profile = get_profile(data, token)
+            log.debug(f'user_profie: {user_profile}')
+            jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
+            custom_headers['Set-Cookie'] = f'{jwt_payload}'
         else:
             return do_auth_and_return(app.current_request.context)
 

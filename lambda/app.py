@@ -104,15 +104,19 @@ def get_user_from_token(token):
             # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
             log.warning('user needs to sign the EULA')
             raise EulaException(msg)
-    elif response.code > 300:
-        msg = json.loads(response.read())
-        if 'error' in msg:
-            errtxt = msg["error"]
-        else:
-            errtxt = f''
-        if 'error_description' in msg:
-            errtxt = errtxt + ' ' + msg['error_description']
-        log.error(f'Error getting URS userid from token: {errtxt}')
+    else:
+        try:
+            msg = json.loads(response.read())
+            if 'error' in msg:
+                errtxt = msg["error"]
+            else:
+                errtxt = f''
+            if 'error_description' in msg:
+                errtxt = errtxt + ' ' + msg['error_description']
+        except (json.JSONDecodeError, KeyError) as e:
+            errtxt = f'Attempt to get userID from token failed. Could not get valid JSON out of: `{response.read()}`'
+
+        log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
         log.debug(f'url: {url}, params: {params}, ')
         return ''
 
@@ -508,7 +512,7 @@ def dynamic_url_head():
     return Response(body='HEAD failed', headers={}, status_code=400)
 
 
-def handle_auth_header(token):
+def handle_auth_bearer_header(token):
     """
     Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
     returns it. If user_id is not determined returns data to be returned
@@ -572,10 +576,11 @@ def dynamic_url():
     if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
-        if 'Authorization' in app.current_request.headers: # are we going to have capitalization issues here?
+        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[0].lower() == 'bearer':
+            # we will deal with "bearer" auth here. "basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
-            action, data = handle_auth_header(token)
+            action, data = handle_auth_bearer_header(token)
 
             if action == 'return':
                 # Not a successful event.

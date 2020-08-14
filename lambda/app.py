@@ -509,7 +509,13 @@ def dynamic_url_head():
 
 
 def handle_auth_header(token):
+    """
+    Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
+    returns it. If user_id is not determined returns data to be returned
 
+    :param token:
+    :return: action, data
+    """
     try:
         user_id = get_user_from_token(token)
     except EulaException as e:

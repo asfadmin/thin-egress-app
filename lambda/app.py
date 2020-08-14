@@ -39,7 +39,6 @@ header_map = {'date':           'Date',
 
 class TeaException(Exception):
     """ base exception for TEA """
-    pass
 
 
 class EulaException(TeaException):
@@ -559,8 +558,7 @@ def dynamic_url():
                                      }
 
                     return make_html_response(template_vars, {}, 403, 'error.html')
-                else:
-                    return Response(body=e.payload, status_code=403, headers={})
+                return Response(body=e.payload, status_code=403, headers={})
 
             if user_id:
                 user_profile = get_profile(user_id, token) # I think (hope!) this token works for this

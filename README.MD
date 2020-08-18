@@ -427,6 +427,13 @@ Its payload looks something like this:
 
 ```
 
+## Service chaining with Shared Tokens
+
+![TEA](https://github.com/asfadmin/thin-egress-app/blob/bb.PR2488/harmony-chain.png)
+
+#### TEA can accept a shared EDL Token as an Authorization (Bearer Token) method
+To enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App Group. Processing a shared toekn is temporally expensive. After the initial request, subsequent Service->TEA data requests should reuse cookies. EULA enforment is preserved in with shared tokens. 
+
 ## Troubleshooting.
 Something went wrong. Here are some solutions:
 

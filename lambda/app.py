@@ -68,7 +68,7 @@ def get_user_from_token(token):
     url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
                                            urlencode(params))
 
-    authval = "basic {}".format(get_urs_creds()['UrsAuth'])
+    authval = "Basic {}".format(get_urs_creds()['UrsAuth'])
     headers = {'Authorization': authval}
 
     log.debug(f'headers: {headers}, params: {params}')
@@ -577,7 +577,7 @@ def dynamic_url():
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[0].lower() == 'bearer':
-            # we will deal with "bearer" auth here. "basic" auth will be handled by do_auth_and_return()
+            # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
             action, data = handle_auth_bearer_header(token)

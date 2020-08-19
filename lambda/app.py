@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
 from rain_api_core.general_util import get_log
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, get_profile, user_profile_2_jwt_payload
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
@@ -94,9 +94,9 @@ def get_user_from_token(token):
 
     if response.code == 200:
         try:
-            return json.loads(response.read())['uid']
-        except (KeyError, json.decoder.JSONDecodeError) as e:
-            log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response: {response}, ')
+            return msg['uid']
+        except KeyError as e:
+            log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
             return ''
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
@@ -105,22 +105,16 @@ def get_user_from_token(token):
             log.warning('user needs to sign the EULA')
             raise EulaException(msg)
     else:
-        try:
-            msg = json.loads(response.read())
-            if 'error' in msg:
-                errtxt = msg["error"]
-            else:
-                errtxt = f''
-            if 'error_description' in msg:
-                errtxt = errtxt + ' ' + msg['error_description']
-        except (json.JSONDecodeError, KeyError) as e:
-            errtxt = f'Attempt to get userID from token failed. Could not get valid JSON out of: `{response.read()}`'
+        if 'error' in msg:
+            errtxt = msg["error"]
+        else:
+            errtxt = f''
+        if 'error_description' in msg:
+            errtxt = errtxt + ' ' + msg['error_description']
 
         log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
         log.debug(f'url: {url}, params: {params}, ')
         return ''
-
-
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -586,7 +580,7 @@ def dynamic_url():
                 # Not a successful event.
                 return data
 
-            user_profile = get_profile(data, token)
+            user_profile = get_new_token_and_profile(data, '')
             log.debug(f'user_profie: {user_profile}')
             jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
             custom_headers['Set-Cookie'] = f'{jwt_payload}'

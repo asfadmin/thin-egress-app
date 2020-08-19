@@ -9,9 +9,9 @@ AWS_DEFAULT_REGION = "us-east-1"
 
 # aws apigateway get - rest - apis - -query "items[?name=='${STACKNAME}-EgressGateway'].id" - -output = text - -region ${AWS_DEFAULT_REGION}
 
-aws_access_key_id = 'ASIATAGW6NUZLQI44THN'
-aws_secret_access_key = 'CPmrlp20wOtuIpJro7Fk8XO8XrCMSxkm0O1VynTa'
-aws_session_token = 'FwoGZXIvYXdzEEQaDB3IWofIdYvxIP8qTSKtAS261gr97INf+UqOZTbZec0vo1aVpWG+A7xsFl9ORcR1Skna9/pV6wXNBO8GufcansFCmyRn2G1AmCR0kKvTCyhYKvx64aW1DmTtpVyetIMK395p4FKqc7CCnvhrjnsxcoOKwAGxlf3W6oV4qbPCgGxd84yl5kJ1RvWUjrantLG/9cYYbbiyDMzrMqsWASGX5p21fUPQOzUTQ+y5mOAlaIjYySzLrYqRmbwCSGg0KKLF8PkFMi2DihF+jJd0YaIv2VfL6i65pXSviXXc7grgBC2kTLqW6yNf0fML58uwQtic6X0 ='
+aws_access_key_id = os.getenv("aws_access_key_id")
+aws_secret_access_key = os.getenv("aws_secret_access_key")
+aws_session_token = os.getenv("aws_session_token")
 
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
                       aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token)

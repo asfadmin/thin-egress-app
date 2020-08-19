@@ -3,19 +3,18 @@ import os
 import boto3
 import requests
 
+# Set environment variables
 STACKNAME = os.getenv("STACKNAME_SAME")
-AWS_DEFAULT_REGION = "us-east-1"
-# os.getenv("AWS_DEFAULT_REGION")
-
-# aws apigateway get - rest - apis - -query "items[?name=='${STACKNAME}-EgressGateway'].id" - -output = text - -region ${AWS_DEFAULT_REGION}
-
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 aws_access_key_id = os.getenv("aws_access_key_id")
 aws_secret_access_key = os.getenv("aws_secret_access_key")
 aws_session_token = os.getenv("aws_session_token")
 
+# Connect to AWS
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
                       aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token)
 
+# Get EgressGateway Rest API ID from AWS
 dict = client.get_rest_apis()
 for item in dict['items']:
     # if item['name'] == f'{STACKNAME}-EgressGateway':
@@ -24,7 +23,6 @@ for item in dict['items']:
 
 
 API=id
-
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
@@ -111,7 +109,7 @@ class download_test():
         r = requests.get(url)
         self.assertEquals(r.content,'["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
 
-    # Upload test results
+    # Upload test results which will override current data in S3
     s3 = boto3.resource('s3')
     s3.meta.client.upload_file('/tmp/testresults.json', '//asf.public.code/thin-egress-app/', 'testresults.json')
 

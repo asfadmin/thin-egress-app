@@ -100,10 +100,11 @@ def get_user_from_token(token):
             return ''
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
-
             # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
             log.warning('user needs to sign the EULA')
             raise EulaException(msg)
+        # Probably an expired token if here
+        log.warning(f'403 error from URS: {msg}')
     else:
         if 'error' in msg:
             errtxt = msg["error"]
@@ -114,7 +115,7 @@ def get_user_from_token(token):
 
         log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
         log.debug(f'url: {url}, params: {params}, ')
-        return ''
+    return ''
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -141,7 +142,6 @@ def restore_bucket_vars():
         log.debug('bucket map: {}'.format(b_map))
     else:
         log.info('reusing old bucket configs')
-
 
 
 def do_auth_and_return(ctxt):
@@ -581,9 +581,12 @@ def dynamic_url():
                 return data
 
             user_profile = get_new_token_and_profile(data, True)
-            log.debug(f'user_profie: {user_profile}')
-            jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
-            custom_headers['Set-Cookie'] = f'{jwt_payload}'
+            if user_profile:
+                log.debug(f'user_profie: {user_profile}')
+                jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
+                custom_headers['Set-Cookie'] = f'{jwt_payload}'
+            else:
+                do_auth_and_return(app.current_request.context)
         else:
             return do_auth_and_return(app.current_request.context)
 

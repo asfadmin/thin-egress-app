@@ -97,7 +97,7 @@ def get_user_from_token(token):
             return msg['uid']
         except KeyError as e:
             log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
-            return ''
+            return None
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
             # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
@@ -115,7 +115,7 @@ def get_user_from_token(token):
 
         log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
         log.debug(f'url: {url}, params: {params}, ')
-    return ''
+    return None
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):

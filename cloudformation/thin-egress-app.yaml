@@ -140,6 +140,8 @@ Parameters:
     AllowedValues:
       - 'https://urs.earthdata.nasa.gov'
       - 'https://uat.urs.earthdata.nasa.gov'
+      - 'https://sit.urs.earthdata.nasa.gov'
+      - 'https://sbx.urs.earthdata.nasa.gov'
     Default: 'https://urs.earthdata.nasa.gov'
     Description: "Is the 'AUTH_BASE_URL' env var in the lambda."
 
@@ -274,6 +276,7 @@ Resources:
     Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
+      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary
@@ -308,6 +311,7 @@ Resources:
     Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-DownloadRoleLocal"
+      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary
@@ -338,6 +342,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub "${AWS::StackName}-EgressLambdaIamRole"
+      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
           - UsePermissionsBoundary

@@ -5,6 +5,7 @@
 /.terraform
 /venv
 /pkg
+/.venv
 /terraform/providers.tf
 bucket_map.yaml
 terraform.tfstate*

@@ -1,18 +1,15 @@
+import sys
 import unittest
 import os
 import boto3
 import requests
 
-
-#@pytest.fixture(scope="module")
-#def setup():
 # Set environment variables
 STACKNAME = os.getenv("STACKNAME_SAME")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 aws_access_key_id = os.getenv("aws_access_key_id")
 aws_secret_access_key = os.getenv("aws_secret_access_key")
 aws_session_token = os.getenv("aws_session_token")
-
 
 # Connect to AWS
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
@@ -51,8 +48,8 @@ class download_test():
     def test_auth_process_is_successful(self):
         url = f'{APIROOT}/{METADATA_FILE}'
         values = {
-            'urs_username': 'myc00lusername',
-            'urs_password': 'Myl33tPassw0rd12'
+            'urs_username': os.getenv("URS_USERNAME"),
+            'urs_password': os.getenv("URS_PASSWORD")
         }
         session = requests.session()
         r = session.post(url, data=values)
@@ -67,7 +64,7 @@ class download_test():
         url = "http://tools.ietf.org/rfc/rfc2822.txt"
         headers = {"Range": "bytes=1035-1042"}
         r = requests.get(url, headers=headers)
-        assert len(r.text) <= 1042  # not exactly 101, because r.text does not include header
+        assert len(r.text) <= 1042  # not exactly 1042, because r.text does not include header
 
     # Check that a bad cookie value causes URS redirect:
     def test_bad_cookie_value_cause_URS_redirect(self):
@@ -112,10 +109,17 @@ class download_test():
         r = requests.get(url)
         self.assertEquals(r.content, '["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
 
-    # Upload test results which will override current data in S3
-    s3 = boto3.resource('s3')
-    s3.meta.client.upload_file('/tmp/testresults.json', 'asf.public.code/thin-egress-app/', 'testresults.json')
+
+def main(out=sys.stderr, verbosity=2):
+    loader = unittest.TestLoader()
+
+    suite = loader.loadTestsFromModule(sys.modules[__name__])
+    unittest.TextTestRunner(out, verbosity=verbosity).run(suite)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    with open('/tmp/testresults.json', 'w') as f:
+        # Upload test results which will override current data in S3
+        s3 = boto3.resource('s3')
+        s3.meta.client.upload_file('/tmp/testresults.json', 's3://asf.public.code/thin-egress-app/', 'testresults.json')
+        unittest.main(f)

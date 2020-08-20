@@ -4,6 +4,7 @@
 /.idea
 /.terraform
 /venv
+/.venv
 /pkg
 /terraform/providers.tf
 bucket_map.yaml

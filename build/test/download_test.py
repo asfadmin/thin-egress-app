@@ -3,12 +3,16 @@ import os
 import boto3
 import requests
 
+
+#@pytest.fixture(scope="module")
+#def setup():
 # Set environment variables
 STACKNAME = os.getenv("STACKNAME_SAME")
 AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
 aws_access_key_id = os.getenv("aws_access_key_id")
 aws_secret_access_key = os.getenv("aws_secret_access_key")
 aws_session_token = os.getenv("aws_session_token")
+
 
 # Connect to AWS
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
@@ -17,19 +21,19 @@ client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_k
 # Get EgressGateway Rest API ID from AWS
 dict = client.get_rest_apis()
 for item in dict['items']:
-    # if item['name'] == f'{STACKNAME}-EgressGateway':
-    if item['name'] == STACKNAME:
+    if item['name'] == f'{STACKNAME}-EgressGateway':
+        # if item['name'] == STACKNAME:
         id = item['id']
 
+API = id
 
-API=id
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
 BROWSE_FILE = 'SA/BROWSE /S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.jpg'
 
 # Get the API ROOT
-APIROOT =f'https://${API}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/API'
+APIROOT = f'https://${API}.execute-api.${AWS_DEFAULT_REGION}.amazonaws.com/API'
 
 
 class download_test():
@@ -45,7 +49,6 @@ class download_test():
 
     # Validate that auth process is successful
     def test_auth_process_is_successful(self):
-
         url = f'{APIROOT}/{METADATA_FILE}'
         values = {
             'urs_username': 'myc00lusername',
@@ -70,8 +73,8 @@ class download_test():
     def test_bad_cookie_value_cause_URS_redirect(self):
         url = f'{APIROOT}/{METADATA_FILE}'
 
-        cookies = {'cookie_test': 'imabadcookie','urs_user_id':'badusername',
-        'urs_access_token':'BLABLABLA'}
+        cookies = {'cookie_test': 'imabadcookie', 'urs_user_id': 'badusername',
+                   'urs_access_token': 'BLABLABLA'}
 
         r = requests.post(url, cookies)
         self.assertFalse(r.url is None)
@@ -107,11 +110,11 @@ class download_test():
         locate_bucket = 'locate bucket'
         url = f'{APIROOT}/locate?bucket_name={locate_bucket}'
         r = requests.get(url)
-        self.assertEquals(r.content,'["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
+        self.assertEquals(r.content, '["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
 
     # Upload test results which will override current data in S3
     s3 = boto3.resource('s3')
-    s3.meta.client.upload_file('/tmp/testresults.json', '//asf.public.code/thin-egress-app/', 'testresults.json')
+    s3.meta.client.upload_file('/tmp/testresults.json', 'asf.public.code/thin-egress-app/', 'testresults.json')
 
 
 if __name__ == '__main__':

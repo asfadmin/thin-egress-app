@@ -19,7 +19,6 @@ client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_k
 dict = client.get_rest_apis()
 for item in dict['items']:
     if item['name'] == f'{STACKNAME}-EgressGateway':
-        # if item['name'] == STACKNAME:
         id = item['id']
 
 API = id
@@ -61,7 +60,7 @@ class download_test():
         self.assertTrue(r.status_code == 404)
 
     def test_range_request_works(self):
-        url = "http://tools.ietf.org/rfc/rfc2822.txt"
+        url = f'{APIROOT}/{METADATA_FILE}'
         headers = {"Range": "bytes=1035-1042"}
         r = requests.get(url, headers=headers)
         assert len(r.text) <= 1042  # not exactly 1042, because r.text does not include header

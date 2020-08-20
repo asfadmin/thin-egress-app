@@ -585,7 +585,7 @@ def dynamic_url():
             user_profile = data
             log.debug(f'user_profie: {user_profile}')
             jwt_payload = user_profile_2_jwt_payload(data, token, user_profile)
-            custom_headers['Set-Cookie'] = f'{jwt_payload}'
+            custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
         else:
             return do_auth_and_return(app.current_request.context)

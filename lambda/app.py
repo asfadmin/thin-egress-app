@@ -4,15 +4,18 @@ from botocore.exceptions import ClientError
 import flatdict
 import os
 import json
+
 import time
 
-from urllib.parse import urlparse, quote_plus
+from urllib import request
+from urllib.error import HTTPError
+from urllib.parse import urlparse, quote_plus, urlencode
 
 from rain_api_core.general_util import get_log
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
-from rain_api_core.egress_util import get_presigned_url, process_request, prepend_bucketname, check_private_bucket, check_public_bucket
+from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
 app = Chalice(app_name='egress-lambda')
 log = get_log()
@@ -23,10 +26,6 @@ bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
 bc_client_cache = {}
-public_buckets_file = os.getenv('PUBLIC_BUCKETS_FILE', None)
-public_buckets = None
-private_buckets_file = os.getenv('PRIVATE_BUCKETS_FILE', None)
-private_buckets = None
 s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
@@ -36,6 +35,87 @@ header_map = {'date':           'Date',
               'etag':           'ETag',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
+
+
+class TeaException(Exception):
+    """ base exception for TEA """
+
+
+class EulaException(TeaException):
+    def __init__(self, payload:dict):
+        self.payload = payload
+
+
+def check_for_browser(hdrs):
+    return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
+
+
+def get_user_from_token(token):
+    """
+    This may be moved to rain-api-core.urs_util.py once things stabilize.
+    Will query URS for user ID of requesting user based on token sent with request
+
+    :param token: token received in request for data
+    :return: user ID of requesting user.
+    """
+
+    params = {
+        'client_id': get_urs_creds()['UrsId'],
+        # The client_id of the non SSO application you registered with Earthdata Login
+        'token': token
+    }
+
+    url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
+                                           urlencode(params))
+
+    authval = "Basic {}".format(get_urs_creds()['UrsAuth'])
+    headers = {'Authorization': authval}
+
+    log.debug(f'headers: {headers}, params: {params}')
+
+    req = request.Request(url, headers=headers, method='POST')
+    try:
+        response = request.urlopen(req)
+    except HTTPError as e:
+        response = e
+        log.debug(e)
+
+    payload = response.read()
+
+    try:
+        msg = json.loads(payload)
+    except json.JSONDecodeError as e:
+        log.error(f'could not get json message from payload: {payload}')
+        msg = {}
+
+    log.debug(f'raw payload: {payload}')
+    log.debug(f'json loads: {msg}')
+    log.debug(f'code: {response.code}')
+
+    if response.code == 200:
+        try:
+            return msg['uid']
+        except KeyError as e:
+            log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
+            return None
+    elif response.code == 403:
+        if 'error_description' in msg and 'eula' in msg['error_description'].lower():
+            # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
+            log.warning('user needs to sign the EULA')
+            raise EulaException(msg)
+        # Probably an expired token if here
+        log.warning(f'403 error from URS: {msg}')
+    else:
+        if 'error' in msg:
+            errtxt = msg["error"]
+        else:
+            errtxt = f''
+        if 'error_description' in msg:
+            errtxt = errtxt + ' ' + msg['error_description']
+
+        log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
+        log.debug(f'url: {url}, params: {params}, ')
+    return None
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
@@ -53,34 +133,15 @@ def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
 def restore_bucket_vars():
 
     global b_map                                                                       #pylint: disable=global-statement
-    global public_buckets                                                              #pylint: disable=global-statement
-    global private_buckets                                                             #pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}, ' +
-              'public_buckets_file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                         bucket_map_file,
-                                                                         public_buckets_file,
-                                                                         private_buckets_file))
-    if b_map is None or public_buckets is None or private_buckets is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, ' +
-                 'public buckets file: {}, private buckets file: {}'.format(conf_bucket,
-                                                                            bucket_map_file,
-                                                                            public_buckets_file,
-                                                                            private_buckets_file))
+    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket,bucket_map_file))
+    if b_map is None:
+        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket,bucket_map_file))
+
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
-        if public_buckets_file:
-            log.debug('fetching public buckets yaml file: {}'.format(public_buckets_file))
-            public_buckets = get_yaml_file(conf_bucket, public_buckets_file, s3_resource)
-        else:
-            public_buckets = {}
-        if private_buckets_file:
-            private_buckets = get_yaml_file(conf_bucket, private_buckets_file, s3_resource)
-        else:
-            private_buckets = {}
     else:
         log.info('reusing old bucket configs')
-
 
 
 def do_auth_and_return(ctxt):
@@ -166,7 +227,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
     t1 = time.time()
-    creds = get_role_creds(user_id, is_in_region)
+    creds, offset = get_role_creds(user_id, is_in_region)
     t2 = time.time()
     session = get_role_session(creds=creds, user_id=user_id)
     t3 = time.time()
@@ -211,7 +272,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                 client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
-        expires_in = 24 * 3600
+        expires_in = 3600 - offset
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
         if isinstance(headers, dict):
             log.debug(f'adding {headers} to redirheaders {redirheaders}')
@@ -241,9 +302,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievar:
-        if fieldname in cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]:
-            return cookievar[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)][fieldname]
+    if JWT_COOKIE_NAME in cookievar:
+        if fieldname in cookievar[JWT_COOKIE_NAME]:
+            return cookievar[JWT_COOKIE_NAME][fieldname]
 
     return None
 
@@ -256,9 +317,9 @@ def root():
 
     cookievars = get_cookie_vars(app.current_request.headers)
     if cookievars:
-        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+        if JWT_COOKIE_NAME in cookievars:
             # We have a JWT cookie
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
+            user_profile = cookievars[JWT_COOKIE_NAME]
 
     if user_profile:
         if os.getenv('MATURITY') == 'DEV':
@@ -275,7 +336,7 @@ def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+    if JWT_COOKIE_NAME in cookievars:
 
         template_vars['contentstring'] = 'You are logged out.'
     else:
@@ -343,6 +404,7 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+
 def get_bc_config_client(user_id):
     params = {}
     if user_id not in bc_client_cache:
@@ -351,9 +413,11 @@ def get_bc_config_client(user_id):
         bc_client_cache[user_id] = session.client('s3', **params)
     return bc_client_cache[user_id]
 
+
 def get_data_dl_s3_client():
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
     return get_bc_config_client(user_id)
+
 
 def try_download_head(bucket, filename):
     t = [time.time()]
@@ -391,11 +455,12 @@ def try_download_head(bucket, filename):
 
     # Generate URL
     t.append(time.time())
-    creds = get_role_creds(user_id=user_id)
+    creds, offset = get_role_creds(user_id=user_id)
+    url_lifespan = 3600 - offset
     bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
     bucket_region = 'us-east-1' if not bucket_region else bucket_region
     t.append(time.time())
-    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, 24 * 3600, user_id, 'HEAD')
+    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
     t.append(time.time())
     s3_host = urlparse(presigned_url).netloc
 
@@ -441,12 +506,43 @@ def dynamic_url_head():
     return Response(body='HEAD failed', headers={}, status_code=400)
 
 
+def handle_auth_bearer_header(token):
+    """
+    Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
+    returns it. If user_id is not determined returns data to be returned
+
+    :param token:
+    :return: action, data
+    """
+    try:
+        user_id = get_user_from_token(token)
+    except EulaException as e:
+
+        log.warning('user has not accepted EULA')
+        if check_for_browser(app.current_request.headers):
+            template_vars = {'title': e.payload['error_description'],
+                             'status_code': 403,
+                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                             }
+
+            return 'return', make_html_response(template_vars, {}, 403, 'error.html')
+        return 'return', Response(body=e.payload, status_code=403, headers={})
+
+    if user_id:
+        user_profile = get_new_token_and_profile(user_id, True)
+        if user_profile:
+            return 'user_profile', user_profile
+
+    return 'return', do_auth_and_return(app.current_request.context)
+
+
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
+    log.debug(f'b_map: {b_map}')
     t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
@@ -463,27 +559,48 @@ def dynamic_url():
     user_profile = None
     if cookievars:
         log.debug('cookievars: {}'.format(cookievars))
-        if os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME) in cookievars:
+        if JWT_COOKIE_NAME in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)]
+            user_profile = cookievars[JWT_COOKIE_NAME]
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
-    t.append(time.time()) # 2
+    t.append(time.time())  # 2
     # Check for public bucket
-    if check_public_bucket(bucket, public_buckets, b_map):
+    pub_bucket = check_public_bucket(bucket, b_map)
+    t.append(time.time())  # 3
+    if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
-        return do_auth_and_return(app.current_request.context)
-    t.append(time.time())  # 3
+        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[0].lower() == 'bearer':
+            # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
+            log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
+            token = app.current_request.headers['Authorization'].split()[1]
+            action, data = handle_auth_bearer_header(token)
+
+            if action == 'return':
+                # Not a successful event.
+                return data
+
+            user_profile = data
+            user_id = user_profile['uid']
+            log.debug(f'User {user_id} has user profile: {user_profile}')
+            jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
+            log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
+            custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+
+        else:
+            return do_auth_and_return(app.current_request.context)
+
+    t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, private_buckets, b_map)  # NOTE: Is an optimization attempt worth it
+    private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
                                                                           # if we're asking for a public file and we
                                                                           # omit this check?
     log.debug('private check: {}'.format(private_check))
-    t.append(time.time())  # 4
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     t.append(time.time())  # 5
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    t.append(time.time())  # 6
 
     if new_user_profile and new_user_profile != user_profile:
         log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
@@ -501,13 +618,14 @@ def dynamic_url():
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
-    t.append(time.time())  # 6
+    t.append(time.time())  # 7
 
     log.debug('timing for dynamic_url()')
     log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
     log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
-    log.debug('ET for user_in_group(): {}s'.format(t[5] - t[4]))
-    log.debug('ET for total: {}s'.format(t[6] - t[0]))
+    log.debug('ET for possible auth header handling: {}s'.format(t[4] - t[3]))
+    log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
+    log.debug('ET for total: {}s'.format(t[7] - t[0]))
 
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 

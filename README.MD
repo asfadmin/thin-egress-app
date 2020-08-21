@@ -1,5 +1,5 @@
 # TEA (Thin Egress App)
-![TEA](https://github.com/asfadmin/thin-egress-app/blob/bb.img/tea.png)
+![TEA](https://github.com/asfadmin/thin-egress-app/blob/devel/tea.png)
 ## About
 The Thin Egress App is an app running in lambda that creates temporary S3 links and provides URS integration. It provides a lightweight egress solution for when you don't need to throttle or cut off egress.
 
@@ -112,12 +112,12 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 ### AWS Secrets
 
 #### Setting up the URS client secrets:
-`UrsId` can be found on your appication's URS home page as `Client ID`. 
+`UrsId` can be found on your SSO appication's URS home page as `Client ID`. 
 
-`UrsAuth` is the `Client ID` and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
+`UrsAuth` is the `UID` for your URS SSO app and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
 
 ```bash
-echo -n "<Client ID>:<App Password>" | openssl base64 
+echo -n "<UID>:<App Password>" | openssl base64 
 ```
 
 
@@ -166,7 +166,7 @@ profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 
 ### Buckets and Bucket map
 
-The bucket map allows the app to determine in which bucket to look when given the path from the URL. It's possible to separate the maps into separate files for bucket, public and private, but this functionality is deprecated and will be removed in a future version of TEA.
+The bucket map allows the app to determine in which bucket to look when given the path from the URL.
 
 If a url for a product would look like:
 ```https://datapile.domain.com/STAGE/PROCESSING_TYPE_1/PLATFORM_A/datafile.dat```
@@ -426,6 +426,13 @@ Its payload looks something like this:
 }
 
 ```
+
+## Service chaining with Shared Tokens
+
+![TEA](https://github.com/asfadmin/thin-egress-app/blob/devel/harmony-chain.png)
+
+#### TEA can accept a shared EDL Token as an Authorization (Bearer Token) method
+To enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App Group. Processing a shared toekn is temporally expensive. After the initial request, subsequent Service->TEA data requests should reuse cookies. EULA enforment is preserved in with shared tokens. 
 
 ## Troubleshooting.
 Something went wrong. Here are some solutions:

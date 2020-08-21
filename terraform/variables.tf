@@ -128,18 +128,6 @@ variable "private_vpc" {
   description = "Optional internal VPC."
 }
 
-variable "private_buckets_file" {
-  type        = string
-  default     = null
-  description = "Path and file of private buckets file's location in the ConfigBucket."
-}
-
-variable "public_buckets_file" {
-  type        = string
-  default     = null
-  description = "Path and file of public buckets file's location in the ConfigBucket."
-}
-
 variable "session_ttl" {
   type        = number
   default     = null

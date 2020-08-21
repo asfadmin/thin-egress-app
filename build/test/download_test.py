@@ -42,10 +42,11 @@ class download_test(unittest.TestCase):
     def test_urs_auth_redirect_for_auth_downloads(self):
         r = requests.get(f"{APIROOT}/{METADATA_FILE}", cookies=cookiejar, allow_redirects=False)
         self.assertFalse(r.url is None)
-        logging.info(f'redirct status : {r.status_code}')
+        logging.info(f'redirect status : {r.status_code}')
         self.assertTrue(r.is_redirect)
         self.assertTrue(r.headers['Location'] is not None)
 
+    # Check that public files are returned without auth
     def test_check_that_images_are_public(self):
         r = requests.get(f'{APIROOT}/{BROWSE_FILE}', cookies=cookiejar)
         logging.info(f'Public Image Test Content_Type : {r.status_code}')
@@ -66,19 +67,17 @@ class download_test(unittest.TestCase):
         final_request = session.get(url, cookies=cookiejar)
         self.assertTrue(final_request.status_code == 200)
 
-
     # Check for 404 on bad request
     def test_404_on_bad_request(self):
-        r = requests.get(f"{APIROOT}/bad/url.ext", cookies=cookiejar, )
+        r = requests.get(f"{APIROOT}/bad/url.ext", cookies=cookiejar)
         self.assertTrue(r.status_code == 404)
 
-
+    # Check that range requests work
     def test_range_request_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         headers = {"Range": "bytes=1035-1042"}
         r = requests.get(url, cookies=cookiejar, headers=headers)
         assert len(r.text) <= 1042  # not exactly 1042, because r.text does not include header
-
 
     # Check that a bad cookie value causes URS redirect:
     def test_bad_cookie_value_cause_URS_redirect(self):
@@ -94,7 +93,6 @@ class download_test(unittest.TestCase):
     def test_approved_user_can_access_private_data(self):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         r = requests.get(url, cookies=cookiejar)
-
         self.assertTrue(r.status_code == 200)
 
     # Check that approved users CAN'T access PRIVATE data they don't have access to:
@@ -123,8 +121,19 @@ class download_test(unittest.TestCase):
         locate_bucket = os.getenv("LOCATE_BUCKET")
         url = f"{APIROOT}/locate?bucket_name={locate_bucket}"
         r = requests.get(url, cookies=cookiejar)
-        self.assertEqual(r.content, '["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
+        logging.info(f'Output Should equal "SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"  : {r.content}')
+        self.assertEqual(r.content, b'["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
 
+
+def main(out=sys.stderr, verbosity=2):
+    loader = unittest.TestLoader()
+
+    suite = loader.loadTestsFromModule(sys.modules[__name__])
+    unittest.TextTestRunner(out, verbosity=verbosity).run(suite)
+    s3 = boto3.resource('s3')
+    s3.meta.client.upload_file('/tmp/testresults.json', 'asf.public.code', 'thin-egress-app/testresults.json')
 
 if __name__ == '__main__':
-    unittest.main()
+    with open('/tmp/testresults.json', 'w') as f:
+        main(f)
+

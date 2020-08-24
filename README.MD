@@ -49,7 +49,7 @@ If you are deploying in another region, you must upload the lambda and dependenc
 If you prefer to roll your own zip for the lambda code:
 
 #### Dependency Layer
-We've found that the if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+We've found that if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
 ```bash
 
 # Make up a filename for code archive:
@@ -112,7 +112,7 @@ aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
 ### AWS Secrets
 
 #### Setting up the URS client secrets:
-`UrsId` can be found on your SSO appication's URS home page as `Client ID`. 
+`UrsId` can be found on your SSO application's URS home page as `Client ID`. 
 
 `UrsAuth` is the `UID` for your URS SSO app and password separated by a colon. You can create the value with the command below. See URS' [Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl) documentation for more details.
 
@@ -158,7 +158,7 @@ aws secretsmanager create-secret --name jwt_secret_for_tea \
 ```
 
 ##### Option 2: Using bash script
-You can create en encoded b64 key pair by running the provided [setup_jwt_cookie.sh](https://github.com/asfadmin/thin-egress-app/blob/devel/setup_jwt_cookie.sh) script :
+You can create an encoded b64 key pair by running the provided [setup_jwt_cookie.sh](https://github.com/asfadmin/thin-egress-app/blob/devel/setup_jwt_cookie.sh) script :
 ```bash
 profile_name=<aws_profile> aws_region=<region> bash setup_jwt_cookie.sh
 ```
@@ -258,7 +258,7 @@ This is the base template.
 
 Blocks: 
  * `pagetitle`: Gets inserted inside the `<title></title>` element
- * `content`
+ * `content`: Content payload fed into the template.
 
 **root.html**
 Child template. Gets called by `/` and `/logout` for 200 responses.
@@ -432,7 +432,7 @@ Its payload looks something like this:
 ![TEA](https://github.com/asfadmin/thin-egress-app/blob/devel/harmony-chain.png)
 
 #### TEA can accept a shared EDL Token as an Authorization (Bearer Token) method
-To enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App Group. Processing a shared toekn is temporally expensive. After the initial request, subsequent Service->TEA data requests should reuse cookies. EULA enforment is preserved in with shared tokens. 
+To enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App Group. Processing a shared token is temporally expensive. After the initial request, subsequent Service->TEA data requests should reuse cookies. EULA enforcement is preserved in with shared tokens. 
 
 ## Troubleshooting.
 Something went wrong. Here are some solutions:
@@ -446,7 +446,3 @@ If you see an error message in the Cloudformation Events like this:
 #### Solution:
 
 `EnableApiGatewayLogToCloudWatch` is set to `True`. If you don't need API Gateway logging to cloudwatch, set to `False`. If you do, you must create a role with write access to Cloudwatch Logs and add its ARN here: https://console.aws.amazon.com/apigateway/home?region=<REGION>#/settings
-
-#### Error message: 
-
-#### Solution:

@@ -1,3 +1,4 @@
+import argparse
 import sys
 import unittest
 import os
@@ -5,8 +6,11 @@ import boto3
 import requests
 from requests.auth import HTTPBasicAuth
 import logging
+import json
 
-logging.basicConfig(level=logging.WARNING)
+logging.getLogger('boto3').setLevel(logging.ERROR)
+logging.getLogger('botocore').setLevel(logging.ERROR)
+
 
 # Set environment variables
 STACKNAME = os.getenv("STACKNAME_SAME")
@@ -17,6 +21,7 @@ aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 # Connect to AWS
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
                       aws_secret_access_key=aws_secret_access_key)
+
 
 # Get EgressGateway Rest API ID from AWS
 dict = client.get_rest_apis()
@@ -38,20 +43,6 @@ APIROOT = f"https://{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com/API"
 
 class download_test(unittest.TestCase):
 
-    # Check that we get a URS auth redirect for auth'd downloads
-    def test_urs_auth_redirect_for_auth_downloads(self):
-        r = requests.get(f"{APIROOT}/{METADATA_FILE}", cookies=cookiejar, allow_redirects=False)
-        self.assertFalse(r.url is None)
-        logging.info(f'redirect status : {r.status_code}')
-        self.assertTrue(r.is_redirect)
-        self.assertTrue(r.headers['Location'] is not None)
-
-    # Check that public files are returned without auth
-    def test_check_that_images_are_public(self):
-        r = requests.get(f'{APIROOT}/{BROWSE_FILE}', cookies=cookiejar)
-        logging.info(f'Public Image Test Content_Type : {r.status_code}')
-        self.assertTrue('Content-Type' in r.headers and r.headers['Content-Type'] == 'image/jpeg')
-
     # Validate that auth process is successful
     def test_auth_process_is_successful(self):
         url = f"{APIROOT}/{METADATA_FILE}"
@@ -66,6 +57,22 @@ class download_test(unittest.TestCase):
         cookiejar = session.cookies
         final_request = session.get(url, cookies=cookiejar)
         self.assertTrue(final_request.status_code == 200)
+
+    # Check that we get a URS auth redirect for auth'd downloads
+    def test_urs_auth_redirect_for_auth_downloads(self):
+        r = requests.get(f"{APIROOT}/{METADATA_FILE}", cookies=cookiejar, allow_redirects=False)
+        self.assertFalse(r.url is None)
+        logging.info(f'redirect status : {r.status_code}')
+        self.assertTrue(r.is_redirect)
+        self.assertTrue(r.headers['Location'] is not None)
+
+    # Check that public files are returned without auth
+    def test_check_that_images_are_public(self):
+        r = requests.get(f'{APIROOT}/{BROWSE_FILE}', cookies=cookiejar)
+        logging.info(f'Public Image Test Content_Type : {r.status_code}')
+        self.assertTrue('Content-Type' in r.headers and r.headers['Content-Type'] == 'image/jpeg')
+
+
 
     # Check for 404 on bad request
     def test_404_on_bad_request(self):
@@ -125,16 +132,29 @@ class download_test(unittest.TestCase):
         self.assertEqual(r.content, b'["SA/OCN", "SA/OCN_CH", "SB/OCN_CN", "SB/OCN_CH"]')
 
 
-def main(out=sys.stderr, verbosity=2):
-    loader = unittest.TestLoader()
+def main():
+    thetest = download_test()
+    result = thetest.run()
+    failures = len(result.failures)
+    # Build Test File Json Object
+    if(failures < 1):
+        success_msg = '{"schemaVersion": 1, "label": "Tests", "message": "All Tests Passed", "color": "success"}'
+        testresults = success_msg
+    else:
+        failure_msg = f'{"schemaVersion": 1, "label": "Tests", "message": "{failures} Tests Failed", "color": "failure"}'
+        testresults= failure_msg
+    with open('testresults.text') as json_file:
+        s3 = boto3.resource('s3')
+        s3.meta.client.upload_file(json_file.name, 'asf.public.code', 'thin-egress-app/testresults.json')
+    # for fail in result.failures:
+    #     print(f'stacktrace: {fail[1]}')
+    #     print(fail[0].longMessage)
+    #     print(fail[0])
+    #
+    # for error in result.errors:
+    #     print(f'stacktrace: {error[1]}')
+    #     print(error[0])
 
-    suite = loader.loadTestsFromModule(sys.modules[__name__])
-    unittest.TextTestRunner(out, verbosity=verbosity).run(suite)
-    s3 = boto3.resource('s3')
-    s3.meta.client.upload_file('/tmp/testresults.json', 'asf.public.code', 'thin-egress-app/testresults.json')
 
 if __name__ == '__main__':
-    with open('/tmp/testresults.json', 'w') as f:
-        main(f)
-
-
+    main()

@@ -140,17 +140,23 @@ def main():
     if(failures < 1):
         success_msg = '{"schemaVersion": 1, "label": "Tests", "message": "All Tests Passed", "color": "success"}'
         testresults = success_msg
-    else:
-        failure_msg = f'{"schemaVersion": 1, "label": "Tests", "message": "{failures} Tests Failed", "color": "failure"}'
+    elif(failures < 3):
+        failure_msg = f'{"schemaVersion": 1, "label": "Tests", "message": "{failures} Tests Failed ⚠", "color": "important"}'
         testresults= failure_msg
+    else:
+        failure_msg = f'{"schemaVersion": 1, "label": "Tests", "message": "{failures} Tests Failed ☠", "color": "critical"}'
+        testresults = failure_msg
     with open('testresults.text') as json_file:
         s3 = boto3.resource('s3')
         s3.meta.client.upload_file(json_file.name, 'asf.public.code', 'thin-egress-app/testresults.json')
+
+
+
     # for fail in result.failures:
     #     print(f'stacktrace: {fail[1]}')
     #     print(fail[0].longMessage)
     #     print(fail[0])
-    #
+
     # for error in result.errors:
     #     print(f'stacktrace: {error[1]}')
     #     print(error[0])

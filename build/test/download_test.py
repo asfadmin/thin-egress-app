@@ -52,7 +52,7 @@ MAP_PATHS = sorted(["SA/OCN", "SA/OCN_CH", "SB/OCN", "SB/OCN_CH"])
 
 # Configuration:
 TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", 'asf.public.code')
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", 'thin-egress-app/testresults-b.json')
+TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", 'thin-egress-app/testresults.json')
 LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", 's1-ocn-1e29d408')
 
 # Global variable we'll use for our tests

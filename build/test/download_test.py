@@ -7,6 +7,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import logging
 import json
+import base64
 from datetime import datetime
 
 logging.getLogger('boto3').setLevel(logging.ERROR)

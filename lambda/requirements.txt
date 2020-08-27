@@ -1,7 +1,7 @@
 aws-requests-auth==0.4.3
 cfnresponse==1.0.2
 chalice==1.18.0
-cryptography==3.0
+cryptography==3.1
 flatdict==4.0.1
 jinja2==2.11.2
 jwcrypto==0.7

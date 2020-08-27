@@ -414,7 +414,7 @@ def get_bc_config_client(user_id):
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
         bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
-    elif now - bc_client_cache[user_id][timestamp] >= (50*60): 
+    elif now - bc_client_cache[user_id]["timestamp"] >= (50*60): 
         # Replace the client if is more than 50 minutes old 
         log.info(f"Replacing old bc_Config_client for user {user_id}")
         params['config'] = bc_Config(**get_bcconfig(user_id))

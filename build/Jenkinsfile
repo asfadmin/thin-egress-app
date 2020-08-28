@@ -18,6 +18,7 @@ pipeline {
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
     LAMBDA_TIMEOUT=6
+    AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
   }
 
@@ -134,10 +135,10 @@ pipeline {
 
           // Push the code up to private bucket
           sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+          sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
           sh "echo '>> Pushing code to ASF Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
+          sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
+          sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
 
           // Clarify in description that this stack is deployed by Jenkins,
@@ -145,7 +146,7 @@ pipeline {
           sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app-deployed.yaml'
           // Push out the CF Stack
           sh "echo '>> Deploying the CF stack'"
-          sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+          sh """ ${AWS_BIN} cloudformation deploy --region=${AWS_DEFAULT_REGION} \
                      --stack-name ${STACKNAME_SAME} \
                      --template-file cloudformation/thin-egress-app-deployed.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
@@ -179,7 +180,7 @@ pipeline {
                        UseReverseBucketMap="False" """
 
           // This will be the stack for downloading from 2nd account.
-          /*sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+          /*sh """ ${AWS_BIN} cloudformation deploy --region=${AWS_DEFAULT_REGION} \
                      --stack-name ${STACKNAME_SCND} \
                      --template-file cloudformation/thin-egress-app-deployed.yaml \
                      --capabilities CAPABILITY_NAMED_IAM \
@@ -254,12 +255,12 @@ pipeline {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
           sh "echo '>> Pushing code to Public Code Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
+          sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+          sh "${AWS_BIN} s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+          sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
+          sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
           sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
-          sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+          sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                            --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                            /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
         }
@@ -277,7 +278,7 @@ pipeline {
       sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+        sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                          --recursive /tmp/buildreport/ \
                          s3://asf.public.code/thin-egress-app/ --acl public-read """
@@ -290,7 +291,7 @@ pipeline {
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
       mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+        sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                          --recursive /tmp/buildreport/ \
                          s3://asf.public.code/thin-egress-app/ --acl public-read """

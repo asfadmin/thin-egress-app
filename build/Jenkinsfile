@@ -27,6 +27,7 @@ pipeline {
 
     }
 
+ }
   stages {
 
     // just sort of assess the environment

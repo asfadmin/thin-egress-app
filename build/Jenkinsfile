@@ -21,12 +21,14 @@ pipeline {
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
   }
 
-  // Build on a slave with docker (for pre-req?)
-  agent { label 'docker' }
+  // Build on a slave with docker on kubernetes
+  agent { kubernetes {
+      yamlFile 'build/k8s.yaml'
+    }
 
   stages {
 
-    // just sort of assess the enviroment
+    // just sort of assess the environment
     stage('Setup Env') {
       steps {
         // Send chat notification
@@ -221,7 +223,7 @@ pipeline {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
           withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
             // Attempt some downloads
-            sh("bash ./build/download_test.sh")
+            sh("python3 build/test/download_test.py")
           }
         }
       }

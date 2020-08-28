@@ -24,6 +24,7 @@ pipeline {
   // Build on a slave with docker on kubernetes
   agent { kubernetes {
       yamlFile 'build/k8s.yaml'
+
     }
 
   stages {

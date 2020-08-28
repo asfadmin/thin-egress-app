@@ -8,7 +8,7 @@ spec:
   - name: kaniko
     image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
     command:
-         -"tail",
+         - "tail",
          - "-f",
          - "/dev/null"
     tty: true

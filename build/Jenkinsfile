@@ -32,6 +32,8 @@ pipeline {
     // just sort of assess the environment
     stage('Setup Env') {
       steps {
+        container('kaniko') {
+             sh '/kaniko/executor --dockerfile=jenkins-kaniko/Dockerfile --no-push'
         // Send chat notification
         mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
@@ -64,6 +66,7 @@ pipeline {
         echo "params.DOMAIN_CERT_ARN: ${params.DOMAIN_CERT_ARN}"
         echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
         echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
+        }
       }
     }
 

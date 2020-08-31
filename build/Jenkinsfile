@@ -32,7 +32,7 @@ pipeline {
     // just sort of assess the environment
     stage('Setup Env') {
       steps {
-        container() {
+        container('') {
 
         // Send chat notification
         mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."

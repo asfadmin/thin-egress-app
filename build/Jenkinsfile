@@ -219,12 +219,15 @@ pipeline {
     // Run download test script
     stage('Validate AWS Deployment'){
       steps {
-        // Load up AWS + URS credentials
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
-          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-            // Attempt some downloads
-            sh("python3 build/test/download_test.py")
-          }
+            container('kaniko') {
+             sh '/kaniko/executor --dockerfile=jenkins-kaniko/Dockerfile --no-push'
+            // Load up AWS + URS credentials
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
+              withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+                // Attempt some downloads
+                sh("python3 build/test/download_test.py")
+              }
+            }
         }
       }
     }

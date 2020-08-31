@@ -12,3 +12,10 @@ spec:
          - "-f"
          - "/dev/null"
     tty: true
+  - name: layer-builder
+    image: amazonlinux:2
+    command:
+         - "tail"
+         - "-f"
+         - "/dev/null"
+    tty: true

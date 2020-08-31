@@ -73,7 +73,7 @@ pipeline {
     // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
-        container('tea-container') {
+        container('layer-builder') {
         // Since we can't build a working pycrypto in our Jenkins environment,
         // we'll offload that to a amazonlinux:2 container
 

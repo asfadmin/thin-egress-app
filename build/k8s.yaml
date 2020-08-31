@@ -5,7 +5,7 @@ metadata:
     some-label: some-label-value
 spec:
   containers:
-  - name: kaniko
+  - name: tea-container
     image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
     command:
          - "tail"

@@ -73,6 +73,7 @@ pipeline {
     // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
+        container('tea-container') {
         // Since we can't build a working pycrypto in our Jenkins environment,
         // we'll offload that to a amazonlinux:2 container
 
@@ -91,13 +92,13 @@ pipeline {
         sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
         sh "ls -lah *.zip"
 
-
+        }
       }
    }
     // Package code
     stage('Package Code') {
       steps {
-
+        container('tea-container') {
         // Zip up the upload.
         sh "echo '>> Building Zipfile....'"
 
@@ -128,11 +129,13 @@ pipeline {
         sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
         sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
         sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip dependencylayer.zip"
+        }
       }
    }
    // Push packages to AWS and deploy new version
    stage('Push to AWS') {
       steps {
+        container('tea-container') {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
 
 
@@ -216,6 +219,7 @@ pipeline {
                        JwtKeySecretName=${JWTKEYSECRETNAME} \
                        UseReverseBucketMap="False" """
           */
+          }
         }
       }
     }
@@ -223,7 +227,7 @@ pipeline {
     // Run download test script
     stage('Validate AWS Deployment'){
       steps {
-
+            container('tea-container') {
             // Load up AWS + URS credentials
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
               withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
@@ -231,13 +235,14 @@ pipeline {
                 sh("python3 build/test/download_test.py")
               }
             }
-
+        }
       }
     }
 
     // Tag it in Github
     stage('Tag Build'){
       steps {
+      container('tea-container') {
         // Use existing creds
         sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
         sh("git config user.name 'jenkins'")
@@ -249,6 +254,7 @@ pipeline {
         // pushes the tags
         sh "echo '>> Pushing Build Tag'"
         sh ("git push origin ${BUILDTAG}")
+        }
       }
     }
 
@@ -258,6 +264,7 @@ pipeline {
         expression { "${env.APPTAG}" == 'tea' }
       }
       steps {
+        container('tea-container') {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
           sh "echo '>> Pushing code to Public Code Bucket'"
           sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
@@ -268,6 +275,7 @@ pipeline {
           sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                            --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                            /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
+          }
         }
       }
     }

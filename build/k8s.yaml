@@ -5,23 +5,23 @@ metadata:
     some-label: some-label-value
 spec:
   containers:
-  - name: tea-container
-    image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
+  - image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
+    name: tea-container
     command:
          - "tail"
          - "-f"
          - "/dev/null"
     tty: true
-  - name: layer-builder
-    image: amazonlinux:2
+  - image: amazonlinux:2
+    name: layer-builder
     command:
       - "tail"
       - "-f"
       - "/dev/null"
-  - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/lambda/:/depbuild/in"
-    name: "depbuild/in"
-      readOnly: false
-  - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
-    name: "/depbuild/out"
+    volumeMounts:
+      - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/lambda/:/depbuild/in"
+        name: "depbuild/in"
+      - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
+        name: "/depbuild/out"
       readOnly: false
     tty: true

@@ -11,7 +11,6 @@ spec:
          - "tail"
          - "-f"
          - "/dev/null"
-    tty: true
   - image: amazonlinux:2
     name: layer-builder
     command:
@@ -24,8 +23,8 @@ spec:
         name: "depbuild/in"
       - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
         name: "/depbuild/out"
+        readOnly: false
   volumes:
     - name: "depbuild/in"
     - name: "/depbuild/out"
-      readOnly: false
 

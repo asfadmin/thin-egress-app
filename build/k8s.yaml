@@ -18,12 +18,12 @@ spec:
       - "tail"
       - "-f"
       - "/dev/null"
+    tty: true
     volumeMounts:
       - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/lambda/:/depbuild/in"
         name: "depbuild/in"
       - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
         name: "/depbuild/out"
-    tty: true
   volumes:
     - name: "depbuild/in"
     - name: "/depbuild/out"

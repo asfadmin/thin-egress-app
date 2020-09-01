@@ -2,26 +2,25 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    some-label: some-label-value
+    some-label: tea-kub
 spec:
   containers:
-  - image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
-    name: tea-container
+  - name: tea-container
+    image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
     command:
          - "tail"
          - "-f"
          - "/dev/null"
-  - image: amazonlinux:2
-    name: layer-builder
+  - name: layer-builder
+    image: amazonlinux:2
     command:
       - "tail"
       - "-f"
       - "/dev/null"
-    tty: true
     volumeMounts:
-      - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/lambda/:/depbuild/in"
+      - mountPath: "depbuild/in/:/depbuild/in"
         name: "depbuild/in"
-      - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
+      - mountPath: "depbuild/out/:/depbuild/out"
         name: "/depbuild/out"
         readOnly: false
 

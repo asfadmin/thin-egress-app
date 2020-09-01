@@ -24,7 +24,5 @@ spec:
       - mountPath: "/home/jenkins/agent/workspace/rain/thin-egress-app-pipeline-DEV/:/depbuild/out"
         name: "/depbuild/out"
         readOnly: false
-  volumes:
-    - name: "depbuild/in"
-    - name: "/depbuild/out"
+
 

@@ -24,9 +24,7 @@ pipeline {
 
   // Build on a slave with docker on kubernetes
   agent { kubernetes {
-          label "tea-kub"
-          defaultContainer 'layer-builder'
-          yamlFile 'build/k8s.yaml'
+          yaml 'build/k8s.yaml'
              }
       }
   stages {

@@ -23,6 +23,3 @@ spec:
       - mountPath: "depbuild/out/:/depbuild/out"
         name: "/depbuild/out"
         readOnly: false
-  volumes:
-  - name: tea-container
-  - name: layer-builder

@@ -23,3 +23,6 @@ spec:
       - mountPath: "depbuild/out/:/depbuild/out"
         name: "/depbuild/out"
         readOnly: false
+  volumes:
+    - name: "depbuild/in"
+    - name: "/depbuild/out"

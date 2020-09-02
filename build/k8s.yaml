@@ -1,8 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
+  name: 123-tea
   labels:
-    some-label: tea-kub
+    some-label: 123-tea
 spec:
   containers:
   - name: tea-container
@@ -18,11 +19,13 @@ spec:
       - "-f"
       - "/dev/null"
     volumeMounts:
-      - mountPath: "depbuild/in/:/depbuild/in"
-        name: "depbuild/in"
-      - mountPath: "depbuild/out/:/depbuild/out"
-        name: "/depbuild/out"
+      - mountPath: "/depbuild/in"
+        name: depbuild-in
+      - mountPath: "/depbuild/out"
+        name: depbuild-out
         readOnly: false
   volumes:
-    - name: "depbuild/in"
-    - name: "/depbuild/out"
+    - name: depbuild-in
+      emptyDir: {}
+    - name: depbuild-out
+      emptyDir: {}

@@ -18,6 +18,8 @@ spec:
       - "tail"
       - "-f"
       - "/dev/null"
+      - "-rf"
+      -
       - "./dependency_builder.sh"
     volumeMounts:
       - mountPath: "/depbuild/in"

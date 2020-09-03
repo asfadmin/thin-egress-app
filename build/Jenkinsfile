@@ -20,7 +20,6 @@ pipeline {
     LAMBDA_TIMEOUT=6
     AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
-    ZIPFILENAME=DEPENDENCYLAYERFILENAME
   }
 
   // Build on a slave with docker on kubernetes

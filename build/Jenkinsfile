@@ -68,7 +68,7 @@ pipeline {
             echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
 
             //sh 'docker run --rm -v ${WORKSPACE}/lambda/depbuild/in -v ${WORKSPACE}/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh'
-            sh """zip -g -r  ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}"""
+            sh """zip -r  ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}"""
             sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
             sh "ls -lah *.zip"
 

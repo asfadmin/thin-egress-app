@@ -89,9 +89,6 @@ pipeline {
 
 
 
-            sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
-            sh "ls -lah *.zip"
-
         }
       }
    }

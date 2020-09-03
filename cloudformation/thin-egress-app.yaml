@@ -276,7 +276,6 @@ Resources:
     Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-DownloadRoleInRegion"
-      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary
@@ -311,7 +310,6 @@ Resources:
     Condition: CreateDownloadRole
     Properties:
       RoleName: !Sub "${AWS::StackName}-DownloadRoleLocal"
-      MaxSessionDuration: 43200
       PermissionsBoundary:
         !If
         - UsePermissionsBoundary

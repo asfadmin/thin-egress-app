@@ -1,7 +1,7 @@
 FROM ubuntu
 
 RUN apt-get update && \
-    apt-get -y install curl python3 python3-pip git vim && \
+    apt-get -y install curl python3 python3-pip git vim tree zip && \
     pip3 install awscli boto3 requests
 
 RUN apt-get clean && apt-get install -y apt-transport-https gnupg2 && \

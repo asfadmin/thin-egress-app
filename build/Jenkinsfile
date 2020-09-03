@@ -140,8 +140,8 @@ pipeline {
 
 
               // Push the code up to private bucket
-              sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+             // sh "echo '>> Pushing dependencylayer to ASF Bucket'"
+             // sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
               sh "echo '>> Pushing code to ASF Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
@@ -269,7 +269,7 @@ pipeline {
               sh "echo '>> Pushing code to Public Code Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
               sh "${AWS_BIN} s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
+             // sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
               sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
               sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \

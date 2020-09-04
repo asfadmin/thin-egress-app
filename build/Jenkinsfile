@@ -89,7 +89,7 @@ pipeline {
             sh "cp ${WORKSPACE}/build/dependency_builder.sh ${WORKSPACE}/lambda/"
         }
         container('layer-builder') {
-            sh './dependency_builder.sh'
+            sh '${WORKSPACE}/build/dependency_builder.sh'
             //depbuild/in/
         }
         container('tea-container') {

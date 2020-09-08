@@ -90,8 +90,9 @@ pipeline {
         }
         container('layer-builder') {
             sh '${WORKSPACE}/build/dependency_builder.sh'
+            sh 'ZIPFILENAME=${DEPENDENCYLAYERFILENAME}'
         }
-        container('layer-builder') {
+        container('tea-container') {
             sh 'echo "this file ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME}" should exist: '
             sh "ls -lah *.zip"
         }

@@ -129,7 +129,9 @@ pipeline {
             // Zip up terraform
             sh "echo '>> Building Terraform Zip....'"
             sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
-            sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
+            container('layer-builder') {
+                sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
+            }
             sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
             sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip"
         }
@@ -143,8 +145,8 @@ pipeline {
 
 
               // Push the code up to private bucket
-             // sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-             // sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+              sh "echo '>> Pushing dependencylayer to ASF Bucket'"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
               sh "echo '>> Pushing code to ASF Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"

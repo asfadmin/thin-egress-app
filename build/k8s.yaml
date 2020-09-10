@@ -26,6 +26,7 @@ spec:
         readOnly: false
   volumes:
     - name: depbuild-in
-      emptyDir: {}
+      hostPath:
+        path: /depbuild/in/requirements_tea.txt
     - name: depbuild-out
       emptyDir: {}

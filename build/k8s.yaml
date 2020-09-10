@@ -28,8 +28,6 @@ spec:
     - name: depbuild-in
       hostPath:
         path: /depbuild/in/
-        type: Directory
     - name: depbuild-out
       hostPath:
         path: /depbuild/out/
-        type: Directory

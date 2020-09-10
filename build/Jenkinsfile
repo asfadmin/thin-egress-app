@@ -128,7 +128,7 @@ pipeline {
             // Zip up terraform
             sh "echo '>> Building Terraform Zip....'"
             sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
-            //sh "cp ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/build/terraform/dependencylayer.zip"
+            sh "cp ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/build/terraform/dependencylayer.zip"
             sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
             sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip"
         }

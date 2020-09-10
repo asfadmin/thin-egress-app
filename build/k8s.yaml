@@ -27,7 +27,7 @@ spec:
   volumes:
     - name: depbuild-in
       hostPath:
-        path: /depbuild/in/
+        path: /depbuild/in/requirements_tea.txt
     - name: depbuild-out
       hostPath:
-        path: /depbuild/out/
+        path: /depbuild/out/requirements_tea.txt

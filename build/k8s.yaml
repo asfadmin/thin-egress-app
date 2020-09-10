@@ -29,4 +29,5 @@ spec:
       hostPath:
         path: /depbuild/in/requirements_tea.txt
     - name: depbuild-out
-      emptyDir: {}
+      hostPath:
+        path: /depbuild/out/requirements_tea.txt

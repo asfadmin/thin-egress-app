@@ -316,6 +316,7 @@ CF_TEMPLATE_FILE=/absolute/path/to/tea-cloudformation-build.XX.yaml
 # See the Cloudformation parameters section above for a description of these params.
 STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc) 
                   # because the CF template may create buckets using this name.
+                  # It should be shorter than 35 characters or you will run into resource name length restrictions.
 AWS_REGION=us-west-2 # Or another region if desired.
 AWS_PROFILE=default  # Or whichever aws cli profile gives you the write access necessary.
 

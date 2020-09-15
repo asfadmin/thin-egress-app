@@ -1,7 +1,6 @@
 pipeline {
   parameters {
     string(name: 'APPTAG', defaultValue: 'teatest', description: '')
-    string(name: 'BUILDTAG', defaultValue: "build.${BUILD_NUMBER}", description: '')
     choice(name: 'MATURITY', choices: ['dev', 'int', 'test', 'prod'], description: 'The MATURITY (AWS) account to deploy')
 
     choice(name: 'CHAT_ROOM', choices: ['raindev', 'rain'], description: 'MatterMost chat room to post notifications during deployment')
@@ -41,6 +40,7 @@ pipeline {
   // Environment Setup
   environment {
     AWSENV=""
+    NEWTAG="build.${BUILD_NUMBER}"
     BUILDTAG="${APPTAG}-${NEWTAG}"
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"

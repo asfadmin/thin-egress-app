@@ -6,9 +6,10 @@
 
 yum update -y
 yum install -y zip python3-devel python3-pip
+export depbuild=${DEPBUILD:-"/depbuild/"}
 
 mkdir -p ${depbuild}pkg/python
-export depbuild=${DEPBUILD:-"/depbuild/"}
+
 
 cd ${depbuild}pkg/python || exit
 

@@ -26,8 +26,4 @@ spec:
         readOnly: false
   volumes:
     - name: depbuild-in
-      hostPath:
-        path: /depbuild/in/requirements_tea.txt
-    - name: depbuild-out
-      hostPath:
-        path: /depbuild/out/requirements_tea.txt
+      emptyDir: {"/dependency_builder.sh" }

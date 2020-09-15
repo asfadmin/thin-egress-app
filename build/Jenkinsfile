@@ -1,7 +1,6 @@
 pipeline {
   parameters {
     string(name: 'APPTAG', defaultValue: 'teatest', description: '')
-    string(name: 'BUILDTAG', defaultValue: "build.${BUILD_NUMBER}", description: '')
     choice(name: 'MATURITY', choices: ['dev', 'int', 'test', 'prod'], description: 'The MATURITY (AWS) account to deploy')
 
     choice(name: 'CHAT_ROOM', choices: ['raindev', 'rain'], description: 'MatterMost chat room to post notifications during deployment')
@@ -22,11 +21,11 @@ pipeline {
     credentials(
         name: 'URS_ACCT',
         credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
-        defaultValue: 'aa4a3277-cfd4-4edb-90dc-f55f6f99f835', //<option value="aa4a3277-cfd4-4edb-90dc-f55f6f99f835">Jenkins/******</option>
+        defaultValue: 'URS-asf_automated_testing',
         description: 'urs_client_id and urs_password for cumulus',
         required: true
     )
-    string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_CREDS_SECRET_NAME', description: '')
+    string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
     string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
     string(name: 'DOMAIN_NAME', defaultValue: 'tea-WHATEVER.asf.alaska.edu', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
@@ -41,6 +40,7 @@ pipeline {
   // Environment Setup
   environment {
     AWSENV=""
+    NEWTAG="build.${BUILD_NUMBER}"
     BUILDTAG="${APPTAG}-${NEWTAG}"
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"

@@ -30,9 +30,8 @@ rm -f typing.py # MUST be removed, its presence causes error every time
 
 cd ..
 
-echo "zipping to ${depbuild}out/${ZIPFILENAME}"
+zip -r9 "${depbuild}out/${ZIPFILENAME}"
 
-
-zip -r9 "${depbuild}out/${ZIPFILENAME}" .
+echo "zipping to ${depbuild}out/${ZIPFILENAME}".
 
 echo "all done"

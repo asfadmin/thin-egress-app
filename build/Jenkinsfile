@@ -58,8 +58,8 @@ pipeline {
     ZIPFILENAME="${DEPENDENCYLAYERFILENAME}"
     LAMBDA_TIMEOUT=6
     AWS_BIN="/usr/local/bin/aws"
-    DEPBUILD="/home/jenkins/agent/workspace/rain/dflowers-dev/build/"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
+
   }
 
   // Build on a slave with docker on kubernetes
@@ -114,27 +114,12 @@ pipeline {
     // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
-        container('tea-container') {
-            // Since we can't build a working pycrypto in our Jenkins environment,
-            // we'll offload that to a amazonlinux:2 container
-
-            // Create a working space, pull in dependencies
-            sh "echo '>> Gathering Dependencies....'"
-
-            sh "cd ${WORKSPACE}"
-
-            // Make sure we get all the requirements:
-            sh "cp ${WORKSPACE}/rain-api-core/requirements.txt ${WORKSPACE}/lambda/requirements_rain-api-core.txt"
-            sh "cp ${WORKSPACE}/lambda/requirements.txt ${WORKSPACE}/lambda/requirements_tea.txt"
-            sh "cp ${WORKSPACE}/build/dependency_builder.sh ${WORKSPACE}/lambda/"
-        }
         container('layer-builder') {
-            sh 'ZIPFILENAME=${DEPENDENCYLAYERFILENAME}  ${WORKSPACE}/build/dependency_builder.sh  echo "zipping to /depbuild/out/ZIPFILENAME"'
-        }
-        container('tea-container') {
-            sh 'mkdir ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME} zip  ${WORKSPACE}/build/out/${DEPENDENCYLAYERFILENAME}'
-            sh 'echo "this file ${WORKSPACE}/build/out/${DEPENDENCYLAYERFILENAME}" should exist:'
-            sh "ls -lah *.zip"
+
+            sh '${WORKSPACE}/build/dependency_builder.sh && echo "built to $WORKSPACE"'
+
+            sh 'echo "finished depbuilder, now looking in some dirs" && cd "$WORKSPACE" && ls -lah'
+            // zip file now located at $WORKSPACE/$DEPENDENCYLAYERFILENAME
         }
       }
    }

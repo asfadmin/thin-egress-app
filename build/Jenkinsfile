@@ -133,7 +133,7 @@ pipeline {
         }
         container('tea-container') {
             //sh 'mkdir ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME} zip  ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME}'
-            sh 'echo "this file ${WORKSPACE}/build/${DEPENDENCYLAYERFILENAME}" should exist:'
+            sh 'echo "this file ${WORKSPACE}/build/out/${DEPENDENCYLAYERFILENAME}" should exist:'
             sh "ls -lah *.zip"
         }
       }

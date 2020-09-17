@@ -197,7 +197,6 @@ pipeline {
                            HtmlTemplateDir= \
                            StageName=API \
                            Loglevel=DEBUG \
-                           Maturity=${MATURITY}\
                            PrivateVPC= \
                            VPCSecurityGroupIDs= \
                            VPCSubnetIDs= \

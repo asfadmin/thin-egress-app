@@ -27,7 +27,7 @@ pipeline {
     )
     string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
     string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
-    string(name: 'DOMAIN_NAME', defaultValue: 'tea-WHATEVER.asf.alaska.edu', description: '')
+    string(name: 'DOMAIN_NAME', defaultValue: 'tea-test-jenk-0.asf.alaska.edu', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN_INREGION', defaultValue: 'arn:aws:iam::820203326710:role/EcsS3ReadOnly-inregion-us-west-2', description: '')
     string(name: 'BUCKETNAME_PREFIX', defaultValue: 'rain-uw2-t-', description: '')

@@ -1,5 +1,44 @@
 pipeline {
 
+  parameters {
+    string(name: 'APPTAG', defaultValue: 'teatest', description: '')
+    choice(name: 'MATURITY', choices: ['DEV', 'INT', 'TEST', 'PROD'], description: 'The MATURITY (AWS) account to deploy')
+
+    choice(name: 'CHAT_ROOM', choices: ['raindev', 'rain'], description: 'MatterMost chat room to post notifications during deployment')
+    credentials(
+      name: 'CHATHOST',
+      credentialType: 'com.cloudbees.plugins.credentials.impl.SecretTextCredentialsImpl',
+      defaultValue: 'mattermost_webhook_url',
+      description: 'Chatserver URL, including secret token in path',
+      required: true
+    )
+    credentials(
+        name: 'AWSCREDS',
+        description: '',
+        defaultValue: 'ASF-117169578524',
+        credentialType: 'com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl',
+        required: true
+    )
+    credentials(
+        name: 'URS_ACCT',
+        credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
+        defaultValue: 'URS-asf_automated_testing',
+        description: 'urs_client_id and urs_password for cumulus',
+        required: true
+    )
+    string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
+    string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
+    string(name: 'DOMAIN_NAME', defaultValue: 'tea-test-jenk-0.asf.alaska.edu', description: '')
+    string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
+    string(name: 'DOWNLOAD_ROLE_ARN_INREGION', defaultValue: 'arn:aws:iam::820203326710:role/EcsS3ReadOnly-inregion-us-west-2', description: '')
+    string(name: 'BUCKETNAME_PREFIX', defaultValue: 'rain-uw2-t-', description: '')
+    choice(name: 'AWS_REGION', choices: ['us-west-2', 'us-east-1'], description: 'AWS Region to deploy to')
+    string(name: 'AWS_DEFAULT_REGION', defaultValue: 'us-west-2', description: '')
+    string(name: 'DOMAIN_CERT_ARN', defaultValue: 'arn:aws:acm:us-east-1:117169578524:certificate/1f3945cf-cac7-4d75-ad8d-b8920534fea2', description: '')
+    string(name: 'COOKIE_DOMAIN', defaultValue: '.asf.alaska.edu', description: '')
+
+  }
+
   // Environment Setup
   environment {
     AWSENV=""

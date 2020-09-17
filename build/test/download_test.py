@@ -118,7 +118,7 @@ class auth_download_test(unittest.TestCase):
                  logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
                  cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
-        log.info(f"Geneated cookies: {cookiejar}")
+        log.info(f"Generated cookies: {cookiejar}")
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")

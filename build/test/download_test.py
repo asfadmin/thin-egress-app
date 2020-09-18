@@ -42,7 +42,7 @@ APIHOST = f"{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
 APIROOT = f"https://{APIHOST}/API"
 
 
-# Imporant Objects and strings we'll need for our tests
+# Important Objects and strings we'll need for our tests
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
@@ -51,7 +51,7 @@ MAP_PATHS = sorted(["SA/OCN", "SA/OCN_CH", "SB/OCN", "SB/OCN_CH"])
 
 # Configuration:
 TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", 'asf.public.code')
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", 'thin-egress-app/testresults.json')
+TEST_RESULT_OBJECT = os.getenv("TEST_RESULT_OBJECT", 'thin-egress-app/testresults.json')
 LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", 's1-ocn-1e29d408')
 
 # Global variable we'll use for our tests
@@ -134,7 +134,7 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
 
         log.info(f"Result r.status_code: {r.status_code} (Expect 303)")
-        self.assertTrue( r.status_code == 303 )
+        self.assertTrue(r.status_code == 303)
 
         log.info(f"Result r.is_redirect: {r.is_redirect} (Expect True)")
         self.assertTrue(r.is_redirect)

@@ -14,7 +14,7 @@ pipeline {
     )
     credentials(
         name: 'AWSCREDS',
-        description: '',
+        description: 'benbart-URS-UAT',
         defaultValue: 'ASF-117169578524',
         credentialType: 'com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl',
         required: true

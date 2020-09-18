@@ -53,6 +53,7 @@ pipeline {
     STACKNAME_SAME="${APPTAG}-jenk-same"
     STACKNAME_SCND="${APPTAG}-jenk-scnd"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
+    AUTH_BASE_URL="https://uat.urs.earthdata.nasa.gov"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
@@ -188,6 +189,7 @@ pipeline {
                          --capabilities CAPABILITY_NAMED_IAM \
                          --parameter-overrides \
                            URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+                           AuthBaseUrl=${AUTH_BASE_URL} \
                            ConfigBucket=${BUCKETNAME_PREFIX}config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \
@@ -222,6 +224,7 @@ pipeline {
                          --capabilities CAPABILITY_NAMED_IAM \
                          --parameter-overrides \
                            URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+                           AuthBaseUrl=${AUTH_BASE_URL} \
                            ConfigBucket=rain-t-config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \

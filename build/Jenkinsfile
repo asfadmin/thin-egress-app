@@ -22,7 +22,7 @@ pipeline {
     credentials(
         name: 'URS_ACCT',
         credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
-        defaultValue: 'URS-asf_automated_testing',
+        defaultValue: 'benbart-URS-UAT',
         description: 'urs_client_id and urs_password for cumulus',
         required: true
     )

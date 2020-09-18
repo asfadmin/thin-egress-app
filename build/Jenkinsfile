@@ -14,7 +14,7 @@ pipeline {
     )
     credentials(
         name: 'AWSCREDS',
-        description: 'benbart-URS-UAT',
+        description: 'creds for AWS account where stack resides',
         defaultValue: 'ASF-117169578524',
         credentialType: 'com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl',
         required: true

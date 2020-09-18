@@ -26,7 +26,7 @@ pipeline {
         description: 'urs_client_id and urs_password for cumulus',
         required: true
     )
-    string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
+    string(name: 'URS_CREDS_SECRET_NAME ', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL_UAT', description: '')
     string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
     string(name: 'DOMAIN_NAME', defaultValue: 'tea-test-jenk-0.asf.alaska.edu', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')

@@ -22,11 +22,16 @@ pipeline {
     credentials(
         name: 'URS_ACCT',
         credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
-        defaultValue: 'benbart-URS-UAT',
+        defaultValue: 'URS-asf_automated_testing',
         description: 'urs_client_id and urs_password for cumulus',
         required: true
     )
-    string(name: 'URS_CREDS_SECRET_NAME', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL_UAT', description: '')
+    choice(name: 'URS_URL', choices: ['https://urs.earthdata.nasa.gov',
+                                           'https://uat.urs.earthdata.nasa.gov',
+                                           'https://sit.urs.earthdata.nasa.gov',
+                                           'https://sbx.urs.earthdata.nasa.gov'],
+                            description: 'Which URS to use for auth')
+    string(name: 'URS_CREDS_SECRET_NAME', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
     string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
     string(name: 'DOMAIN_NAME', defaultValue: 'tea-test-jenk-0.asf.alaska.edu', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
@@ -53,7 +58,6 @@ pipeline {
     STACKNAME_SAME="${APPTAG}-jenk-same"
     STACKNAME_SCND="${APPTAG}-jenk-scnd"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
-    AUTH_BASE_URL="https://uat.urs.earthdata.nasa.gov"
     DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
@@ -189,7 +193,7 @@ pipeline {
                          --capabilities CAPABILITY_NAMED_IAM \
                          --parameter-overrides \
                            URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-                           AuthBaseUrl=${AUTH_BASE_URL} \
+                           AuthBaseUrl=${URS_URL} \
                            ConfigBucket=${BUCKETNAME_PREFIX}config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \
@@ -224,7 +228,7 @@ pipeline {
                          --capabilities CAPABILITY_NAMED_IAM \
                          --parameter-overrides \
                            URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-                           AuthBaseUrl=${AUTH_BASE_URL} \
+                           AuthBaseUrl=${URS_URL} \
                            ConfigBucket=rain-t-config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \

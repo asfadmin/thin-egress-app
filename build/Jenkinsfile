@@ -282,7 +282,6 @@ pipeline {
       container('tea-container') {
 
              sh('''
-                    git checkout -B $TARGET_BRANCH
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
                     git push origin ${BUILDTAG}

@@ -284,9 +284,9 @@ pipeline {
 //             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
 //             sh("git config user.name 'jenkins'")
 
-            // tags current changeset
-            sh "echo '>> Creating Build Tag'"
-            sh ("git tag -a ${BUILDTAG} -m \"versioning ${BUILDTAG}\"")
+//             // tags current changeset
+//             sh "echo '>> Creating Build Tag'"
+//             sh ("git tag -a ${BUILDTAG} -m \"versioning ${BUILDTAG}\"")
 
             // pushes the tags
             sh "echo '>> Pushing Build Tag'"

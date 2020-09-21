@@ -281,8 +281,8 @@ pipeline {
       steps {
       container('tea-container') {
             // Use existing creds
-            sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
-            sh("git config user.name 'jenkins'")
+//             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
+//             sh("git config user.name 'jenkins'")
 
             // tags current changeset
             sh "echo '>> Creating Build Tag'"

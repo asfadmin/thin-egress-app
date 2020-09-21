@@ -279,19 +279,15 @@ pipeline {
     // Tag it in Github
     stage('Tag Build'){
       steps {
-     // container('tea-container') {
+  //    container('tea-container') {
 
-            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
-              // Dump ENV
-              sh 'tree'
-              sh 'pwd'
-              sh 'env'
-            }
-            sh('''
+
+                sh('''
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
                     git push origin ${BUILDTAG}
-            ''')
+                ''')
+
             // Use existing creds
 //             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
 //             sh("git config user.name 'jenkins'")
@@ -303,7 +299,7 @@ pipeline {
 //             // pushes the tags
 //             sh "echo '>> Pushing Build Tag'"
 //             sh ("git push origin ${BUILDTAG}")
-      //  }
+    //    }
       }
     }
 

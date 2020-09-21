@@ -281,11 +281,17 @@ pipeline {
       steps {
      // container('tea-container') {
 
-             sh('''
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
+              // Dump ENV
+              sh 'tree'
+              sh 'pwd'
+              sh 'env'
+            }
+            sh('''
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
                     git push origin ${BUILDTAG}
-                ''')
+            ''')
             // Use existing creds
 //             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
 //             sh("git config user.name 'jenkins'")

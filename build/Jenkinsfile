@@ -282,8 +282,8 @@ pipeline {
       container('tea-container') {
 
              sh('''
-                    git config user.email 'jenkins@jenkins.asf.alaska.edu'
-                    git config user.name 'jenkins'
+//                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
+//                     git config user.name 'jenkins'
                     git push origin ${BUILDTAG}
                 ''')
             // Use existing creds

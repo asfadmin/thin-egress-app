@@ -285,7 +285,8 @@ pipeline {
                 sh('''
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
-                    git push origin -l ${BUILDTAG}
+                    git tag -l ${BUILDTAG}
+                    git push origin ${BUILDTAG}
                 ''')
 
             // Use existing creds

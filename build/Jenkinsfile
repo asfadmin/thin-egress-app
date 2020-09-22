@@ -279,7 +279,7 @@ pipeline {
     // Tag it in Github
     stage('Tag Build'){
       steps {
-  //    container('tea-container') {
+      container('tea-container') {
 
 
                 sh('''
@@ -300,7 +300,7 @@ pipeline {
 //             // pushes the tags
 //             sh "echo '>> Pushing Build Tag'"
 //             sh ("git push origin ${BUILDTAG}")
-    //    }
+        }
       }
     }
 

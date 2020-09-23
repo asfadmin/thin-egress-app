@@ -288,18 +288,25 @@ pipeline {
       container('tea-container') {
 
         sshagent(['benbart_github_rsa']) {
-            sh('''
-                #!/usr/bin/env bash
-                set +x
-                # If no host key verification is needed, use the option `-oStrictHostKeyChecking=no`
-                export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
-                git status
-                git checkout $GIT_BRANCH
-                git status
-                echo '>> Creating Build Tag'
-                git tag -a ${BUILDTAG} -m "versioning ${BUILDTAG}"
-
-            ''')
+                  sh('''
+                    GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
+                    git config user.email 'jenkins@jenkins.asf.alaska.edu'
+                    git config user.name 'jenkins'
+                    git tag  ${BUILDTAG}
+                    git push origin ${BUILDTAG}
+                ''')
+//             sh('''
+//                 #!/usr/bin/env bash
+//                 set +x
+//                 # If no host key verification is needed, use the option `-oStrictHostKeyChecking=no`
+//                 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
+//                 git status
+//                 git checkout $GIT_BRANCH
+//                 git status
+//                 echo '>> Creating Build Tag'
+//                 git tag -a ${BUILDTAG} -m "versioning ${BUILDTAG}"
+//
+//             ''')
             /*
             git config user.email 'bbarton@.alaska.edu'
                 git config user.name 'benbart'
@@ -308,13 +315,7 @@ pipeline {
                 git push origin ${BUILDTAG}
             */
         }
-/*                sh('''
-                    GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
-                    git config user.email 'jenkins@jenkins.asf.alaska.edu'
-                    git config user.name 'jenkins'
-                    git tag  ${BUILDTAG}
-                    git push origin ${BUILDTAG}
-                ''')
+/*
 */
             // Use existing creds
 //             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")

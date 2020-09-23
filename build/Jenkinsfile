@@ -294,8 +294,8 @@ pipeline {
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
-                    git tag  ${BUILDTAG}
-                    git push origin ${BUILDTAG}
+                    git --tag  ${BUILDTAG}
+                    git push --force origin ${BUILDTAG}
                 ''')
 //             sh('''
 //                 #!/usr/bin/env bash

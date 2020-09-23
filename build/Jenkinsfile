@@ -287,13 +287,14 @@ pipeline {
       steps {
       container('tea-container') {
 
-        sshagent(['benbart_github_rsa']) {
+        sshagent(['fdc7a89b-13b0-4a73-9c40-76faf87eb6071']) {
                   sh('''
                     mkdir -p ~/.ssh
                     ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
+                    git push --delete origin ${BUILDTAG}
                     git tag ${BUILDTAG}
                     git push --force origin ${BUILDTAG}
                 ''')

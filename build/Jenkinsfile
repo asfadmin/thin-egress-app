@@ -294,7 +294,7 @@ pipeline {
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
-                    git push --delete origin ${BUILDTAG}
+                    git --delete origin ${BUILDTAG}
                     git tag ${BUILDTAG}
                     git push --force origin ${BUILDTAG}
                 ''')

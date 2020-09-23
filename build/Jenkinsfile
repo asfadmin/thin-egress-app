@@ -1,17 +1,18 @@
 pipeline {
 
   parameters {
+
     string(name: 'APPTAG', defaultValue: 'teatest', description: '')
     choice(name: 'MATURITY', choices: ['DEV', 'INT', 'TEST', 'PROD'], description: 'The MATURITY (AWS) account to deploy')
 
-    choice(name: 'CHAT_ROOM', choices: ['RAIN-JENKINSNOTIFICATIONS', 'raindev', 'rain', 'bbarton-scratch'], description: 'MatterMost chat room to post notifications during deployment')
+    choice(name: 'CHAT_ROOM', choices: ['rain-jenkinsnotifications', 'raindev', 'rain', 'bbarton-scratch'], description: 'MatterMost chat room to post notifications during deployment')
     credentials(
-      name: 'CHATHOST',
-      credentialType: 'com.cloudbees.plugins.credentials.impl.SecretTextCredentialsImpl',
-      defaultValue: 'mattermost_webhook_url',
-      description: 'Chatserver URL, including secret token in path',
-      required: true
-    )
+        name: 'CHATSERVER_SECRET_URL_ID',
+        credentialType: 'com.cloudbees.plugins.credentials.impl.SecretTextCredentialsImpl',
+        defaultValue: 'mattermost_webhook_url',
+        description: 'Chatserver URL, including secret token in path',
+        required: true
+      )
     credentials(
         name: 'AWSCREDS',
         description: 'creds for AWS account where stack resides',
@@ -66,6 +67,7 @@ pipeline {
     LAMBDA_TIMEOUT=6
     AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
+    CHATSERVER_SECRET_URL = credentials("${params.CHATSERVER_SECRET_URL_ID}")
 
   }
 
@@ -82,7 +84,7 @@ pipeline {
         container('tea-container') {
 
             // Send chat notification
-            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
               // Dump ENV
               sh 'tree'
@@ -120,6 +122,7 @@ pipeline {
 
     // Download and package dependencies
     stage('Package Dependency Layer') {
+      when { branch 'XXXXXX' }
       steps {
         container('layer-builder') {
 
@@ -132,6 +135,7 @@ pipeline {
    }
     // Package code
     stage('Package Code') {
+      when { branch 'XXXXXX' }
       steps {
         container('tea-container') {
             // Zip up the upload.
@@ -169,6 +173,7 @@ pipeline {
    }
    // Push packages to AWS and deploy new version
    stage('Push to AWS') {
+      when { branch 'XXXXXX' }
       steps {
         container('tea-container') {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
@@ -263,6 +268,7 @@ pipeline {
 
     // Run download test script
     stage('Validate AWS Deployment'){
+      when { branch 'XXXXXX' }
       steps {
             container('tea-container') {
                 // Load up AWS + URS credentials
@@ -281,14 +287,35 @@ pipeline {
       steps {
       container('tea-container') {
 
+        sshagent(['benbart_github_rsa']) {
+            sh('''
+                #!/usr/bin/env bash
+                set +x
+                # If no host key verification is needed, use the option `-oStrictHostKeyChecking=no`
+                export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
+                git status
+                git checkout $GIT_BRANCH
+                git status
+                echo '>> Creating Build Tag'
+                git tag -a ${BUILDTAG} -m "versioning ${BUILDTAG}"
 
-                sh('''
+            ''')
+            /*
+            git config user.email 'bbarton@.alaska.edu'
+                git config user.name 'benbart'
+
+            git tag  ${BUILDTAG}
+                git push origin ${BUILDTAG}
+            */
+        }
+/*                sh('''
+                    GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
                     git tag  ${BUILDTAG}
                     git push origin ${BUILDTAG}
                 ''')
-
+*/
             // Use existing creds
 //             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
 //             sh("git config user.name 'jenkins'")
@@ -330,7 +357,8 @@ pipeline {
   // Send build status to Mattermost, Update build badge
   post {
     success {
-      mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+    container('tea-container') {
+      mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
 
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
@@ -343,12 +371,14 @@ pipeline {
                          s3://asf.public.code/thin-egress-app/ --acl public-read """
       }
     }
+    }
     failure {
+    container('tea-container') {
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
 
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
-      mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
         sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
@@ -357,6 +387,7 @@ pipeline {
       sh 'tree'
       sh 'printenv'
       }
+    }
     }
   }
 }

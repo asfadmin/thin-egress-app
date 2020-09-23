@@ -289,6 +289,7 @@ pipeline {
 
         sshagent(['benbart_github_rsa']) {
                   sh('''
+                    mkdir -p ~/.ssh
                     ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'

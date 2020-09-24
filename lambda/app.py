@@ -236,11 +236,16 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         bucket_region = get_bucket_region(session, bucket)
         t4 = time.time()
     except ClientError as e:
+        try:
+            code = e.response['ResponseMetadata']['HTTPStatusCode']
+        except (AttributeError, KeyError, IndexError):
+            code = 400
+        log.debug(f'response: {e.response}')
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
-        cumulus_log_message('failure', 500, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
-        return make_html_response(template_vars, headers, 500, 'error.html')
+        return make_html_response(template_vars, headers, code, 'error.html')
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
@@ -407,11 +412,21 @@ def get_range_header_val():
 
 def get_bc_config_client(user_id):
     params = {}
+    now = time.time()
+
     if user_id not in bc_client_cache:
+        # This a new user, generate a new bc_Config client
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = session.client('s3', **params)
-    return bc_client_cache[user_id]
+        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
+    elif now - bc_client_cache[user_id]["timestamp"] >= (50*60):
+        # Replace the client if is more than 50 minutes old
+        log.info(f"Replacing old bc_Config_client for user {user_id}")
+        params['config'] = bc_Config(**get_bcconfig(user_id))
+        session = get_role_session(user_id=user_id)
+        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
+
+    return bc_client_cache[user_id]["client"]
 
 
 def get_data_dl_s3_client():

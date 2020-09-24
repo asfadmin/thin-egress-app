@@ -43,7 +43,7 @@ APIHOST = f"{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
 APIROOT = f"https://{APIHOST}/API"
 
 
-# Imporant Objects and strings we'll need for our tests
+# Important Objects and strings we'll need for our tests
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
@@ -119,7 +119,7 @@ class auth_download_test(unittest.TestCase):
                  logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
                  cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
-        log.info(f"Geneated cookies: {cookiejar}")
+        log.info(f"Generated cookies: {cookiejar}")
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")
@@ -135,7 +135,7 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
 
         log.info(f"Result r.status_code: {r.status_code} (Expect 303)")
-        self.assertTrue( r.status_code == 303 )
+        self.assertTrue(r.status_code == 303)
 
         log.info(f"Result r.is_redirect: {r.is_redirect} (Expect True)")
         self.assertTrue(r.is_redirect)

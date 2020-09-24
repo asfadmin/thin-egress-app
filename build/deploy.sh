@@ -21,7 +21,7 @@ case $i in
     ;;
     
     -p=*|--pass=*)
-    EDLPASS=="${i#*=}"
+    EDLPASS="${i#*=}"
     ;;
 
     -c=*|--client-id=*)

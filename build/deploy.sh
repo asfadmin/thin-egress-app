@@ -399,7 +399,7 @@ else
        download_check=$(curl --proxy socks5h://localhost:8001 \
                              -c $cookie_file -b cookie_file \
                              -L -s -o /tmp/res_test.txt \
-                             -w "%{http_code}" $api_endpoint/res/test.txt
+                             -w "%{http_code}" $api_endpoint/res/test.txt )
        
        if [[ $download_check -eq "200" ]]; then
           echo "Succesfully fetched public file:"

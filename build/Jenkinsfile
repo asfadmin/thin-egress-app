@@ -291,7 +291,7 @@ pipeline {
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
                     git tag ${BUILDTAG}-dfdev
-                    git push --force origin ${BUILDTAG}
+                    git push --force origin ${BUILDTAG}-dfdev
                 ''')
         }
 

@@ -380,17 +380,37 @@ if [[ -z "$EDLUSER" ]]; then
     echo "No EDL User creds provided. Cannot validate download."
     echo "Try supplying --edl-user-creds='<EDL-USER>:<EDL-PASS>'"
 else
-    echo "Attempting to download authenticated file $api_endpoint/res/test.txt"
-    auth_dl_url="$edl_authbase/oauth/authorize?client_id=$CLIENTID&redirect_uri=$api_endpoint/login&response_type=code&state=/res/test.txt"
-    echo "Magic Download URL is $auth_dl_url"
-    restricted_file_check=$(curl --proxy socks5h://localhost:8001 -u "$EDLUSER" \
-                                 -L -s -o /tmp/res_test.txt -w "%{http_code}" $auth_dl_url)
-    if [[ $http_resp -eq "200" ]]; then
-       echo "Succesfully fetched public file:"
+    echo "Generating Session cookie"
+    cookie_file="/tmp/$STACKNAME.cookiejar"
+    rm -rf $cookie_file
+    
+    # First step, log in 
+    auth_dl_url="$edl_authbase/oauth/authorize?client_id=$CLIENTID&redirect_uri=$api_endpoint/login&response_type=code"
+    echo "Login link is $auth_dl_url"
+    login_check=$(curl --proxy socks5h://localhost:8001 -u "$EDLUSER" \
+                       -c $cookie_file -b cookie_file \
+                       -L -s -o /tmp/login_test.txt  \
+                       -w "%{http_code}" $auth_dl_url)
+                                 
+    if [[ $login_check -eq "200" ]]; then 
+       echo "Successfully negotiated login... Attempting download"
+       echo "Attempting to download authenticated file $api_endpoint/res/test.txt"
+       
+       download_check=$(curl --proxy socks5h://localhost:8001 \
+                             -c $cookie_file -b cookie_file \
+                             -L -s -o /tmp/res_test.txt \
+                             -w "%{http_code}" $api_endpoint/res/test.txt
+       
+       if [[ $download_check -eq "200" ]]; then
+          echo "Succesfully fetched public file:"
+       else
+          echo "There was a problem fetching restricted file:"
+       fi
+       cat /tmp/res_test.txt
     else
-       echo "There was a problem fetching restricted file:"
-    fi
-    cat /tmp/res_test.txt
+       echo "Could not complete login:"
+       cat /tmp/login_test.txt
+    fi 
 fi
 
 # Kill the proxy

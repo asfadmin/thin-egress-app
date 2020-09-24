@@ -84,7 +84,7 @@ pipeline {
         container('tea-container') {
 
             // Send chat notification
-            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER}, branch: ${GIT_BRANCH} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
               // Dump ENV
               sh 'tree'

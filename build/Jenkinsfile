@@ -68,7 +68,7 @@ pipeline {
     AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
     CHATSERVER_SECRET_URL = credentials("${params.CHATSERVER_SECRET_URL_ID}")
-
+    GIT_CREDS_ID = "6af85197-f063-4c10-aa7e-04c881211997"
   }
 
   // Build on a slave with docker on kubernetes
@@ -84,7 +84,7 @@ pipeline {
         container('tea-container') {
 
             // Send chat notification
-            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER}, branch: ${GIT_BRANCH} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
               // Dump ENV
               sh 'tree'
@@ -285,6 +285,8 @@ pipeline {
 
         sshagent(credentials: ["${env.GIT_CREDS_ID}"]) {
                   sh('''
+                    printenv
+                    
                     mkdir -p ~/.ssh
                     ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"

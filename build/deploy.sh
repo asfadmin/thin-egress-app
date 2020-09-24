@@ -121,8 +121,8 @@ UrsAuth=$(echo -n "$EDLUID:$EDLPASS" | base64)
 UrsId="$CLIENTID"
 cat << EOL > $urs_secret_file
 {
-    "UrsId": "$UrsAuth",
-    "UrsAuth": "$UrsId"
+    "UrsAuth": "$UrsAuth",
+    "UrsId": "$UrsId"
 }
 EOL
 

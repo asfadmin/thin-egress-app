@@ -324,7 +324,7 @@ if [[ -z "$BASTIONNAME" || -z "$KEYFILE" ]]; then
    exit 0
 fi
 
-# Look up Bastion instane id & Start tunnel
+# Look up Bastion instance id & Start tunnel
 echo "Finding EC2 Instance id for bastion \"$BASTIONNAME\""
 ssm_bastion=$(aws $AWSENV ec2 describe-instances --filters "Name=tag:Name,Values=$BASTIONNAME" \
                                                  --query "Reservations[].Instances[].InstanceId" \

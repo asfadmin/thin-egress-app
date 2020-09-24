@@ -333,9 +333,9 @@ pipeline {
 
     // If this is PROD, push the code to public
     stage ('Push Public Code') {
-      when {
-        expression { "${env.APPTAG}" == 'tea' }
-      }
+//       when {
+//         expression { "${env.APPTAG}" == 'tea' }
+//       }
       steps {
         container('tea-container') {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {

@@ -290,8 +290,8 @@ pipeline {
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
-                    git tag ${BUILDTAG}-dfdev
-                    git push --force origin ${BUILDTAG}-dfdev
+                    git tag ${BUILDTAG}
+                    git push --force origin ${BUILDTAG}
                 ''')
         }
 
@@ -301,9 +301,9 @@ pipeline {
 
     // If this is PROD, push the code to public
     stage ('Push Public Code') {
-//       when {
-//         expression { "${env.APPTAG}" == 'tea' }
-//       }
+      when {
+        expression { "${env.APPTAG}" == 'tea' }
+      }
       steps {
         container('tea-container') {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {

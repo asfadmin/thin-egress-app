@@ -283,7 +283,7 @@ pipeline {
       steps {
       container('tea-container') {
 
-        sshagent(['6af85197-f063-4c10-aa7e-04c881211997']) {
+        sshagent(credentials: ["${env.GIT_CREDS_ID}"]) {
                   sh('''
                     mkdir -p ~/.ssh
                     ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts

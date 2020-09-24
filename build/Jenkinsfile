@@ -290,43 +290,11 @@ pipeline {
                     GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
                     git config user.email 'jenkins@jenkins.asf.alaska.edu'
                     git config user.name 'jenkins'
-                    git push --delete origin ${BUILDTAG}
                     git tag ${BUILDTAG}-dfdev
                     git push --force origin ${BUILDTAG}
                 ''')
-//             sh('''
-//                 #!/usr/bin/env bash
-//                 set +x
-//                 # If no host key verification is needed, use the option `-oStrictHostKeyChecking=no`
-//                 export GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
-//                 git status
-//                 git checkout $GIT_BRANCH
-//                 git status
-//                 echo '>> Creating Build Tag'
-//                 git tag -a ${BUILDTAG} -m "versioning ${BUILDTAG}"
-//
-//             ''')
-            /*
-            git config user.email 'bbarton@.alaska.edu'
-                git config user.name 'benbart'
-
-            git tag  ${BUILDTAG}
-                git push origin ${BUILDTAG}
-            */
         }
-/*
-*/
-            // Use existing creds
-//             sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
-//             sh("git config user.name 'jenkins'")
 
-//             // tags current changeset
-//             sh "echo '>> Creating Build Tag'"
-//             sh ("git tag -a ${BUILDTAG} -m \"versioning ${BUILDTAG}\"")
-
-//             // pushes the tags
-//             sh "echo '>> Pushing Build Tag'"
-//             sh ("git push origin ${BUILDTAG}")
         }
       }
     }

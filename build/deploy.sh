@@ -1,5 +1,28 @@
 #!/bin/bash
 
+#
+#  ./depoy.sh  --stack-name=<STACK-NAME> \
+#              --aws-profile=<AWS-PROFILE-NAME \
+#              --bastion="<SSM-BASTION-NAME>" \
+#              --key-file=<LOCAL-PATH-TO-YOUR-PRIVATE-KEY> \
+#              --uid=<EDL-APP-UID> \
+#              --client-id=<EDL-APP-CLIENT-ID> \
+#              --pass='<EDL-APP-PASSWORD>' \
+#              --maturity=<SBX|DEV|SIT|INT|UAT|TEST|PROD>  \
+#              --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>' 
+#
+#        -a|--aws-profile     AWS Profile (from ~/.aws/credentials)
+#        -b|--bastion         SSM Bastion name ("NGAP SSH Bastion"?)
+#        -c|--client-id       EDL App Client ID
+#        -e|--edl-user-creds  EDL USER credentials (For Validating DL's)
+#        -k|--key-file        ssh key for connecting to SSM Bastion
+#        -m|--maturity        Account/EDL Matuirty (SBX|SIT|UAT|PROD)
+#        -p|--pass            EDL App Password
+#        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
+#        -s|--stack-name      The name of the stack to be deployed.
+#        -u|--uid             EDL App UID 
+#     
+
 # Pass Options
 for i in "$@"
 do
@@ -388,7 +411,7 @@ else
     auth_dl_url="$edl_authbase/oauth/authorize?client_id=$CLIENTID&redirect_uri=$api_endpoint/login&response_type=code"
     echo "Login link is $auth_dl_url"
     login_check=$(curl --proxy socks5h://localhost:8001 -u "$EDLUSER" \
-                       -c $cookie_file -b cookie_file \
+                       -c $cookie_file -b $cookie_file \
                        -L -s -o /tmp/login_test.txt  \
                        -w "%{http_code}" $auth_dl_url)
                                  
@@ -397,7 +420,7 @@ else
        echo "Attempting to download authenticated file $api_endpoint/res/test.txt"
        
        download_check=$(curl --proxy socks5h://localhost:8001 \
-                             -c $cookie_file -b cookie_file \
+                             -c $cookie_file -b $cookie_file \
                              -L -s -o /tmp/res_test.txt \
                              -w "%{http_code}" $api_endpoint/res/test.txt )
        

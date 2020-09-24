@@ -8,8 +8,8 @@
 [![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
 [![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 
-If you want the fastest path between 0 and S3 Distirbution, see the [TL;DR](#tldr) section 
-for a quick step-by-step walkthrough of deploying TEA. 
+If you want the fastest path between 0 and S3 distirbution, see the [TL;DR](#tldr) section 
+for a quick and easy TEA bootstrapping script. 
 
 ## Table of Contents: 
 * [History of TEA](#history-of-tea) - A Brief History of where TEA came from

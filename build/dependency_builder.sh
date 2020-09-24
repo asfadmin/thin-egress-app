@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
 
-# requirements.txt should be at /depbuild/in/requirements.txt
-# output goes /depbuild/out
-# ZIPFILENAME
+# required env vars:
+# WORKSPACE - will contain the thin-egress-app project
+# DEPENDENCYLAYERFILENAME - this script will output a zip file with this name
+
+echo "RUNNING dependency_builder.sh"
+
+echo "inside dependency building container env:"
+printenv
 
 yum update -y
 yum install -y zip python3-devel python3-pip
 
-mkdir -p /depbuild/pkg/python
 
-cd /depbuild/pkg/python || exit
+mkdir -p /tmp/pkg/python
+
+
+cd /tmp/pkg/python || exit
 
 pip3 install --upgrade setuptools
-pip3 install -r /depbuild/in/requirements_tea.txt --target .
-pip3 install -r /depbuild/in/requirements_rain-api-core.txt --target .
+pip3 install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
+pip3 install -r ${WORKSPACE}/lambda/requirements.txt --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info
@@ -27,9 +34,11 @@ rm -rf easy_install.py
 rm -f typing.py # MUST be removed, its presence causes error every time
 
 cd ..
+# now in pkg/
+echo "zipping dependencies to ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}."
 
-echo "zipping to /depbuild/out/${ZIPFILENAME}"
+ls -lah
 
-zip -r9 "/depbuild/out/${ZIPFILENAME}" .
+zip -r9 "${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" .
 
-echo "all done"
+echo "all done making dependency layer"

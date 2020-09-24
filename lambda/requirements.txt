@@ -1,10 +1,10 @@
 aws-requests-auth==0.4.3
 cfnresponse==1.0.2
-chalice==1.18.0
-cryptography==3.0
+chalice==1.20.0
+cryptography==3.1
 flatdict==4.0.1
 jinja2==2.11.2
-jwcrypto==0.7
+jwcrypto==0.8
 netaddr==0.8.0
 pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary

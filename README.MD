@@ -8,7 +8,7 @@
 [![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
 [![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 
-If you want the fastest path between 0 and S3 distirbution, see the [TL;DR](#tldr) section 
+If you want the fastest path between 0 and S3 distribution, see the [TL;DR](#tldr) section 
 for a quick and easy TEA bootstrapping script. 
 
 ## Table of Contents: 
@@ -89,7 +89,7 @@ Lambda + API Gateway architecture.
 
 ## Purpose of TEA 
 
-At the most fundimental level, TEA is intended to be a FULLY Earthdata Cloud (EDC) compliant 
+At the most fundamental level, TEA is intended to be a FULLY Earthdata Cloud (EDC) compliant 
 application to enable distribution of EOSDIS data from Amazon S3 while ensuring data 
 providers have all the tools, controls and metrics required for ensuring data distribution 
 restriction and reporting compliance. TEA Distribution supports only static S3 data, and is 
@@ -136,7 +136,7 @@ ecosystem.
 ### Cumulus
 
 TEA can be considered the "official" distribution application of Cumulus, and while there is
-a symbiotic relationship, TEA is an add-on to cumulus rather than an extention. We suggest 
+a symbiotic relationship, TEA is an add-on to cumulus rather than an extension. We suggest 
 utilizing the applicable Cumulus documentation for tightly coupled TEA+Cumulus deployments. 
  
 ### EDL
@@ -229,7 +229,7 @@ cd thin-egress-app
 
 # Create a scratch directory in which to confine the required module
 
-# To make the archive smaller, you can cull unecessary packages and files from the directory. The particulars 
+# To make the archive smaller, you can cull unnecessary packages and files from the directory. The particulars 
 # are beyond the scope of this documentation.
 
 # Create the zip archive and put the required modules in
@@ -265,7 +265,7 @@ Major release documentation can be found
 
 Raw TEA code is broken into two github repos:
  * [thin-egress-app](https://github.com/asfadmin/thin-egress-app/) - 
-     Chalic App, infrastructure-as-code, build scafolding 
+     Chalice App, infrastructure-as-code, build scaffolding 
  * [rain-api-core](https://github.com/asfadmin/rain-api-core/) - 
      EDL, AWS, Session Management helper functions
 
@@ -289,7 +289,7 @@ files:
 At the heart of TEA is the concept of the Bucket Map. This YAML file tells TEA how to 
 map URLs to buckets and how to control access to data in buckets. Mapping depths are 
 arbitrary and dynamically account for object path prefixes. Bucket maps are case 
-senstive!
+sensitive!
 
 When working with a bucket map, it is important to remember that bucket names are 
 relative to the optional `bucket prefix` TEA parameter. If a `bucket prefix` is 
@@ -297,7 +297,7 @@ supplied, that value is added to any bucket name. This optional feature is inten
 to allow bucket maps to be used in multiple maturities (e.g. Sandbox, SIT, UAT, Prod) 
 where bucket names are consistent across maturities given a specific bucket prefix. 
 
-Asssume the following bucket map:
+Assume the following bucket map:
 
 ```
 MAP:
@@ -469,7 +469,7 @@ aws $AWSENV ec2 describe-vpc-endpoints --query "VpcEndpoints[?(VpcId=='$VPCID' &
 ### Permission Boundaries
 
 When deploying into NGAP, it is important to supply a Permission Boundary. This
-allows CloudFormation to create neccessary IAM roles on your behalf. 
+allows CloudFormation to create necessary IAM roles on your behalf. 
 
 ### Do I need a Bastion?
 
@@ -701,7 +701,7 @@ curl ${api_endpoint}version
 
 #### Accessing the API Gateway inside EDC
 
-Its important to understand that in the EDC, you can't do the above step. 
+It's important to understand that in the EDC, you can't do the above step. 
 There is no route into the VPC from the general internet. There are 
 write-ups elsewhere that go into depth on how to proxy HTTPS requests into 
 the private VPC. 
@@ -714,7 +714,7 @@ NASD request.
 
 After the NASD has been processed and a new CloudFront domain is generated
 for your TEA deployment, you'll need to update the `DomainName` and `CookieName`
-parematers of your [TEA Deployment](#all-parameters) with the new CloudFront 
+parameters of your [TEA Deployment](#all-parameters) with the new CloudFront 
 domain name.
 
 ### Using custom domain names
@@ -770,10 +770,10 @@ If you see an error message in the Cloudformation Events like this:
  
 #### Updating Cached Values:
 
-For effeciency, TEA will cache configuration into the Lambda run environment. 
+For efficiency, TEA will cache configuration into the Lambda run environment. 
 Certain changes, like modifications to the bucket map or secrets, may not be 
 immediately picked up. Lambda run times will eventually time out, but you can 
-force refeching of cached values be simply adding a dummy environment 
+force refetching of cached values be simply adding a dummy environment 
 variable to the running Lambda environment. There may be a better way to 
 trigger Lambda environment flushing, lets us know if you find a way. 
 
@@ -829,7 +829,7 @@ case, try our magic bootstrapping script!
 You can either download [`deploy.sh`](https://github.com/asfadmin/thin-egress-app/blob/devel/build/deploy.sh) 
 and run it, or, as show below, curl the output directly into bash. 
 
-This bash script requets `curl`, 
+This bash script requires `curl`, 
 [`awscli`](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html), 
 [`Session Manager Plugin`](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html), 
 and [`jq`](https://github.com/stedolan/jq/wiki/Installation) to be 

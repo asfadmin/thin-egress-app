@@ -154,7 +154,7 @@ secret_arn=$(aws $AWSENV secretsmanager describe-secret \
                                  --secret-id ${urs_secret_name} \
                                  --query "ARN" --output=text 2>&1 \
                                  | grep -v ResourceNotFoundException)
-if [ -z secret_arn ]; then
+if [ -z "$secret_arn" ]; then
    echo "Creating URS Secret ${urs_secret_name}"
    aws $AWSENV secretsmanager create-secret --name ${urs_secret_name} \
        --description "URS creds for TEA ${STACKNAME} app" \

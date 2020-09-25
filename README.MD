@@ -293,13 +293,13 @@ sensitive!
 
 When working with a bucket map, it is important to remember that bucket names are 
 relative to the optional `bucket prefix` TEA parameter. If a `bucket prefix` is 
-supplied, that value is added to any bucket name. This optional feature is intended 
+supplied, that value is prepended to any bucket name. This optional feature is intended 
 to allow bucket maps to be used in multiple maturities (e.g. Sandbox, SIT, UAT, Prod) 
 where bucket names are consistent across maturities given a specific bucket prefix. 
 
 Assume the following bucket map:
 
-```
+```yaml
 MAP:
   path1: bucket-path-1
   
@@ -328,7 +328,7 @@ It is **NOT** possible to have distribution at the app root. That is,
 
 Custom HTTP response headers can be added to bucket mappings:
 
-```
+```yaml
 MAP:         
   path1:
       bucket: bucket-path-1
@@ -345,7 +345,7 @@ download data. However, there are two options to change that behavior
 
 Buckets can be made public by adding a `PUBLIC_BUCKETS` block:
 
-```
+```yaml
 MAP:
    browse: browse-bucket
    
@@ -363,7 +363,7 @@ TEA download can also be restricted to users who belonging to an EDL Application
 User Group. This allows App and Data owners to specify a discrete list of specially 
 approved users who can download data.
 
-```
+```yaml
 MAP:
    pre-commission: pre-comission-data-bucket
    
@@ -481,7 +481,7 @@ validating a deployment will be very difficult.
 ## Deploying TEA
 
 At its core, TEA uses a CloudFormation template to deploy all of its resources to 
-AWS. Additionally, there is an available Terraform module that can be used on its
+AWS. Additionally, there is an available [Terraform module](#from-terraform) that can be used on its
 own, or as an add-on to Cumulus.
 
 ### Secrets Setup

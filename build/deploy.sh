@@ -122,7 +122,7 @@ if [[ -z "$EDLUID" || -z "$EDLPASS" || -z "$CLIENTID" ]]; then
    NOEDL=True
 fi
 
-if [ -z "AWSPROFILE" ]; then
+if [ -z "$AWSPROFILE" ]; then
    AWSENV="--region=$AWSREGION"
 else
    AWSENV="--profile=$AWSPROFILE --region=$AWSREGION"
@@ -274,7 +274,7 @@ endpoint=$(aws $AWSENV ec2 describe-vpc-endpoints \
                             --output=text)
 if [ -z $endpoint ]; then
    echo "ERROR!!!!! There is no VPC Endpoint!"
-   exit -1
+   exit 1
 fi
 
 ### Deploy the Stack!
@@ -339,7 +339,7 @@ ssh -o ProxyCommand="sh -c 'aws $AWSENV ssm start-session \
 
 if [[ $? -gt 0 ]]; then 
    echo " >> COULD NOT ESTABLISH SSH TUNNEL!!"
-   exit -1 
+   exit 1 
 fi
 
 ssh_tunnel_pid=$(pgrep -f 'ssh -o ProxyCommand')
@@ -396,7 +396,7 @@ if [[ $http_resp -eq "302" ]]; then
 else
    echo "There was a problem validating auth challenge for restricted data:"
    cat /tmp/res_test.txt
-   exit -1
+   exit 1
 fi 
 
 if [[ -z "$EDLUSER" ]]; then

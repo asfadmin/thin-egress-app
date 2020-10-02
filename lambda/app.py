@@ -615,10 +615,12 @@ def dynamic_url():
     t.append(time.time())  # 6
 
     new_jwt_cookie_headers = {}
-    if new_user_profile and new_user_profile != user_profile:
-        log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
+    if new_user_profile:
+        log.debug(f"We got new profile from user_in_group() {new_user_profile}")
         user_profile = new_user_profile
-        jwt_cookie_payload = user_profile_2_jwt_payload(cookievars.get('urs-user-id'), cookievars.get('urs-access-token'), user_profile)
+        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
+                                                        get_jwt_field(cookievars, 'urs-access-token'),
+                                                        user_profile)
         new_jwt_cookie_headers.update(make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
     log.debug('user_in_group: {}'.format(u_in_g))

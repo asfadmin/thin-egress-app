@@ -307,11 +307,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if JWT_COOKIE_NAME in cookievar:
-        if fieldname in cookievar[JWT_COOKIE_NAME]:
-            return cookievar[JWT_COOKIE_NAME][fieldname]
-
-    return None
+    return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
 
 @app.route('/')
@@ -610,28 +606,37 @@ def dynamic_url():
     t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
-                                                                          # if we're asking for a public file and we
-                                                                          # omit this check?
+                                                         # if we're asking for a public file and we
+                                                         # omit this check?
+                                                         # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     t.append(time.time())  # 6
 
-    if new_user_profile and new_user_profile != user_profile:
-        log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
+    new_jwt_cookie_headers = {}
+    if new_user_profile:
+        log.debug(f"We got new profile from user_in_group() {new_user_profile}")
         user_profile = new_user_profile
+        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
+                                                        get_jwt_field(cookievars, 'urs-access-token'),
+                                                        user_profile)
+        new_jwt_cookie_headers.update(make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+
     log.debug('user_in_group: {}'.format(u_in_g))
+
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}
-        headers = {}
-        return make_html_response(template_vars, headers, 403, 'error.html')
+        return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
-        headers = {}
-        return make_html_response(template_vars, headers, 404, 'error.html')
+
+        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
+
+    custom_headers.update(new_jwt_cookie_headers)
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
     t.append(time.time())  # 7
 

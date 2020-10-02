@@ -621,20 +621,18 @@ def dynamic_url():
         jwt_cookie_payload = user_profile_2_jwt_payload(cookievars.get('urs-user-id'), cookievars.get('urs-access-token'), user_profile)
         new_jwt_cookie_headers.update(make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
-    headers = {}
-    headers.update(new_jwt_cookie_headers)
     log.debug('user_in_group: {}'.format(u_in_g))
 
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}
-        return make_html_response(template_vars, headers, 403, 'error.html')
+        return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
-        headers = {}
-        return make_html_response(template_vars, headers, 404, 'error.html')
+
+        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 
     custom_headers.update(new_jwt_cookie_headers)
     log.debug(f'custom headers before try download from bucket: {custom_headers}')

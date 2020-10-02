@@ -268,6 +268,8 @@ Outputs:
   ApiGatewayLogGroupEgress:
     Value: !Ref ApiGatewayCloudWatchLogGroupEgress
     Condition: ApiGatewayLogToCloudWatchIsSet
+  EgressLambdaName:
+    Value: !Ref EgressLambda
 
 Resources:
 

@@ -236,11 +236,16 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         bucket_region = get_bucket_region(session, bucket)
         t4 = time.time()
     except ClientError as e:
+        try:
+            code = e.response['ResponseMetadata']['HTTPStatusCode']
+        except (AttributeError, KeyError, IndexError):
+            code = 400
+        log.debug(f'response: {e.response}')
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
-        cumulus_log_message('failure', 500, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
         template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
         headers = {}
-        return make_html_response(template_vars, headers, 500, 'error.html')
+        return make_html_response(template_vars, headers, code, 'error.html')
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
@@ -302,11 +307,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
 
 def get_jwt_field(cookievar: dict, fieldname: str):
-    if JWT_COOKIE_NAME in cookievar:
-        if fieldname in cookievar[JWT_COOKIE_NAME]:
-            return cookievar[JWT_COOKIE_NAME][fieldname]
-
-    return None
+    return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
 
 @app.route('/')
@@ -408,19 +409,19 @@ def get_range_header_val():
 def get_bc_config_client(user_id):
     params = {}
     now = time.time()
-    
+
     if user_id not in bc_client_cache:
         # This a new user, generate a new bc_Config client
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
         bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
-    elif now - bc_client_cache[user_id]["timestamp"] >= (50*60): 
-        # Replace the client if is more than 50 minutes old 
+    elif now - bc_client_cache[user_id]["timestamp"] >= (50*60):
+        # Replace the client if is more than 50 minutes old
         log.info(f"Replacing old bc_Config_client for user {user_id}")
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
         bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
-        
+
     return bc_client_cache[user_id]["client"]
 
 
@@ -605,28 +606,37 @@ def dynamic_url():
     t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
-                                                                          # if we're asking for a public file and we
-                                                                          # omit this check?
+                                                         # if we're asking for a public file and we
+                                                         # omit this check?
+                                                         # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
     t.append(time.time())  # 6
 
-    if new_user_profile and new_user_profile != user_profile:
-        log.debug("Profile was mutated from {0} => {1}".format(user_profile,new_user_profile))
+    new_jwt_cookie_headers = {}
+    if new_user_profile:
+        log.debug(f"We got new profile from user_in_group() {new_user_profile}")
         user_profile = new_user_profile
+        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
+                                                        get_jwt_field(cookievars, 'urs-access-token'),
+                                                        user_profile)
+        new_jwt_cookie_headers.update(make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+
     log.debug('user_in_group: {}'.format(u_in_g))
+
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}
-        headers = {}
-        return make_html_response(template_vars, headers, 403, 'error.html')
+        return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
-        headers = {}
-        return make_html_response(template_vars, headers, 404, 'error.html')
+
+        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
+
+    custom_headers.update(new_jwt_cookie_headers)
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
     t.append(time.time())  # 7
 

@@ -1,8 +1,54 @@
 pipeline {
 
+  parameters {
+
+    string(name: 'APPTAG', defaultValue: 'teatest', description: '')
+    choice(name: 'MATURITY', choices: ['DEV', 'INT', 'TEST', 'PROD'], description: 'The MATURITY (AWS) account to deploy')
+
+    choice(name: 'CHAT_ROOM', choices: ['rain-jenkinsnotifications', 'raindev', 'rain', 'bbarton-scratch'], description: 'MatterMost chat room to post notifications during deployment')
+    credentials(
+        name: 'CHATSERVER_SECRET_URL_ID',
+        credentialType: 'com.cloudbees.plugins.credentials.impl.SecretTextCredentialsImpl',
+        defaultValue: 'mattermost_webhook_url',
+        description: 'Chatserver URL, including secret token in path',
+        required: true
+      )
+    credentials(
+        name: 'AWSCREDS',
+        description: 'creds for AWS account where stack resides',
+        defaultValue: 'ASF-117169578524',
+        credentialType: 'com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl',
+        required: true
+    )
+    credentials(
+        name: 'URS_ACCT',
+        credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
+        defaultValue: 'URS-asf_automated_testing',
+        description: 'urs_client_id and urs_password for cumulus',
+        required: true
+    )
+    choice(name: 'URS_URL', choices: ['https://urs.earthdata.nasa.gov',
+                                           'https://uat.urs.earthdata.nasa.gov',
+                                           'https://sit.urs.earthdata.nasa.gov',
+                                           'https://sbx.urs.earthdata.nasa.gov'],
+                            description: 'Which URS to use for auth')
+    string(name: 'URS_CREDS_SECRET_NAME', defaultValue: 'URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL', description: '')
+    string(name: 'JWTKEYSECRETNAME', defaultValue: 'bbarton_rsa_keys_4_jwt', description: '')
+    string(name: 'DOMAIN_NAME', defaultValue: 'tea-test-jenk-0.asf.alaska.edu', description: '')
+    string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
+    string(name: 'DOWNLOAD_ROLE_ARN_INREGION', defaultValue: 'arn:aws:iam::820203326710:role/EcsS3ReadOnly-inregion-us-west-2', description: '')
+    string(name: 'BUCKETNAME_PREFIX', defaultValue: 'rain-uw2-t-', description: '')
+    choice(name: 'AWS_REGION', choices: ['us-west-2', 'us-east-1'], description: 'AWS Region to deploy to')
+    string(name: 'AWS_DEFAULT_REGION', defaultValue: 'us-west-2', description: '')
+    string(name: 'DOMAIN_CERT_ARN', defaultValue: 'arn:aws:acm:us-east-1:117169578524:certificate/1f3945cf-cac7-4d75-ad8d-b8920534fea2', description: '')
+    string(name: 'COOKIE_DOMAIN', defaultValue: '.asf.alaska.edu', description: '')
+
+  }
+
   // Environment Setup
   environment {
     AWSENV=""
+    NEWTAG="build.${BUILD_NUMBER}"
     BUILDTAG="${APPTAG}-${NEWTAG}"
     CODE_ARCHIVE_FILENAME="${APPTAG}-code-${NEWTAG}.zip"
     CF_TEMPLATE_FILENAME="${APPTAG}-cloudformation-${NEWTAG}.yaml"
@@ -17,199 +63,202 @@ pipeline {
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
+    ZIPFILENAME="${DEPENDENCYLAYERFILENAME}"
     LAMBDA_TIMEOUT=6
+    AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
+    CHATSERVER_SECRET_URL = credentials("${params.CHATSERVER_SECRET_URL_ID}")
+    GIT_CREDS_ID = "6af85197-f063-4c10-aa7e-04c881211997"
   }
 
-  // Build on a slave with docker (for pre-req?)
-  agent { label 'docker' }
-
+  // Build on a slave with docker on kubernetes
+  agent { kubernetes {
+          yamlFile 'build/k8s.yaml'
+             }
+      }
   stages {
 
-    // just sort of assess the enviroment
+    // just sort of assess the environment
     stage('Setup Env') {
       steps {
-        // Send chat notification
-        mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATHOST}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
-          // Dump ENV
-          sh 'tree'
-          sh 'pwd'
-          sh 'env'
-        }
-        // Update submodules.
-        sh "echo '>> Updating submodules....'"
-        sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
-        sh "git config user.name 'jenkins'"
-        sh "git submodule update --init --recursive"
+        container('tea-container') {
 
-        // show us the params:
-        echo "params.APPTAG: ${params.APPTAG}"
-        echo "params.NEWTAG: ${params.NEWTAG}"
-        echo "params.AWSCREDS: ${params.AWSCREDS}"
-        echo "params.URS_ACCT: ${params.URS_ACCT}"
-        echo "params.CHATHOST: ${params.CHATHOST}"
-        echo "params.CHAT_ROOM: ${params.CHAT_ROOM}"
-        echo "params.MATURITY: ${params.MATURITY}"
-        echo "params.URS_CREDS_SECRET_NAME: ${params.URS_CREDS_SECRET_NAME}"
-        echo "params.JWTKEYSECRETNAME: ${params.JWTKEYSECRETNAME}"
-        echo "params.DOMAIN_NAME: ${params.DOMAIN_NAME}"
-        echo "params.DOWNLOAD_ROLE_ARN: ${params.DOWNLOAD_ROLE_ARN}"
-        echo "params.DOWNLOAD_ROLE_ARN_INREGION: ${params.DOWNLOAD_ROLE_ARN_INREGION}"
-        echo "params.BUCKETNAME_PREFIX: ${params.BUCKETNAME_PREFIX}"
-        echo "params.AWS_DEFAULT_REGION: ${params.AWS_DEFAULT_REGION}"
-        echo "params.DOMAIN_CERT_ARN: ${params.DOMAIN_CERT_ARN}"
-        echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
-        echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
+            // Send chat notification
+            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER}, branch: ${GIT_BRANCH} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
+              // Dump ENV
+              sh 'tree'
+              sh 'pwd'
+              sh 'env'
+            }
+            // Update submodules.
+            sh "echo '>> Updating submodules....'"
+            sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
+            sh "git config user.name 'jenkins'"
+            sh "git submodule update --init --recursive"
+
+            // show us the params:
+            echo "params.APPTAG: ${params.APPTAG}"
+            echo "params.NEWTAG: ${params.NEWTAG}"
+            echo "params.AWSCREDS: ${params.AWSCREDS}"
+            echo "params.URS_ACCT: ${params.URS_ACCT}"
+            echo "params.CHATHOST: ${params.CHATHOST}"
+            echo "params.CHAT_ROOM: ${params.CHAT_ROOM}"
+            echo "params.MATURITY: ${params.MATURITY}"
+            echo "params.URS_CREDS_SECRET_NAME: ${params.URS_CREDS_SECRET_NAME}"
+            echo "params.JWTKEYSECRETNAME: ${params.JWTKEYSECRETNAME}"
+            echo "params.DOMAIN_NAME: ${params.DOMAIN_NAME}"
+            echo "params.DOWNLOAD_ROLE_ARN: ${params.DOWNLOAD_ROLE_ARN}"
+            echo "params.DOWNLOAD_ROLE_ARN_INREGION: ${params.DOWNLOAD_ROLE_ARN_INREGION}"
+            echo "params.BUCKETNAME_PREFIX: ${params.BUCKETNAME_PREFIX}"
+            echo "params.AWS_DEFAULT_REGION: ${params.AWS_DEFAULT_REGION}"
+            echo "params.DOMAIN_CERT_ARN: ${params.DOMAIN_CERT_ARN}"
+            echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
+            echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
+
+        }
       }
     }
 
     // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
-        // Since we can't build a working pycrypto in our Jenkins environment,
-        // we'll offload that to a amazonlinux:2 container
+        container('layer-builder') {
 
-        // Create a working space, pull in dependencies
-        sh "echo '>> Gathering Dependencies....'"
+            sh '${WORKSPACE}/build/dependency_builder.sh && echo "built to $WORKSPACE"'
 
-        sh "cd ${WORKSPACE}"
-
-        // Make sure we get all the requirements:
-        sh "cp ${WORKSPACE}/rain-api-core/requirements.txt ${WORKSPACE}/lambda/requirements_rain-api-core.txt"
-        sh "cp ${WORKSPACE}/lambda/requirements.txt ${WORKSPACE}/lambda/requirements_tea.txt"
-        sh "cp ${WORKSPACE}/build/dependency_builder.sh ${WORKSPACE}/lambda/"
-
-        sh 'docker run --rm -v ${WORKSPACE}/lambda/:/depbuild/in -v ${WORKSPACE}/:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" --name "depbuilder.${APPTAG}.${NEWTAG}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh'
-
-        sh 'echo "this file ${WORKSPACE}/${DEPENDENCYLAYERFILENAME}" should exist: '
-        sh "ls -lah *.zip"
-
-
+            sh 'echo "finished depbuilder, now looking in some dirs" && cd "$WORKSPACE" && ls -lah'
+            // zip file now located at $WORKSPACE/$DEPENDENCYLAYERFILENAME
+        }
       }
    }
     // Package code
     stage('Package Code') {
       steps {
+        container('tea-container') {
+            // Zip up the upload.
+            sh "echo '>> Building Zipfile....'"
 
-        // Zip up the upload.
-        sh "echo '>> Building Zipfile....'"
+            sh """ cd ${WORKSPACE}/lambda  && \
+                   sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
+                   zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
+                   zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
+                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
+                   cd .. && \
+                   cd rain-api-core  && \
+                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
 
-        sh """ cd ${WORKSPACE}/lambda  && \
-               sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
-               zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
-               zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
-               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
-               cd .. && \
-               cd rain-api-core  && \
-               zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
+            // Swap in BUILD#
+            sh "echo '>> Build Stamping....'"
 
-        // Swap in BUILD#
-        sh "echo '>> Build Stamping....'"
+            sh "cd ${WORKSPACE}"
 
-        sh "cd ${WORKSPACE}"
+            // thin-egress-app.yaml
+            sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
+            sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
+            sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
+            sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/" ./cloudformation/thin-egress-app.yaml'
+            sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
 
-        // thin-egress-app.yaml
-        sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
-        sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/" ./cloudformation/thin-egress-app.yaml'
-        sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
-
-        // Zip up terraform
-        sh "echo '>> Building Terraform Zip....'"
-        sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
-        sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
-        sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
-        sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip dependencylayer.zip"
+            // Zip up terraform
+            sh "echo '>> Building Terraform Zip....'"
+            sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
+            sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
+            sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
+            sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip"
+        }
       }
    }
    // Push packages to AWS and deploy new version
    stage('Push to AWS') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+        container('tea-container') {
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
 
 
-          // Push the code up to private bucket
-          sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
-          sh "echo '>> Pushing code to ASF Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
+              // Push the code up to private bucket
+              sh "echo '>> Pushing dependencylayer to ASF Bucket'"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+              sh "echo '>> Pushing code to ASF Bucket'"
+              sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
+              sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
 
 
-          // Clarify in description that this stack is deployed by Jenkins,
-          sh 'cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml'
-          sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app-deployed.yaml'
-          // Push out the CF Stack
-          sh "echo '>> Deploying the CF stack'"
-          sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
-                     --stack-name ${STACKNAME_SAME} \
-                     --template-file cloudformation/thin-egress-app-deployed.yaml \
-                     --capabilities CAPABILITY_NAMED_IAM \
-                     --parameter-overrides \
-                       URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-                       ConfigBucket=${BUCKETNAME_PREFIX}config \
-                       PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map_customheaders.yaml \
-                       PublicBucketsFile="" \
-                       PrivateBucketsFile="" \
-                       BucketnamePrefix=${BUCKETNAME_PREFIX} \
-                       DownloadRoleArn="" \
-                       DownloadRoleInRegionArn="" \
-                       HtmlTemplateDir= \
-                       StageName=API \
-                       Loglevel=DEBUG \
-                       Maturity=${MATURITY}\
-                       PrivateVPC= \
-                       VPCSecurityGroupIDs= \
-                       VPCSubnetIDs= \
-                       EnableApiGatewayLogToCloudWatch="False" \
-                       DomainName=${DOMAIN_NAME-""} \
-                       DomainCertArn=${DOMAIN_CERT_ARN-""}  \
-                       CookieDomain=${COOKIE_DOMAIN-""} \
-                       LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
-                       LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
-                       LambdaTimeout=${LAMBDA_TIMEOUT} \
-                       JwtAlgo=${JWTALGO} \
-                       JwtKeySecretName=${JWTKEYSECRETNAME} \
-                       UseReverseBucketMap="False" """
+              // Clarify in description that this stack is deployed by Jenkins,
+              sh 'cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml'
+              sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built and deployed by Jenkins job ${JOB_NAME}, currently at ${BUILDTAG}\\";" ./cloudformation/thin-egress-app-deployed.yaml'
+              // Push out the CF Stack
+              sh "echo '>> Deploying the CF stack'"
+              sh """ ${AWS_BIN} cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+                         --stack-name ${STACKNAME_SAME} \
+                         --template-file cloudformation/thin-egress-app-deployed.yaml \
+                         --capabilities CAPABILITY_NAMED_IAM \
+                         --parameter-overrides \
+                           URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+                           AuthBaseUrl=${URS_URL} \
+                           ConfigBucket=${BUCKETNAME_PREFIX}config \
+                           PermissionsBoundaryName= \
+                           BucketMapFile=bucket_map_customheaders.yaml \
+                           PublicBucketsFile="" \
+                           PrivateBucketsFile="" \
+                           BucketnamePrefix=${BUCKETNAME_PREFIX} \
+                           DownloadRoleArn="" \
+                           DownloadRoleInRegionArn="" \
+                           HtmlTemplateDir= \
+                           StageName=API \
+                           Loglevel=DEBUG \
+                           Maturity=${MATURITY}\
+                           PrivateVPC= \
+                           VPCSecurityGroupIDs= \
+                           VPCSubnetIDs= \
+                           EnableApiGatewayLogToCloudWatch="False" \
+                           DomainName=${DOMAIN_NAME-""} \
+                           DomainCertArn=${DOMAIN_CERT_ARN-""}  \
+                           CookieDomain=${COOKIE_DOMAIN-""} \
+                           LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+                           LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
+                           LambdaTimeout=${LAMBDA_TIMEOUT} \
+                           JwtAlgo=${JWTALGO} \
+                           JwtKeySecretName=${JWTKEYSECRETNAME} \
+                           UseReverseBucketMap="False" """
 
-          // This will be the stack for downloading from 2nd account.
-          /*sh """ aws cloudformation deploy --region=${AWS_DEFAULT_REGION} \
-                     --stack-name ${STACKNAME_SCND} \
-                     --template-file cloudformation/thin-egress-app-deployed.yaml \
-                     --capabilities CAPABILITY_NAMED_IAM \
-                     --parameter-overrides \
-                       URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
-                       ConfigBucket=rain-t-config \
-                       PermissionsBoundaryName= \
-                       BucketMapFile=bucket_map_customheaders.yaml \
-                       PublicBucketsFile="" \
-                       PrivateBucketsFile="" \
-                       BucketnamePrefix=${BUCKETNAME_PREFIX_SCND} \
-                       DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
-                       DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
-                       HtmlTemplateDir= \
-                       StageName=API \
-                       Loglevel=DEBUG \
-                       Maturity=${env.MATURITY}\
-                       PrivateVPC= \
-                       VPCSecurityGroupIDs= \
-                       VPCSubnetIDs= \
-                       EnableApiGatewayLogToCloudWatch="False" \
-                       DomainName=${DOMAIN_NAME} \
-                       DomainCertArn=${DOMAIN_CERT_ARN}  \
-                       CookieDomain=${COOKIE_DOMAIN} \
-                       LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
-                       LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
-                       LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
-                       LambdaTimeout=${LAMBDA_TIMEOUT} \
-                       JwtAlgo=${JWTALGO} \
-                       JwtKeySecretName=${JWTKEYSECRETNAME} \
-                       UseReverseBucketMap="False" """
-          */
+              // This will be the stack for downloading from 2nd account.
+              /*sh """ ${AWS_BIN} cloudformation deploy --region=${AWS_DEFAULT_REGION} \
+                         --stack-name ${STACKNAME_SCND} \
+                         --template-file cloudformation/thin-egress-app-deployed.yaml \
+                         --capabilities CAPABILITY_NAMED_IAM \
+                         --parameter-overrides \
+                           URSAuthCredsSecretName=${URS_CREDS_SECRET_NAME} \
+                           AuthBaseUrl=${URS_URL} \
+                           ConfigBucket=rain-t-config \
+                           PermissionsBoundaryName= \
+                           BucketMapFile=bucket_map_customheaders.yaml \
+                           PublicBucketsFile="" \
+                           PrivateBucketsFile="" \
+                           BucketnamePrefix=${BUCKETNAME_PREFIX_SCND} \
+                           DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
+                           DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \
+                           HtmlTemplateDir= \
+                           StageName=API \
+                           Loglevel=DEBUG \
+                           Maturity=${env.MATURITY}\
+                           PrivateVPC= \
+                           VPCSecurityGroupIDs= \
+                           VPCSubnetIDs= \
+                           EnableApiGatewayLogToCloudWatch="False" \
+                           DomainName=${DOMAIN_NAME} \
+                           DomainCertArn=${DOMAIN_CERT_ARN}  \
+                           CookieDomain=${COOKIE_DOMAIN} \
+                           LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+                           LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
+                           LambdaTimeout=${LAMBDA_TIMEOUT} \
+                           JwtAlgo=${JWTALGO} \
+                           JwtKeySecretName=${JWTKEYSECRETNAME} \
+                           UseReverseBucketMap="False" """
+              */
+          }
         }
       }
     }
@@ -217,12 +266,14 @@ pipeline {
     // Run download test script
     stage('Validate AWS Deployment'){
       steps {
-        // Load up AWS + URS credentials
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
-          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-            // Attempt some downloads
-            sh("bash ./build/download_test.sh")
-          }
+            container('tea-container') {
+                // Load up AWS + URS credentials
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
+                  withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+                    // Attempt some downloads
+                    sh("python3 build/test/download_test.py")
+              }
+            }
         }
       }
     }
@@ -230,17 +281,22 @@ pipeline {
     // Tag it in Github
     stage('Tag Build'){
       steps {
-        // Use existing creds
-        sh("git config user.email 'jenkins@jenkins.asf.alaska.edu'")
-        sh("git config user.name 'jenkins'")
+      container('tea-container') {
 
-        // tags current changeset
-        sh "echo '>> Creating Build Tag'"
-        sh ("git tag -a ${BUILDTAG} -m \"versioning ${BUILDTAG}\"")
+        sshagent(credentials: ["${env.GIT_CREDS_ID}"]) {
+                  sh('''
+                    printenv
+                    mkdir -p ~/.ssh
+                    ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+                    GIT_SSH_COMMAND="ssh -oStrictHostKeyChecking=no"
+                    git config user.email 'jenkins@jenkins.asf.alaska.edu'
+                    git config user.name 'jenkins'
+                    git tag ${BUILDTAG}
+                    git push --force origin ${BUILDTAG}
+                ''')
+        }
 
-        // pushes the tags
-        sh "echo '>> Pushing Build Tag'"
-        sh ("git push origin ${BUILDTAG}")
+        }
       }
     }
 
@@ -250,16 +306,18 @@ pipeline {
         expression { "${env.APPTAG}" == 'tea' }
       }
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-          sh "echo '>> Pushing code to Public Code Bucket'"
-          sh "aws s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-          sh "aws s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
-          sh "aws s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
-          sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
-          sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
-                           --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
-                           /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
+        container('tea-container') {
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
+              sh "echo '>> Pushing code to Public Code Bucket'"
+              sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+              sh "${AWS_BIN} s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
+              sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
+              sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
+              sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
+                               --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
+                               /tmp/lastrelease.json s3://asf.public.code/thin-egress-app/ --acl public-read """
+              }
         }
       }
     }
@@ -268,33 +326,37 @@ pipeline {
   // Send build status to Mattermost, Update build badge
   post {
     success {
-      mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATHOST}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+    container('tea-container') {
+      mattermostSend channel: "${CHAT_ROOM}", color: '#CEEBD3', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build Successful: ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
 
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastgoodbuild.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/buildreport/lastbuild.json """
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+        sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                          --recursive /tmp/buildreport/ \
                          s3://asf.public.code/thin-egress-app/ --acl public-read """
       }
     }
+    }
     failure {
+    container('tea-container') {
       sh "rm -rf /tmp/buildreport && mkdir -p /tmp/buildreport/"
 
       sh """ echo '{ "schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical" }' > /tmp/buildreport/buildstatus.json """
       sh """ echo '{ "schemaVersion": 1, "label": "Last Build ", "message": "'$BUILDTAG'", "color": "critical" }'  > /tmp/buildreport/lastbuild.json """
-      mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATHOST}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
+      mattermostSend channel: "${CHAT_ROOM}", color: '#FFBDBD', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build Failed:  ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
       withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-        sh """ aws s3 cp --metadata-directive REPLACE --cache-control no-cache \
+        sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \
                          --expires '2016-06-14T00:00:00Z' --content-type 'application/json' \
                          --recursive /tmp/buildreport/ \
                          s3://asf.public.code/thin-egress-app/ --acl public-read """
       sh 'tree'
       sh 'printenv'
       }
+    }
     }
   }
 }

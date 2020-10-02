@@ -2,7 +2,7 @@
 .DS_Store
 /lambda/.chalice
 /.idea
-/.terraform
+.terraform
 /venv
 /pkg
 /terraform/providers.tf

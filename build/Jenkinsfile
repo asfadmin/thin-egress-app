@@ -185,6 +185,7 @@ pipeline {
               sh "echo '>> Pushing code to ASF Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${TF_ZIP_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/terraform_packages/"
 
 
               // Clarify in description that this stack is deployed by Jenkins,

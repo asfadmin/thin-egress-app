@@ -24,7 +24,7 @@ pip3 install -r ${WORKSPACE}/lambda/requirements.txt --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info
-rm -rf pip
+# rm -rf pip # commented out because https://snyk.io/vuln/SNYK-PYTHON-PIP-609855
 rm -rf docutils
 rm -rf chalice/cli # cli in lambda? No way!
 rm -rf botocore # included with lambda, just takes up space here

@@ -11,7 +11,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log
+from rain_api_core.general_util import get_log, log_context
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
@@ -223,6 +223,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         elif 'uid' in user_profile:
             user_id = user_profile['uid']
     log.info("User Id for download is {0}".format(user_id))
+    log.log_context(user_id=user_id)
 
     t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
@@ -309,10 +310,10 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 def get_jwt_field(cookievar: dict, fieldname: str):
     return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
-
 @app.route('/')
 def root():
-
+    log_context(user_id=None, route='/', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     user_profile = False
     template_vars = {'title': 'Welcome'}
 
@@ -321,19 +322,20 @@ def root():
         if JWT_COOKIE_NAME in cookievars:
             # We have a JWT cookie
             user_profile = cookievars[JWT_COOKIE_NAME]
+            log_context(user_id=user_profile['urs-user-id'])
 
     if user_profile:
         if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
-
     headers = {'Content-Type': 'text/html'}
     return make_html_response(template_vars, headers, 200, 'root.html')
 
-
 @app.route('/logout')
 def logout():
+    log_context(user_id=None, route='/logout', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
@@ -353,6 +355,8 @@ def logout():
 
 @app.route('/login')
 def login():
+    log_context(user_id=None, route='/login', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
@@ -362,11 +366,16 @@ def login():
 
 @app.route('/version')
 def version():
+    log_context(user_id=None, route='/version', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
+    log.info("Got a version request!")
     return json.dumps({'version_id': '<BUILD_ID>'})
 
 
 @app.route('/locate')
 def locate():
+    log_context(user_id=None, route='/locate', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
         return Response(body='Required "bucket_name" query paramater not specified',
@@ -463,6 +472,7 @@ def try_download_head(bucket, filename):
 
     # Try Redirecting to HEAD. There should be a better way.
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
+    log_context(user_id=user_id)
 
     # Generate URL
     t.append(time.time())
@@ -490,6 +500,8 @@ def try_download_head(bucket, filename):
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
+    log_context(user_id=None, route='/{proxy+} HEAD', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
@@ -540,6 +552,7 @@ def handle_auth_bearer_header(token):
         return 'return', Response(body=e.payload, status_code=403, headers={})
 
     if user_id:
+        log_context(user_id=user_id)
         user_profile = get_new_token_and_profile(user_id, True)
         if user_profile:
             return 'user_profile', user_profile
@@ -549,6 +562,8 @@ def handle_auth_bearer_header(token):
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
+    log_context(user_id=None, route='/{proxy+} GET', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     t = [time.time()]
     custom_headers = {}
     log.debug('attempting to GET a thing')
@@ -595,6 +610,7 @@ def dynamic_url():
 
             user_profile = data
             user_id = user_profile['uid']
+            log_context(user_id=user_id)
             log.debug(f'User {user_id} has user profile: {user_profile}')
             jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
             log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
@@ -652,5 +668,7 @@ def dynamic_url():
 
 @app.route('/profile')
 def profile():
+    log_context(user_id=None, route='/profile', request_id=app.current_request.context['requestId'])
+    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     return Response(body='Profile not available.',
                     status_code=200, headers={})

@@ -127,7 +127,7 @@ def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
         logkey = 'other'
     k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
     jsonstr = json.dumps(k_v)
-    log.info(f'`{logkey}` {jsonstr}')
+    print(f'`INFO: {logkey}` {jsonstr}')
 
 
 def restore_bucket_vars():

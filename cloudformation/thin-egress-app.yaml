@@ -30,6 +30,7 @@ Metadata:
           - LambdaCodeS3Key
           - LambdaCodeDependencyArchive
           - LambdaTimeout
+          - LambdaMemory
       -
         Label:
           default: URS Settings
@@ -107,6 +108,13 @@ Parameters:
     Type: String
     Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
     Description: "S3 Key of packaged lambda urs code dependencies."
+
+  LambdaMemory:
+    Type: Number
+    Default: 1792
+    MinValue: 128
+    MaxValue: 3008
+    Description: "The amount of memory available to the function during execution. Must be multiple of 64."
 
   LambdaTimeout:
     Type: Number
@@ -540,7 +548,7 @@ Resources:
       Runtime: 'python3.7'
       Layers:
         - !Ref EgressLambdaDependencyLayer
-      #MemorySize: 128
+      MemorySize: !Ref LambdaMemory
 
   ExtDomainName:
     Type: AWS::ApiGateway::DomainName

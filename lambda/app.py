@@ -119,15 +119,9 @@ def get_user_from_token(token):
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
-    if outcome == 'success':
-        logkey = 'successes'
-    elif outcome == 'failure':
-        logkey = 'failures'
-    else:
-        logkey = 'other'
     k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
     jsonstr = json.dumps(k_v)
-    print(f'`INFO: {logkey}` {jsonstr}')
+    print(f'{jsonstr}')
 
 
 def restore_bucket_vars():

@@ -70,6 +70,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
     LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout
+    LambdaMemory                    = var.lambda_memory
     Loglevel                        = var.log_level
     Maturity                        = var.maturity
     PermissionsBoundaryName         = var.permissions_boundary_name

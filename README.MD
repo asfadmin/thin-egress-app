@@ -567,6 +567,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `LambdaCodeS3Key` - Object name of Lambda code zip
    * `LambdaCodeDependencyArchive` - Object name of Lambda Dependency Layer zip
    * `LambdaTimeout` - Lambda timeout in seconds
+   * `LambdaMemory` - The amount of memory available to the function during execution. Must be multiple of 64. Minimum: 128. Max: 3008. Default 1792.
 * **URS Settings**:
    * `URSAuthCredsSecretName` - [URS Auth Creds Secret](#urs-auth-creds-secret)
    * `AuthBaseUrl` - Which maturity of URS to hit

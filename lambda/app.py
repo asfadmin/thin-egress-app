@@ -289,8 +289,10 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         # Watch for bad range request:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
             # cumulus uses this log message for metrics purposes.
-            log.error("Invalid Range 416, Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range', 's3': f'{bucket}/{filename}'})
+            log.error(f"Invalid Range 416, Could not get range {get_range_header_val()} s3://{bucket}/{filename}: {e}")
+            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range',
+                                                        's3': f'{bucket}/{filename}',
+                                                        'range': get_range_header_val()})
             return Response(body='Invalid Range', status_code=416, headers={})
 
         # cumulus uses this log message for metrics purposes.
@@ -303,6 +305,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
 def get_jwt_field(cookievar: dict, fieldname: str):
     return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
+
 
 @app.route('/')
 def root():

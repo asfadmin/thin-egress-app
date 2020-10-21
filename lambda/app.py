@@ -295,6 +295,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                                                         'range': get_range_header_val()})
             return Response(body='Invalid Range', status_code=416, headers={})
 
+
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}

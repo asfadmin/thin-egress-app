@@ -72,6 +72,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     LambdaTimeout                   = var.lambda_timeout
     LambdaMemory                    = var.lambda_memory
     Loglevel                        = var.log_level
+    Logtype                         = var.log_type
     Maturity                        = var.maturity
     PermissionsBoundaryName         = var.permissions_boundary_name
     PrivateVPC                      = var.private_vpc

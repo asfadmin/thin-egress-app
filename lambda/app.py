@@ -17,7 +17,7 @@ from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_sess
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
-app = Chalice(app_name='egress-lambda')
+
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 
@@ -36,6 +36,25 @@ header_map = {'date':           'Date',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
 
+
+class TeaChalice(Chalice):
+    def __call__(self, event, context):
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        log_context(route=resource_path, request_id=context.aws_request_id)
+        # get_jwt_field() below generates log messages, so the above log_context() sets the
+        # vars for it to use while it's doing the username lookup
+        userid = get_jwt_field(get_cookie_vars(event['headers']), 'urs-user-id')
+        log_context(user_id=userid)
+
+        resp = super().__call__(event, context)
+
+        resp['headers'].update({'x-request-id': context.aws_request_id})
+        log_context(user_id=None, route=None, request_id=None)
+
+        return resp
+
+
+app = TeaChalice(app_name='egress-lambda')
 
 class TeaException(Exception):
     """ base exception for TEA """
@@ -310,8 +329,6 @@ def get_jwt_field(cookievar: dict, fieldname: str):
 
 @app.route('/')
 def root():
-    log_context(user_id=None, route='/', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     user_profile = False
     template_vars = {'title': 'Welcome'}
 
@@ -332,8 +349,6 @@ def root():
 
 @app.route('/logout')
 def logout():
-    log_context(user_id=None, route='/logout', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
@@ -353,8 +368,6 @@ def logout():
 
 @app.route('/login')
 def login():
-    log_context(user_id=None, route='/login', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
@@ -364,16 +377,12 @@ def login():
 
 @app.route('/version')
 def version():
-    log_context(user_id=None, route='/version', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     log.info("Got a version request!")
     return json.dumps({'version_id': '<BUILD_ID>'})
 
 
 @app.route('/locate')
 def locate():
-    log_context(user_id=None, route='/locate', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
         return Response(body='Required "bucket_name" query paramater not specified',
@@ -498,8 +507,6 @@ def try_download_head(bucket, filename):
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
-    log_context(user_id=None, route='/{proxy+} HEAD', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
@@ -560,8 +567,6 @@ def handle_auth_bearer_header(token):
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-    log_context(user_id=None, route='/{proxy+} GET', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     t = [time.time()]
     custom_headers = {}
     log.debug('attempting to GET a thing')
@@ -666,7 +671,5 @@ def dynamic_url():
 
 @app.route('/profile')
 def profile():
-    log_context(user_id=None, route='/profile', request_id=app.current_request.context['requestId'])
-    log_context(user_id=get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id'))
     return Response(body='Profile not available.',
                     status_code=200, headers={})

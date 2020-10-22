@@ -10,6 +10,7 @@ Metadata:
           default: App Settings
         Parameters:
           - Loglevel
+          - Logtype
           - Maturity
           - ConfigBucket
           - HtmlTemplateDir
@@ -163,6 +164,14 @@ Parameters:
       - 'CRITICAL'
     Default: 'DEBUG'
     Description: "Python loglevel."
+
+  Logtype:
+    Type: String
+    AllowedValues:
+      - 'json'
+      - 'flat'
+    Default: 'json'
+    Description: "How log entries are formed. Use json in conjunction with log analysis tools. Use flat for human debugging."
 
   Maturity:
     Type: String
@@ -529,6 +538,7 @@ Resources:
           URS_CREDS_SECRET_NAME: !Ref URSAuthCredsSecretName
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
+          LOGTYPE: !Ref Logtype
           BUILD_VERSION: "<BUILD_ID>"
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'

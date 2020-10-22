@@ -212,6 +212,7 @@ pipeline {
                            HtmlTemplateDir= \
                            StageName=API \
                            Loglevel=DEBUG \
+                           Logtype=json \
                            Maturity=${MATURITY}\
                            PrivateVPC= \
                            VPCSecurityGroupIDs= \
@@ -248,6 +249,7 @@ pipeline {
                            HtmlTemplateDir= \
                            StageName=API \
                            Loglevel=DEBUG \
+                           Logtype=json \
                            Maturity=${env.MATURITY}\
                            PrivateVPC= \
                            VPCSecurityGroupIDs= \

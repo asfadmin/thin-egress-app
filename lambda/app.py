@@ -337,9 +337,10 @@ def root():
         if JWT_COOKIE_NAME in cookievars:
             # We have a JWT cookie
             user_profile = cookievars[JWT_COOKIE_NAME]
-            log_context(user_id=user_profile['urs-user-id'])
 
     if user_profile:
+        if 'urs-user-id' in user_profile:
+            log_context(user_id=user_profile['urs-user-id'])
         if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:

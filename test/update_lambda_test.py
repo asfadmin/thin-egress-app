@@ -23,7 +23,7 @@ class update_lambda_test(unittest.TestCase):
     #Check that the base policy is allowing the prefix to be added
     def test_get_base_policy(self):
         prefix = "prefix-test"
-        dict = update_lambda.get_base_policy(prefix)
+        dict = update_lambda.get_base_policy('prefix-test')
         policy = """
         
             {

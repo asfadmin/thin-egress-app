@@ -15,14 +15,17 @@ import os
 
 class update_lambda_test(unittest.TestCase):
 
-
+    #Test that the lambda handler given an event returns the correct response from cloudformation
     def test_lambda_handler(self):
-        print(update_lambda.lambda_handler(any, any))
+        unittest.TextTestRunner().run(
+            unittest.TestLoader().loadTestsFromTestCase(MyTest))
 
+    #Using us-west-2  ensure the method has the correct region id in its list
     def test_get_region_cidrs(self):
         current_region = "us-west-2"
         self.assertTrue(update_lambda.get_region_cidrs(current_region).count('52.94.76.0/22') > 0 )
 
+    #Check that the base policy is allowing the prefix to be added
     def test_get_base_policy(self):
         prefix = "prefix-test"
         dict = update_lambda.get_base_policy(prefix)
@@ -49,6 +52,10 @@ class update_lambda_test(unittest.TestCase):
             """
         self.assertEqual(dict,json.loads(policy))
 
+class MyTest(unittest.TestCase):
+    def return_type(self,event, context):
+        self.assertTrue(isinstance(
+            update_lambda.lambda_handler(event, context),int))
 
 if __name__ == '__main__':
     unittest.main()

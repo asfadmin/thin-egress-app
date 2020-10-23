@@ -42,8 +42,6 @@ pipeline {
     string(name: 'DOWNLOAD_ROLE_ARN', defaultValue: 'arn:aws:iam::820203326710:role/AccessToNGAP2wSentinel', description: '')
     string(name: 'DOWNLOAD_ROLE_ARN_INREGION', defaultValue: 'arn:aws:iam::820203326710:role/EcsS3ReadOnly-inregion-us-west-2', description: '')
     string(name: 'BUCKETNAME_PREFIX', defaultValue: 'rain-uw2-t-', description: '')
-    choice(name: 'AWS_REGION', choices: ['us-west-2', 'us-east-1'], description: 'AWS Region to deploy to')
-    string(name: 'AWS_DEFAULT_REGION', defaultValue: 'us-west-2', description: '')
     string(name: 'DOMAIN_CERT_ARN', defaultValue: 'arn:aws:acm:us-east-1:117169578524:certificate/1f3945cf-cac7-4d75-ad8d-b8920534fea2', description: '')
 
 
@@ -51,6 +49,7 @@ pipeline {
 
   // Environment Setup
   environment {
+    AWS_DEFAULT_REGION="us-west-2"
     AWSENV=""
     NEWTAG="build.${BUILD_NUMBER}"
     BUILDTAG="${APPTAG}-${NEWTAG}"

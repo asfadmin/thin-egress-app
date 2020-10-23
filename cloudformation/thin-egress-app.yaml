@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: "A 'thinner' egress app using lambdacode."
+Description: "A 'thinner' egress app using lambda."
 
 Metadata:
   "AWS::CloudFormation::Interface":
@@ -98,17 +98,17 @@ Parameters:
   LambdaCodeS3Key:
     Type: String
     Default: "<CODE_ARCHIVE_PATH_FILENAME>"
-    Description: "S3 Key of packaged lambdacode egress code."
+    Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
     Default: "asf.public.code"
-    Description: "S3 Bucket of packaged lambdacode egress code."
+    Description: "S3 Bucket of packaged lambda egress code."
 
   LambdaCodeDependencyArchive:
     Type: String
     Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
-    Description: "S3 Key of packaged lambdacode urs code dependencies."
+    Description: "S3 Key of packaged lambda urs code dependencies."
 
   LambdaMemory:
     Type: Number
@@ -122,7 +122,7 @@ Parameters:
     Default: 6
     MinValue: 3
     MaxValue: 30
-    Description: "Timeout in seconds for lambdacode."
+    Description: "Timeout in seconds for lambda."
 
   JwtKeySecretName:
     Type: String
@@ -152,7 +152,7 @@ Parameters:
       - 'https://sit.urs.earthdata.nasa.gov'
       - 'https://sbx.urs.earthdata.nasa.gov'
     Default: 'https://urs.earthdata.nasa.gov'
-    Description: "Is the 'AUTH_BASE_URL' env var in the lambdacode."
+    Description: "Is the 'AUTH_BASE_URL' env var in the lambda."
 
   Loglevel:
     Type: String
@@ -206,7 +206,7 @@ Parameters:
   HtmlTemplateDir:
     Type: String
     Default: ''
-    Description: 'Directory in ConfigBucket where the lambdacode will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates that are included with the lambdacode code zip file.'
+    Description: 'Directory in ConfigBucket where the lambda will look for html templates. Lambda will not look into subdirectories. Please put only html templates in this dir. Leave this field blank to use default templates that are included with the lambda code zip file.'
 
   BucketMapFile:
     Type: String
@@ -371,7 +371,7 @@ Resources:
           Action: sts:AssumeRole
           Principal:
             Service:
-              - lambdacode.amazonaws.com
+              - lambda.amazonaws.com
           Effect: Allow
       Policies:
         - PolicyName: !Sub "${AWS::StackName}-IamPolicy"
@@ -392,7 +392,7 @@ Resources:
                   - !Sub "arn:aws:s3:::${ConfigBucket}"
               - Effect: Allow
                 Action:
-                  - lambdacode:InvokeFunction
+                  - lambda:InvokeFunction
                 Resource: "*"
               - Effect: Allow
                 Action:
@@ -423,7 +423,7 @@ Resources:
           Action: sts:AssumeRole
           Principal:
             Service:
-              - lambdacode.amazonaws.com
+              - lambda.amazonaws.com
           Effect: Allow
       Policies:
         - PolicyName: !Sub "${AWS::StackName}-UpdateLambdaIamPolicy"
@@ -486,7 +486,7 @@ Resources:
       Properties:
         TopicArn: !Sub 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
         Endpoint: !GetAtt UpdatePolicyLambda.Arn
-        Protocol: lambdacode
+        Protocol: lambda
         Region: !Sub 'us-east-1'
 
 
@@ -670,7 +670,7 @@ Resources:
           - StatusCode: 200
           - StatusCode: 404
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses:
         - ResponseParameters:
             'method.response.header.Set-Cookie': true
@@ -694,7 +694,7 @@ Resources:
           - StatusCode: 404
             # etc
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses: #TODO: this, probably
         - ResponseParameters:
             'method.response.header.Set-Cookie': true
@@ -743,7 +743,7 @@ Resources:
           - StatusCode: 200
           - StatusCode: 404
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses: #TODO: this, probably
         - ResponseParameters:
             'method.response.header.Set-Cookie': true
@@ -770,7 +770,7 @@ Resources:
           - StatusCode: 200
           - StatusCode: 404
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses: #TODO: this, probably
         - ResponseParameters:
             'method.response.header.Set-Cookie': true
@@ -822,7 +822,7 @@ Resources:
           - StatusCode: 404
           - StatusCode: 401
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       OperationName: 'profile view'
       RequestParameters:
         'method.request.header.Cookie': true
@@ -841,7 +841,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: 200
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses: #TODO: this, probably
         - ResponseParameters:
             'method.response.header.Set-Cookie': true
@@ -909,7 +909,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt EgressLambda.Arn
-      Action: lambdacode:InvokeFunction
+      Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${EgressApiGateway}/*"
 

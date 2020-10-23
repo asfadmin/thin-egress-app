@@ -236,7 +236,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         elif 'uid' in user_profile:
             user_id = user_profile['uid']
     log.info("User Id for download is {0}".format(user_id))
-    log.log_context(user_id=user_id)
+    log_context(user_id=user_id)
 
     t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])

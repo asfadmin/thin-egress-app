@@ -21,7 +21,7 @@ from rain_api_core.egress_util import get_presigned_url, process_request, check_
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 
-# Here's a lifetime-of lambda cache of these values:
+# Here's a lifetime-of lambdacode cache of these values:
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
 b_region_map = {}
@@ -54,7 +54,7 @@ class TeaChalice(Chalice):
         return resp
 
 
-app = TeaChalice(app_name='egress-lambda')
+app = TeaChalice(app_name='egress-lambdacode')
 
 class TeaException(Exception):
     """ base exception for TEA """

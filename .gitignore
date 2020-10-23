@@ -1,6 +1,6 @@
 *.pyc
 .DS_Store
-/lambda/.chalice
+/lambdacode/.chalice
 /.idea
 .terraform
 /venv

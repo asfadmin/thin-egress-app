@@ -1,12 +1,7 @@
-import json
-import logging
 import unittest
 from lambdacode import update_lambda
-import cfnresponse
 import json
-import boto3
-import urllib.request
-import os
+
 
 
 
@@ -15,7 +10,7 @@ import os
 
 class update_lambda_test(unittest.TestCase):
 
-    #Test that the lambda handler given an event returns the correct response from cloudformation
+    #Intergration Test : that the lambda handler given an event returns the correct response from cloudformation
     def test_lambda_handler(self):
         unittest.TextTestRunner().run(
             unittest.TestLoader().loadTestsFromTestCase(MyTest))

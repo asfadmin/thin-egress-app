@@ -717,7 +717,7 @@ Resources:
           - StatusCode: 200
           - StatusCode: 404
         Type: 'AWS_PROXY'
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambdacode:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
       MethodResponses: #TODO: this, probably
         - ResponseParameters:
             'method.response.header.Set-Cookie': true

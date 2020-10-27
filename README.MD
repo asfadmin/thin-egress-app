@@ -553,6 +553,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
 #### All Parameters
  * **App Settings**:
    * `Loglevel` - How verbose the logging should be 
+   *  `Logtype` - How log entries are formed. Use json in conjunction with log analysis tools. Use flat for human debugging.
    * `Maturity` - Maturity, mostly for logs
    * `ConfigBucket` - S3 bucket where configuration files (bucket map, templates) are kept
    * `HtmlTemplateDir` - (OPTIONAL) Subdirectory of `ConfigBucket` where templates can be found 
@@ -567,6 +568,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `LambdaCodeS3Key` - Object name of Lambda code zip
    * `LambdaCodeDependencyArchive` - Object name of Lambda Dependency Layer zip
    * `LambdaTimeout` - Lambda timeout in seconds
+   * `LambdaMemory` - The amount of memory available to the function during execution. Must be multiple of 64. Minimum: 128. Max: 3008. Default 1792.
 * **URS Settings**:
    * `URSAuthCredsSecretName` - [URS Auth Creds Secret](#urs-auth-creds-secret)
    * `AuthBaseUrl` - Which maturity of URS to hit
@@ -643,6 +645,7 @@ aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
         LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \
         LambdaTimeout=6 \
         Loglevel=INFO \
+        Logtype=json \
         Maturity=DEV \
         PermissionsBoundaryName=NGAPShRoleBoundary \
         PrivateVPC=$VPCID \

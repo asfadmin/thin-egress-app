@@ -92,6 +92,12 @@ variable "lambda_timeout" {
   description = "Timeout in seconds for lambda."
 }
 
+variable "lambda_memory" {
+  type        = number
+  default     = 1792
+  description = "The amount of memory available to the function during execution. Must be multiple of 64. Minimum: 128. Max: 3008"
+}
+
 variable "log_api_gateway_to_cloudwatch" {
   type        = bool
   default     = false
@@ -108,6 +114,12 @@ variable "log_level" {
   type        = string
   default     = null
   description = "Python loglevel."
+}
+
+variable "log_type" {
+  type        = string
+  default     = null
+  description = "Type of log entry."
 }
 
 variable "maturity" {

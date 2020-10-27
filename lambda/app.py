@@ -11,13 +11,13 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log
+from rain_api_core.general_util import get_log, log_context
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
-app = Chalice(app_name='egress-lambda')
+
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 
@@ -36,6 +36,25 @@ header_map = {'date':           'Date',
               'content-type':   'Content-Type',
               'content-length': 'Content-Length'}
 
+
+class TeaChalice(Chalice):
+    def __call__(self, event, context):
+        resource_path = event.get('requestContext', {}).get('resourcePath')
+        log_context(route=resource_path, request_id=context.aws_request_id)
+        # get_jwt_field() below generates log messages, so the above log_context() sets the
+        # vars for it to use while it's doing the username lookup
+        userid = get_jwt_field(get_cookie_vars(event['headers']), 'urs-user-id')
+        log_context(user_id=userid)
+
+        resp = super().__call__(event, context)
+
+        resp['headers'].update({'x-request-id': context.aws_request_id})
+        log_context(user_id=None, route=None, request_id=None)
+
+        return resp
+
+
+app = TeaChalice(app_name='egress-lambda')
 
 class TeaException(Exception):
     """ base exception for TEA """
@@ -119,15 +138,9 @@ def get_user_from_token(token):
 
 
 def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
-    if outcome == 'success':
-        logkey = 'successes'
-    elif outcome == 'failure':
-        logkey = 'failures'
-    else:
-        logkey = 'other'
     k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
     jsonstr = json.dumps(k_v)
-    log.info(f'`{logkey}` {jsonstr}')
+    print(f'{jsonstr}')
 
 
 def restore_bucket_vars():
@@ -223,6 +236,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         elif 'uid' in user_profile:
             user_id = user_profile['uid']
     log.info("User Id for download is {0}".format(user_id))
+    log_context(user_id=user_id)
 
     t0 = time.time()
     is_in_region = check_in_region_request(app.current_request.context['identity']['sourceIp'])
@@ -294,9 +308,12 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         # Watch for bad range request:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
             # cumulus uses this log message for metrics purposes.
-            log.error("Invalid Range 416, Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range', 's3': f'{bucket}/{filename}'})
+            log.error(f"Invalid Range 416, Could not get range {get_range_header_val()} s3://{bucket}/{filename}: {e}")
+            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range',
+                                                        's3': f'{bucket}/{filename}',
+                                                        'range': get_range_header_val()})
             return Response(body='Invalid Range', status_code=416, headers={})
+
 
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
@@ -312,7 +329,6 @@ def get_jwt_field(cookievar: dict, fieldname: str):
 
 @app.route('/')
 def root():
-
     user_profile = False
     template_vars = {'title': 'Welcome'}
 
@@ -323,14 +339,14 @@ def root():
             user_profile = cookievars[JWT_COOKIE_NAME]
 
     if user_profile:
+        if 'urs-user-id' in user_profile:
+            log_context(user_id=user_profile['urs-user-id'])
         if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
-
     headers = {'Content-Type': 'text/html'}
     return make_html_response(template_vars, headers, 200, 'root.html')
-
 
 @app.route('/logout')
 def logout():
@@ -362,6 +378,7 @@ def login():
 
 @app.route('/version')
 def version():
+    log.info("Got a version request!")
     return json.dumps({'version_id': '<BUILD_ID>'})
 
 
@@ -463,6 +480,7 @@ def try_download_head(bucket, filename):
 
     # Try Redirecting to HEAD. There should be a better way.
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
+    log_context(user_id=user_id)
 
     # Generate URL
     t.append(time.time())
@@ -540,6 +558,7 @@ def handle_auth_bearer_header(token):
         return 'return', Response(body=e.payload, status_code=403, headers={})
 
     if user_id:
+        log_context(user_id=user_id)
         user_profile = get_new_token_and_profile(user_id, True)
         if user_profile:
             return 'user_profile', user_profile
@@ -595,6 +614,7 @@ def dynamic_url():
 
             user_profile = data
             user_id = user_profile['uid']
+            log_context(user_id=user_id)
             log.debug(f'User {user_id} has user profile: {user_profile}')
             jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
             log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")

@@ -43,7 +43,7 @@ class TeaChalice(Chalice):
         log_context(route=resource_path, request_id=context.aws_request_id)
         # get_jwt_field() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
-        userid = get_jwt_field(get_cookie_vars(event['headers']), 'urs-user-id')
+        userid = get_jwt_field(get_cookie_vars(event.get('headers', {})), 'urs-user-id')
         log_context(user_id=userid)
 
         resp = super().__call__(event, context)

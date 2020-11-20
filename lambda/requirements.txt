@@ -1,5 +1,5 @@
 aws-requests-auth==0.4.3
-cfnresponse==1.0.2
+cfnresponse==1.1.1
 chalice==1.21.4
 cryptography==3.2.1
 flatdict==4.0.1

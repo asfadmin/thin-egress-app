@@ -873,11 +873,7 @@ Resources:
           - StatusCode: 200
         Type: 'AWS_PROXY'
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
-      MethodResponses: #TODO: this, probably
-        - ResponseParameters:
-            'method.response.header.Set-Cookie': true
-          StatusCode: 200
-      OperationName: 'pubkey method'
+      OperationName: 'pubkey view'
       RequestParameters:
         'method.request.header.Cookie': true
       ResourceId: !Ref EgressApiResourcePubkey

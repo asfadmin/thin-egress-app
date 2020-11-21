@@ -14,7 +14,8 @@ from urllib.parse import urlparse, quote_plus, urlencode
 from rain_api_core.general_util import get_log, log_context
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME, get_jwt_keys
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, get_jwt_keys, \
+                                    JWT_COOKIE_NAME, JWT_ALGO
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
 
@@ -679,7 +680,8 @@ def profile():
 @app.route('/pubkey', methods=['GET'])
 def pubkey():
     thebody = json.dumps({
-        'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode())
+        'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),
+        'algorithm': JWT_ALGO
     })
     return Response(body=thebody,
                     status_code=200,

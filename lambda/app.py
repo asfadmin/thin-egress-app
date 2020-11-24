@@ -65,6 +65,10 @@ class EulaException(TeaException):
         self.payload = payload
 
 
+def get_request_id() -> str:
+    return app.lambda_context.aws_request_id
+
+
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
 
@@ -257,7 +261,11 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         log.debug(f'response: {e.response}')
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
-        template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
+        template_vars = {'contentstring': 'There was a problem accessing download data.',
+                         'title': 'Data Not Available',
+                         'requestid': get_request_id(),
+                         }
+
         headers = {}
         return make_html_response(template_vars, headers, code, 'error.html')
 
@@ -317,7 +325,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-        template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}
+        template_vars = {'contentstring': 'Could not find requested data.',
+                         'title': 'Data Not Available',
+                         'requestid': get_request_id(),}
         headers = {}
         cumulus_log_message('failure', 404, 'GET', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
@@ -373,6 +383,7 @@ def login():
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
 
+    template_vars['requestid'] = get_request_id()
     return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
@@ -465,7 +476,8 @@ def try_download_head(bucket, filename):
         # cumulus uses this log message for metrics purposes.
 
         template_vars = {'contentstring': 'File not found',
-                         'title': 'File not found'}
+                         'title': 'File not found',
+                         'requestid': get_request_id(),}
         headers = {}
         cumulus_log_message('failure', 404, 'HEAD', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
@@ -522,7 +534,8 @@ def dynamic_url_head():
 
         if not bucket:
             template_vars = {'contentstring': 'Bucket not available',
-                             'title': 'Bucket not available'}
+                             'title': 'Bucket not available',
+                             'requestid': get_request_id(),}
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
         t.append(time.time())
@@ -551,7 +564,8 @@ def handle_auth_bearer_header(token):
         if check_for_browser(app.current_request.headers):
             template_vars = {'title': e.payload['error_description'],
                              'status_code': 403,
-                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.',
+                             'requestid': get_request_id(),
                              }
 
             return 'return', make_html_response(template_vars, {}, 403, 'error.html')
@@ -579,7 +593,8 @@ def dynamic_url():
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
         log.debug('path, bucket, filename, custom_headers: {}'.format(( path, bucket, filename, custom_headers)))
         if not bucket:
-            template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
+            template_vars = {'contentstring': 'File not found', 'title': 'File not found',
+                             'requestid': get_request_id(),}
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
     else:
@@ -646,13 +661,15 @@ def dynamic_url():
     log.debug('user_in_group: {}'.format(u_in_g))
 
     if private_check and not u_in_g:
-        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}
+        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
+                         'requestid': get_request_id(),}
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
-        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
+        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
+                         'requestid': get_request_id(),}
 
         return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 

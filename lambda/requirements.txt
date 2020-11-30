@@ -9,7 +9,7 @@ netaddr==0.8.0
 pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.2.0
-PyYAML==6.0.0
+PyYAML==5.3.1
 ipaddress==1.0.23
 
 pip>=19.2 # not directly required, pinned by Snyk to avoid a vulnerability

@@ -160,7 +160,7 @@ you have all the information you need to do the right thing.
 
 ## Build Process
 
-![build-process](https://github.com/asfadmin/thin-egress-app/blob/bb.doc-update/tea-build.png)
+![build-process](https://github.com/asfadmin/thin-egress-app/blob/devel/tea-build.png)
 
 ### Code Quality
 

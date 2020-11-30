@@ -10,6 +10,6 @@ pyjwt==1.7.1
 pyOpenSSL==19.1.0 # maybe not necessary
 python-jose==3.2.0
 PyYAML==6.0.0
-ipaddress==3.8.6
+ipaddress==1.0.23
 
 pip>=19.2 # not directly required, pinned by Snyk to avoid a vulnerability

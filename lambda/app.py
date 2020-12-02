@@ -369,11 +369,17 @@ def logout():
 
 @app.route('/login')
 def login():
-    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
-    if status_code == 301:
+    try:
+        status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
+        if status_code == 301:
+            return make_html_response(template_vars, headers, status_code, 'error.html')
         return Response(body='', status_code=status_code, headers=headers)
+    except ClientError as e:
+        return make_html_response(template_vars, headers, status_code, e.response)
 
-    return make_html_response(template_vars, headers, status_code, 'error.html')
+
+
+
 
 
 @app.route('/version')

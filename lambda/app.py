@@ -43,7 +43,7 @@ class TeaChalice(Chalice):
         log_context(route=resource_path, request_id=context.aws_request_id)
         # get_jwt_field() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
-        userid = get_jwt_field(get_cookie_vars(event['headers']), 'urs-user-id')
+        userid = get_jwt_field(get_cookie_vars(event.get('headers', {}) or {}), 'urs-user-id')
         log_context(user_id=userid)
 
         resp = super().__call__(event, context)
@@ -379,7 +379,16 @@ def logout():
 
 @app.route('/login')
 def login():
-    status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
+    try:
+        status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
+    except ClientError as e:
+        log.error(e)
+        status_code = 500
+        headers = {'x-request-id': app.lambda_context.aws_request_id}
+        template_vars = {
+            'contentstring': 'Client Error occurred. ',
+            'title': 'Client Error',
+        }
     if status_code == 301:
         return Response(body='', status_code=status_code, headers=headers)
 

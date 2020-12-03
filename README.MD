@@ -459,7 +459,7 @@ echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNE
 ### VPC Endpoints
 
 It is also important to be aware that an API Gateway VPC Endpoint will need to 
-setup prior to deployment. You can check to see if your account has the 
+be setup prior to deployment. You can check to see if your account has the 
 appropriate VPCE by running this command:
 
 ```bash

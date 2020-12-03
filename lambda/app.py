@@ -14,7 +14,8 @@ from urllib.parse import urlparse, quote_plus, urlencode
 from rain_api_core.general_util import get_log, log_context
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, JWT_COOKIE_NAME
+from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, get_jwt_keys, \
+                                    JWT_COOKIE_NAME, JWT_ALGO
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
 
 
@@ -43,7 +44,7 @@ class TeaChalice(Chalice):
         log_context(route=resource_path, request_id=context.aws_request_id)
         # get_jwt_field() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
-        userid = get_jwt_field(get_cookie_vars(event['headers']), 'urs-user-id')
+        userid = get_jwt_field(get_cookie_vars(event.get('headers', {}) or {}), 'urs-user-id')
         log_context(user_id=userid)
 
         resp = super().__call__(event, context)
@@ -63,6 +64,10 @@ class TeaException(Exception):
 class EulaException(TeaException):
     def __init__(self, payload:dict):
         self.payload = payload
+
+
+def get_request_id() -> str:
+    return app.lambda_context.aws_request_id
 
 
 def check_for_browser(hdrs):
@@ -257,7 +262,11 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         log.debug(f'response: {e.response}')
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
-        template_vars = {'contentstring': 'There was a problem accessing download data.', 'title': 'Data Not Available'}
+        template_vars = {'contentstring': 'There was a problem accessing download data.',
+                         'title': 'Data Not Available',
+                         'requestid': get_request_id(),
+                         }
+
         headers = {}
         return make_html_response(template_vars, headers, code, 'error.html')
 
@@ -317,7 +326,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-        template_vars = {'contentstring': 'Could not find requested data.', 'title': 'Data Not Available'}
+        template_vars = {'contentstring': 'Could not find requested data.',
+                         'title': 'Data Not Available',
+                         'requestid': get_request_id(),}
         headers = {}
         cumulus_log_message('failure', 404, 'GET', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
@@ -371,15 +382,19 @@ def logout():
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
-        if status_code == 301:
-            return make_html_response(template_vars, headers, status_code, 'error.html')
-        return Response(body='', status_code=status_code, headers=headers)
     except ClientError as e:
-        return make_html_response(template_vars, headers, status_code, e.response)
+        log.error(e)
+        status_code = 500
+        headers = {'x-request-id': app.lambda_context.aws_request_id}
+        template_vars = {
+            'contentstring': 'Client Error occurred. ',
+            'title': 'Client Error',
+        }
+    if status_code == 301:
+        return Response(body='', status_code=status_code, headers=headers)
 
-
-
-
+    template_vars['requestid'] = get_request_id()
+    return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
 @app.route('/version')
@@ -471,7 +486,8 @@ def try_download_head(bucket, filename):
         # cumulus uses this log message for metrics purposes.
 
         template_vars = {'contentstring': 'File not found',
-                         'title': 'File not found'}
+                         'title': 'File not found',
+                         'requestid': get_request_id(),}
         headers = {}
         cumulus_log_message('failure', 404, 'HEAD', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
@@ -528,7 +544,8 @@ def dynamic_url_head():
 
         if not bucket:
             template_vars = {'contentstring': 'Bucket not available',
-                             'title': 'Bucket not available'}
+                             'title': 'Bucket not available',
+                             'requestid': get_request_id(),}
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
         t.append(time.time())
@@ -557,7 +574,8 @@ def handle_auth_bearer_header(token):
         if check_for_browser(app.current_request.headers):
             template_vars = {'title': e.payload['error_description'],
                              'status_code': 403,
-                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.',
+                             'requestid': get_request_id(),
                              }
 
             return 'return', make_html_response(template_vars, {}, 403, 'error.html')
@@ -585,7 +603,8 @@ def dynamic_url():
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
         log.debug('path, bucket, filename, custom_headers: {}'.format(( path, bucket, filename, custom_headers)))
         if not bucket:
-            template_vars = {'contentstring': 'File not found', 'title': 'File not found'}
+            template_vars = {'contentstring': 'File not found', 'title': 'File not found',
+                             'requestid': get_request_id(),}
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
     else:
@@ -652,13 +671,15 @@ def dynamic_url():
     log.debug('user_in_group: {}'.format(u_in_g))
 
     if private_check and not u_in_g:
-        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data'}
+        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
+                         'requestid': get_request_id(),}
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
-        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable'}
+        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
+                         'requestid': get_request_id(),}
 
         return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 
@@ -680,3 +701,14 @@ def dynamic_url():
 def profile():
     return Response(body='Profile not available.',
                     status_code=200, headers={})
+
+
+@app.route('/pubkey', methods=['GET'])
+def pubkey():
+    thebody = json.dumps({
+        'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),
+        'algorithm': JWT_ALGO
+    })
+    return Response(body=thebody,
+                    status_code=200,
+                    headers={'content-type': 'application/json'})

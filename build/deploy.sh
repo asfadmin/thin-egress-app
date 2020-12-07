@@ -412,7 +412,7 @@ http_resp=$(curl --proxy socks5h://localhost:8001 -s \
                  -o /tmp/pub_test.txt -w "%{http_code}" \
                  -L ${api_endpoint}/pub/test.txt)
 if [[ $http_resp -eq "200" ]]; then
-   echo ">> 🎉 Succesfully fetched public file:"
+   echo ">> 🎉 Successfully fetched public file:"
 else
    echo ">> 🤮 There was a problem fetching public file:"
 fi

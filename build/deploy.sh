@@ -1,13 +1,14 @@
 #!/bin/bash
 
-#
+#  DEPLOY: 
 #  ./depoy.sh  --stack-name=<STACK-NAME> \
-#              --aws-profile=<AWS-PROFILE-NAME \
+#              --aws-profile=<AWS-PROFILE-NAME> \
 #              --bastion="<SSM-BASTION-NAME>" \
 #              --key-file=<LOCAL-PATH-TO-YOUR-PRIVATE-KEY> \
 #              --uid=<EDL-APP-UID> \
 #              --client-id=<EDL-APP-CLIENT-ID> \
 #              --pass='<EDL-APP-PASSWORD>' \
+#              --region-name="aws-region-value" \
 #              --maturity=<SBX|DEV|SIT|INT|UAT|TEST|PROD>  \
 #              --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>' 
 #
@@ -21,7 +22,15 @@
 #        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
 #        -s|--stack-name      The name of the stack to be deployed.
 #        -u|--uid             EDL App UID 
-#     
+#
+#  DESTROY:
+#  ./depoy.sh  --destroy-stack=<STACK-NAME> \
+#              --aws-profile=<AWS-PROFILE-NAME> \
+#              --region-name="aws-region-value" \
+#
+#        --destroy-stack      Stack name to destory all the parts we created
+#        -a|--aws-profile     AWS Profile (from ~/.aws/credentials)
+#        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
 
 # Pass Options
 for i in "$@"
@@ -30,6 +39,10 @@ case $i in
     -s=*|--stack-name=*)
     STACKNAME="${i#*=}"
     ;;    
+
+    --destroy-stack=*)
+    DESTROY="${i#*=}"
+    ;;
 
     -a=*|--aws-profile=*)
     AWSPROFILE="${i#*=}"
@@ -68,7 +81,7 @@ case $i in
     ;;
 
     *)
-    echo "Invalid Argument ${i#*=}"
+    echo "Invalid Argument '${i}'" && exit 1
             # unknown option
     ;;
 esac
@@ -98,16 +111,6 @@ case $MATURITY in
     ;;
 esac
 
-
-# Check Input
-if [ -z "$STACKNAME" ]; then
-   rand_id=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | fold -w 6 | head -n 1 )
-   STACKNAME="my-tea-${rand_id}"
-   echo ">> no Stack Name provided, using $STACKNAME"
-else
-   echo ">> Building Stack $STACKNAME"
-fi
-
 if [ -z "$AWSREGION" ]; then
    AWSREGION=us-west-2
    echo ">> Deploying to default us-west-2, override with --region-name"
@@ -127,6 +130,38 @@ if [ -z "$AWSPROFILE" ]; then
 else
    AWSENV="--profile=$AWSPROFILE --region=$AWSREGION"
 fi
+
+# Check for DESTUCTION
+if [ ! -z "$DESTROY" ]; then
+   echo ">> ⚠️ ⚠️ ⚠️  DESTROYING STACK $DESTROY ⚠️ ⚠️ ⚠️ "
+
+   echo ">> ☠️  Destroying Cloudformation Stack ..."
+   aws $AWSENV cloudformation delete-stack --stack-name ${DESTROY}
+
+   echo ">> ☠️  Destroying Secrets ..."
+   aws $AWSENV secretsmanager delete-secret --secret-id jwt_creds_for_${DESTROY}
+   aws $AWSENV secretsmanager delete-secret --secret-id urs_creds_for_${DESTROY}
+
+   echo ">> ☠️  Destroying Buckets ..."
+   for i in ${DESTROY}-config ${DESTROY}-code ${DESTROY}-restricted ${DESTROY}-public; do
+      aws $AWSENV s3 rm --recursive s3://$i
+      aws $AWSENV s3 rb s3://$i 
+   done 
+
+   echo ">> 🎉 Purge Complete."
+   
+   exit 0
+fi 
+
+# Check Input
+if [ -z "$STACKNAME" ]; then
+   rand_id=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | fold -w 6 | head -n 1 )
+   STACKNAME="my-tea-${rand_id}"
+   echo ">> no Stack Name provided, using $STACKNAME"
+else
+   echo ">> Building Stack $STACKNAME"
+fi
+
 
 ###  Create Secrets
 jwt_secret_file="/tmp/${STACKNAME}-jwt.json"
@@ -155,12 +190,12 @@ secret_arn=$(aws $AWSENV secretsmanager describe-secret \
                                  --query "ARN" --output=text 2>&1 \
                                  | grep -v ResourceNotFoundException)
 if [ -z "$secret_arn" ]; then
-   echo "Creating URS Secret ${urs_secret_name}"
+   echo ">> Creating URS Secret ${urs_secret_name}"
    aws $AWSENV secretsmanager create-secret --name ${urs_secret_name} \
        --description "URS creds for TEA ${STACKNAME} app" \
        --secret-string file://${urs_secret_file}
 else
-   echo "Updating URS Secret ${urs_secret_name}"
+   echo ">> Updating URS Secret ${urs_secret_name}"
    aws $AWSENV secretsmanager update-secret --secret-id ${urs_secret_name} \
        --description "URS creds for TEA ${STACKNAME} app" \
        --secret-string file://${urs_secret_file}
@@ -168,7 +203,7 @@ fi
 
 # write out JWT secret
 if [ ! -f ${jwt_key_file} ]; then 
-   echo "Creating JWT Key ${jwt_key_file}"
+   echo ">> Creating JWT Key ${jwt_key_file}"
    ssh-keygen -t rsa -b 4096 -m PEM -N '' -f $jwt_key_file 
    chmod 600 ${jwt_key_file} ${jwt_key_file}.pub
 fi
@@ -187,12 +222,12 @@ secret_arn=$(aws $AWSENV secretsmanager describe-secret \
                                  --query "ARN" --output=text 2>&1 \
                                  | grep -v ResourceNotFoundException)
 if [ -z "$secret_arn" ]; then
-   echo "Creating JWT Secret ${jwt_secret_name}"
+   echo ">> Creating JWT Secret ${jwt_secret_name}"
    aws $AWSENV secretsmanager create-secret --name ${jwt_secret_name} \
        --description "RS256 keys for TEA ${STACKNAME} app JWT cookies" \
        --secret-string file://${jwt_secret_file}
 else
-   echo "Updating JWT Secret ${jwt_secret_name}"
+   echo ">> Updating JWT Secret ${jwt_secret_name}"
    aws $AWSENV secretsmanager update-secret --secret-id ${jwt_secret_name} \
        --description "RS256 keys for TEA ${STACKNAME} app JWT cookies" \
        --secret-string file://${jwt_secret_file}
@@ -230,11 +265,18 @@ cf_yaml=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
 cf_yaml_name=$(echo $cf_yaml | cut -d "/" -f 2)
 
 # Copy/Downloads the build files
-if aws $AWSENV s3 ls s3://$code_bucket/$code_zip 2>/dev/null && [ $? -gt 0 ]; then
+echo ">> Ensuring we have the latest build artifacts..."
+aws $AWSENV s3 ls s3://$code_bucket/$code_zip 2>/dev/null
+if [ $? -gt 0 ]; then
    aws $AWSENV s3 cp s3://asf.public.code/$code_zip s3://$code_bucket/$code_zip
+else
+   echo ">> Skipping upload of existing $code_zip to s3://$code_bucket/$code_zip"  
 fi
-if aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null && [ $? -gt 0 ]; then
+aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null
+if [ $? -gt 0 ]; then
    aws $AWSENV s3 cp s3://asf.public.code/$layer_zip s3://$code_bucket/$layer_zip
+else
+   echo ">> Skipping upload of existing $layer_zip to s3://$code_bucket/$layer_zip"
 fi
 if [ ! -f "/tmp/$cf_yaml_name" ]; then 
    aws $AWSENV s3 cp s3://asf.public.code/$cf_yaml /tmp/$cf_yaml_name
@@ -265,7 +307,7 @@ export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query "Subnets[?VpcId=='$VP
 export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query "SecurityGroups[?VpcId=='$VPCID'].{ID:GroupId}" \
                                                                 --filters "Name=tag:Name,Values=Application Default*" \
                                                                 --output=text)
-echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;"
+echo ">> 🎉 PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;"
 
 # Check that we have a VPC Endpoint
 endpoint=$(aws $AWSENV ec2 describe-vpc-endpoints \
@@ -273,12 +315,12 @@ endpoint=$(aws $AWSENV ec2 describe-vpc-endpoints \
                                     ServiceName=='com.amazonaws.${AWSREGION}.execute-api')].{ID:VpcEndpointId}" \
                             --output=text)
 if [ -z $endpoint ]; then
-   echo "ERROR!!!!! There is no VPC Endpoint!"
+   echo '>> 🤮 ERROR!!!!! There is no VPC Endpoint!'
    exit 1
 fi
 
 ### Deploy the Stack!
-echo "Deploying CloudFormation Stack"
+echo ">> Deploying CloudFormation Stack"
 edl_authbase="https://$EDL.earthdata.nasa.gov"
 
 aws cloudformation deploy $AWSENV \
@@ -316,7 +358,12 @@ api_endpoint=$(aws $AWSENV cloudformation describe-stacks \
                            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
                            --output=text)
 
-echo "API Endpoint is $api_endpoint"
+if [ $api_endpoint == "None" ]; then 
+   echo ">> 🤮 CloudFormation stack did not properly deploy"
+   exit 0
+fi
+
+echo ">> 🎉 API Endpoint is $api_endpoint"
 api_endpoint=${api_endpoint%/}
 
 if [[ -z "$BASTIONNAME" || -z "$KEYFILE" ]]; then 
@@ -325,20 +372,32 @@ if [[ -z "$BASTIONNAME" || -z "$KEYFILE" ]]; then
 fi
 
 # Look up Bastion instance id & Start tunnel
-echo "Finding EC2 Instance id for bastion \"$BASTIONNAME\""
+echo ">> Finding EC2 Instance id for bastion \"$BASTIONNAME\""
 ssm_bastion=$(aws $AWSENV ec2 describe-instances --filters "Name=tag:Name,Values=$BASTIONNAME" \
                                                  --query "Reservations[].Instances[].InstanceId" \
                                                  --output=text)
-echo "Attempting to connect to bastion $ssm_bastion"
-ssh -o ProxyCommand="sh -c 'aws $AWSENV ssm start-session \
-                                                   --target %h \
-                                                   --document-name AWS-StartSSHSession \
-                                                   --parameters portNumber=22'" \
-    -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
-    -i $KEYFILE -fN -D 127.0.0.1:8001 ec2-user@$ssm_bastion
+echo ">> Attempting to connect to bastion $ssm_bastion"
 
-if [[ $? -gt 0 ]]; then 
-   echo " >> COULD NOT ESTABLISH SSH TUNNEL!!"
+# Brute force retry until it works....
+sshrc=255
+ssh_loop_count=0
+
+while [[ $sshrc -gt 0 && $ssh_loop_count -lt 4 ]]; do 
+    ssh -o ProxyCommand="sh -c 'aws $AWSENV ssm start-session \
+                                    --target %h --document-name AWS-StartSSHSession \
+                                    --parameters portNumber=22'" \
+        -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+        -i $KEYFILE -q -fN -D 127.0.0.1:8001 ec2-user@$ssm_bastion
+
+    sshrc=$? 
+    if [[ $sshrc -gt 0 ]]; then
+       echo ">> 🤮 COULD NOT ESTABLISH SSH TUNNEL, Trying again..."
+       ssh_loop_count=$(($ssh_loop_count + 1))
+    fi
+done
+
+if [[ $sshrc -gt 0 ]]; then 
+   echo '>> 🤮 COULD NOT ESTABLISH SSH TUNNEL AFTER 5 ATTEMPTS!'
    exit 1 
 fi
 
@@ -346,78 +405,78 @@ ssh_tunnel_pid=$(pgrep -f 'ssh -o ProxyCommand')
 
 # Attempt to hit /version endpoint
 tea_version=$(curl -s --proxy socks5h://localhost:8001 ${api_endpoint}/version)
-echo " >> TEA/version response was $tea_version"
+echo ">> 🎉 TEA/version response was $tea_version"
 
 # Attempt to  download restricted file
 http_resp=$(curl --proxy socks5h://localhost:8001 -s \
                  -o /tmp/pub_test.txt -w "%{http_code}" \
                  -L ${api_endpoint}/pub/test.txt)
 if [[ $http_resp -eq "200" ]]; then
-   echo "Succesfully fetched public file:"
+   echo ">> 🎉 Successfully fetched public file:"
 else
-   echo "There was a problem fetching public file:"
+   echo ">> 🤮 There was a problem fetching public file:"
 fi
 cat /tmp/pub_test.txt
 
 # Generating and EDL App Client Token
-echo "Generating an EDL App Client token"
+echo ">> Generating an EDL App Client token"
 edl_resp=$(curl --request POST -s --url "$edl_authbase/oauth/token?grant_type=client_credentials" \
                 --header "authorization: Basic $UrsAuth" | jq -r .access_token)
 
 # Check to see we can download a public file
-echo "Checking to see if $api_endpoint/login is a valid EDL App redirect_uri"
+echo ">> Checking to see if $api_endpoint/login is a valid EDL App redirect_uri"
 edl_redirect_check=$(curl -s --request GET --header "Authorization: Bearer $edl_resp" \
                              --url $edl_authbase/api/apps/$EDLUID/redirect_uri | \
                      jq -r '.[]' | grep -q "$api_endpoint/login" )
 
 if [[ $? -gt 0 ]]; then
-    echo "Redirect URI has not yet been added to EDL App"
+    echo ">> Redirect URI has not yet been added to EDL App"
     post_resp=$( curl -s --request POST --header "Authorization: Bearer $edl_resp" \
                          --data "uri=$api_endpoint/login" \
                          --url $edl_authbase/api/apps/$EDLUID/redirect_uri )
     echo $post_resp | grep -q 'Redirect URI added successfully' 
  
     if [[ $? -gt 0 ]]; then
-       echo "There was a problem adding redirect URI: $post_resp"
+       echo ">> 🤮 There was a problem adding redirect URI: $post_resp"
     else 
-       echo "URI successfully added to EDL App"
+       echo ">> 🎉 URI successfully added to EDL App"
     fi
 else
-    echo "Found $api_endpoint/login redirect_uri in EDL App"
+    echo ">> 🎉 Found $api_endpoint/login redirect_uri in EDL App"
 fi
 
 # Check to see we get redirected to EDL for authed downloads
-echo "Ensuring restricted download is redirect to EDL"
+echo ">> Ensuring restricted download is redirect to EDL"
 http_resp=$(curl --proxy socks5h://localhost:8001 -s \
                  -o /tmp/res_test.txt -w "%{http_code}" \
                  ${api_endpoint}/res/test.txt)
 if [[ $http_resp -eq "302" ]]; then
-   echo "Redirect check has pased"
+   echo ">> 🎉 Redirect check has passed"
 else
-   echo "There was a problem validating auth challenge for restricted data:"
+   echo ">> 🤮 There was a problem validating auth challenge for restricted data:"
    cat /tmp/res_test.txt
    exit 1
 fi 
 
 if [[ -z "$EDLUSER" ]]; then
-    echo "No EDL User creds provided. Cannot validate download."
-    echo "Try supplying --edl-user-creds='<EDL-USER>:<EDL-PASS>'"
+    echo ">> No EDL User creds provided. Cannot validate download."
+    echo ">> Try supplying --edl-user-creds='<EDL-USER>:<EDL-PASS>'"
 else
-    echo "Generating Session cookie"
+    echo ">> Generating Session cookie"
     cookie_file="/tmp/$STACKNAME.cookiejar"
     rm -rf $cookie_file
     
     # First step, log in 
     auth_dl_url="$edl_authbase/oauth/authorize?client_id=$CLIENTID&redirect_uri=$api_endpoint/login&response_type=code"
-    echo "Login link is $auth_dl_url"
+    echo ">> Login link is $auth_dl_url"
     login_check=$(curl --proxy socks5h://localhost:8001 -u "$EDLUSER" \
                        -c $cookie_file -b $cookie_file \
                        -L -s -o /tmp/login_test.txt  \
                        -w "%{http_code}" $auth_dl_url)
                                  
     if [[ $login_check -eq "200" ]]; then 
-       echo "Successfully negotiated login... Attempting download"
-       echo "Attempting to download authenticated file $api_endpoint/res/test.txt"
+       echo ">> 🎉 Successfully negotiated login... Attempting download"
+       echo ">> Attempting to download authenticated file $api_endpoint/res/test.txt"
        
        download_check=$(curl --proxy socks5h://localhost:8001 \
                              -c $cookie_file -b $cookie_file \
@@ -425,17 +484,17 @@ else
                              -w "%{http_code}" $api_endpoint/res/test.txt )
        
        if [[ $download_check -eq "200" ]]; then
-          echo "Succesfully fetched public file:"
+          echo ">> 🎉 Successfully fetched restricted file:"
        else
-          echo "There was a problem fetching restricted file:"
+          echo ">> 🤮 There was a problem fetching restricted file:"
        fi
        cat /tmp/res_test.txt
     else
-       echo "Could not complete login:"
+       echo ">> 🤮 Could not complete login:"
        cat /tmp/login_test.txt
     fi 
 fi
 
 # Kill the proxy
-echo "Killing ssh tunnel $ssh_tunnel_pid"
+echo ">> Killing ssh tunnel $ssh_tunnel_pid"
 kill -9 $ssh_tunnel_pid

@@ -39,6 +39,7 @@ for a quick and easy TEA bootstrapping script.
   * [EDL Access Control](#edl-access-control)
     * [Public Buckets](#public-buckets)
     * [Private Buckets](#private-buckets)
+    * [Public and Private Prefixes](#public-and-private-prefixes)
   * [Custom Templating](#custom-templating)
   * [Shared Token Support](#shared-token-support)
   * [Dynamic In-Region IP CIDR Updates](#dynamic-in-region-ip-cidr-updates)
@@ -377,6 +378,28 @@ In the example above, TEA will ensure that a user attempt to download
 `https://[APP-BASE-URL]/pre-commission/not-yet-public.zip` belongs to **either**
 the App User Group `internal_users` or `external_team`. Users who are not in one or
 both of those groups will not be granted a download.
+
+#### Public and Private Prefixes
+
+In addition you specifying whole buckets as Public or Private, you can also use
+object prefixing to control access:
+
+```yaml
+MAP:
+   data-bucket: data-bucket
+   
+PUBLIC_BUCKETS:
+   data-bucket/browse: "Browse image"
+   
+PRIVATE_BUCKETS: 
+   data-bucket/pre-commission-data: 
+     - internal_users
+     - external_team
+``` 
+
+In the above example, while access data in `data-bucket` requires simple auth,
+accessing an object with the prefix `browse/` will require NO auth, and 
+`pre-commission-data/` will require EDL App group access as specified. 
 
 ### Custom Templating
 

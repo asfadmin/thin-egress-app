@@ -622,7 +622,7 @@ def dynamic_url():
             # Not kicking user out just yet. We might be dealing with a public bucket
     t.append(time.time())  # 2
     # Check for public bucket
-    pub_bucket = check_public_bucket(bucket, b_map)
+    pub_bucket = check_public_bucket(bucket, b_map, path)
     t.append(time.time())  # 3
     if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
@@ -650,10 +650,9 @@ def dynamic_url():
 
     t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, b_map)  # NOTE: Is an optimization attempt worth it
-                                                         # if we're asking for a public file and we
-                                                         # omit this check?
-                                                         # omit this check?
+    private_check = check_private_bucket(bucket, b_map, path)  # NOTE: Is an optimization attempt worth it
+                                                               # if we're asking for a public file and we
+                                                               # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)

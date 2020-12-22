@@ -22,5 +22,5 @@ output "egress_log_group" {
 }
 
 output "egress_lambda_name" {
-  value = aws_cloudformation_stack.thin_egress_app.outputs.EgressLambdaName
+  value = lookup(aws_cloudformation_stack.thin_egress_app.outputs, "EgressLambdaName", null)
 }

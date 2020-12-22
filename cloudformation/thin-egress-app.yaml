@@ -658,6 +658,15 @@ Resources:
       PathPart: 'version'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourcePubkey:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 'pubkey'
+      RestApiId: !Ref EgressApiGateway
+
   EgressAPIMethodLocate:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -850,6 +859,24 @@ Resources:
       RequestParameters:
         'method.request.header.Cookie': true
       ResourceId: !Ref EgressApiResourceVersion
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodPubkey:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 'pubkey view'
+      RequestParameters:
+        'method.request.header.Cookie': true
+      ResourceId: !Ref EgressApiResourcePubkey
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIdeployment:

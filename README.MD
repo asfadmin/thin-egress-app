@@ -39,6 +39,7 @@ for a quick and easy TEA bootstrapping script.
   * [EDL Access Control](#edl-access-control)
     * [Public Buckets](#public-buckets)
     * [Private Buckets](#private-buckets)
+    * [Public and Private Prefixes](#public-and-private-prefixes)
   * [Custom Templating](#custom-templating)
   * [Shared Token Support](#shared-token-support)
   * [Dynamic In-Region IP CIDR Updates](#dynamic-in-region-ip-cidr-updates)
@@ -160,7 +161,7 @@ you have all the information you need to do the right thing.
 
 ## Build Process
 
-![build-process](https://github.com/asfadmin/thin-egress-app/blob/bb.doc-update/tea-build.png)
+![build-process](https://github.com/asfadmin/thin-egress-app/blob/devel/tea-build.png)
 
 ### Code Quality
 
@@ -378,6 +379,28 @@ In the example above, TEA will ensure that a user attempt to download
 the App User Group `internal_users` or `external_team`. Users who are not in one or
 both of those groups will not be granted a download.
 
+#### Public and Private Prefixes
+
+In addition you specifying whole buckets as Public or Private, you can also use
+object prefixing to control access:
+
+```yaml
+MAP:
+   data-bucket: data-bucket
+   
+PUBLIC_BUCKETS:
+   data-bucket/browse: "Browse image"
+   
+PRIVATE_BUCKETS: 
+   data-bucket/pre-commission-data: 
+     - internal_users
+     - external_team
+``` 
+
+In the above example, while access data in `data-bucket` requires simple auth,
+accessing an object with the prefix `browse/` will require NO auth, and 
+`pre-commission-data/` will require EDL App group access as specified. 
+
 ### Custom Templating
 
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html 
@@ -459,7 +482,7 @@ echo "PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNE
 ### VPC Endpoints
 
 It is also important to be aware that an API Gateway VPC Endpoint will need to 
-setup prior to deployment. You can check to see if your account has the 
+be setup prior to deployment. You can check to see if your account has the 
 appropriate VPCE by running this command:
 
 ```bash

@@ -48,6 +48,7 @@ METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T19
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
 BROWSE_FILE = 'SA/BROWSE/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.jpg'
+OBJ_PREFIX_FILE = 'SA/METADATA_GRD_HS_CH/browse/ALAV2A104483200-OORIRFU_000.png'
 MAP_PATHS = sorted(["SA/OCN", "SA/OCN_CH", "SB/OCN", "SB/OCN_CH"])
 
 # Configuration:
@@ -74,6 +75,13 @@ class unauthed_download_test(unittest.TestCase):
         else:
             log.warning(f"Public Image Test Failed to get Content-Type. Headers: {r.headers}")
         self.assertTrue('Content-Type' in r.headers and r.headers['Content-Type'] == 'image/jpeg')
+
+    def test_check_public_obj_prefix(self):
+        url = f'{APIROOT}/{OBJ_PREFIX_FILE}'
+        r = requests.get(url)
+
+        log.info(f'Public prefix in restricted bucket {url} Return Code: {r.status_code} (Expect 200)')
+        self.assertTrue(r.status_code == 200)
 
     # Check for 404 on bad request
     def test_404_on_bad_request(self):

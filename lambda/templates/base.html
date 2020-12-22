@@ -20,12 +20,21 @@
                 margin-top: -200px;
                 margin-left: -300px;
             }
-
+            #requestidcontainer {
+                position: fixed;
+                margin-bottom: 3px;
+                bottom: 0;
+                right: 10px;
+                font-size: 85%;
+            }
         </style>
    </head>
 
    <body>
    {% block content %}{% endblock %}
+   {% if requestid %}
+        <div id="requestidcontainer">Request ID: <span id="requestid">{{ requestid }}</span></div>
+    {% endif %}
    </body>
 </html>
 

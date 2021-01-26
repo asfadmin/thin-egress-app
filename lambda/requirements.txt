@@ -9,6 +9,6 @@ netaddr==0.8.0
 pyjwt==1.7.1
 pyOpenSSL==20.0.1 # maybe not necessary
 python-jose==3.2.0
-PyYAML==5.3.1
+PyYAML==5.4.1
 
 pip>=19.2 # not directly required, pinned by Snyk to avoid a vulnerability

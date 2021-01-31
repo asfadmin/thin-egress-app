@@ -3,7 +3,7 @@ cfnresponse==1.1.1
 chalice==1.22.0
 cryptography==3.3.1
 flatdict==4.0.1
-jinja2==2.11.2
+jinja2==2.11.3
 jwcrypto==0.8
 netaddr==0.8.0
 pyjwt==1.7.1

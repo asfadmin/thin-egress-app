@@ -18,6 +18,7 @@ mkdir -p /tmp/pkg/python
 
 cd /tmp/pkg/python || exit
 
+pip3 install -U pip
 pip3 install --upgrade setuptools
 pip3 install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
 pip3 install -r ${WORKSPACE}/lambda/requirements.txt --target .

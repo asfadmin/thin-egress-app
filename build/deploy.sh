@@ -139,8 +139,8 @@ if [ ! -z "$DESTROY" ]; then
    aws $AWSENV cloudformation delete-stack --stack-name ${DESTROY}
 
    echo ">> ☠️  Destroying Secrets ..."
-   aws $AWSENV secretsmanager delete-secret --secret-id jwt_creds_for_${DESTROY}
-   aws $AWSENV secretsmanager delete-secret --secret-id urs_creds_for_${DESTROY}
+   aws $AWSENV secretsmanager delete-secret --force-delete-without-recovery --secret-id jwt_creds_for_${DESTROY}
+   aws $AWSENV secretsmanager delete-secret --force-delete-without-recovery --secret-id urs_creds_for_${DESTROY}
 
    echo ">> ☠️  Destroying Buckets ..."
    for i in ${DESTROY}-config ${DESTROY}-code ${DESTROY}-restricted ${DESTROY}-public; do

@@ -18,10 +18,14 @@ mkdir -p /tmp/pkg/python
 
 cd /tmp/pkg/python || exit
 
-pip3 install -U pip
-pip3 install --upgrade setuptools
-pip3 install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
-pip3 install -r ${WORKSPACE}/lambda/requirements.txt --target .
+echo "Updating Pip..."
+python3 -m pip install -U pip
+echo "Installing setuptools..."
+python3 -m pip install --upgrade setuptools
+echo "Installing ${WORKSPACE}/rain-api-core/requirements.txt" 
+python3 -m pip install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
+echo "Installing ${WORKSPACE}/lambda/requirements.txt"
+python3 -m pip install -r ${WORKSPACE}/lambda/requirements.txt --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

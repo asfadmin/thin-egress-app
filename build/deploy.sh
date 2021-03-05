@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#  DEPLOY: 
+#  DEPLOY:
 #  ./depoy.sh  --stack-name=<STACK-NAME> \
 #              --aws-profile=<AWS-PROFILE-NAME> \
 #              --bastion="<SSM-BASTION-NAME>" \
@@ -10,7 +10,7 @@
 #              --pass='<EDL-APP-PASSWORD>' \
 #              --region-name="aws-region-value" \
 #              --maturity=<SBX|DEV|SIT|INT|UAT|TEST|PROD>  \
-#              --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>' 
+#              --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>'
 #
 #        -a|--aws-profile     AWS Profile (from ~/.aws/credentials)
 #        -b|--bastion         SSM Bastion name ("NGAP SSH Bastion"?)
@@ -21,10 +21,10 @@
 #        -p|--pass            EDL App Password
 #        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
 #        -s|--stack-name      The name of the stack to be deployed.
-#        -u|--uid             EDL App UID 
+#        -u|--uid             EDL App UID
 #
 #  DESTROY:
-#  ./depoy.sh  --destroy-stack=<STACK-NAME> \
+#  ./deploy.sh  --destroy-stack=<STACK-NAME> \
 #              --aws-profile=<AWS-PROFILE-NAME> \
 #              --region-name="aws-region-value" \
 #
@@ -38,7 +38,7 @@ do
 case $i in
     -s=*|--stack-name=*)
     STACKNAME="${i#*=}"
-    ;;    
+    ;;
 
     --destroy-stack=*)
     DESTROY="${i#*=}"
@@ -55,7 +55,7 @@ case $i in
     -u=*|--uid=*)
     EDLUID="${i#*=}"
     ;;
-    
+
     -p=*|--pass=*)
     EDLPASS="${i#*=}"
     ;;
@@ -87,10 +87,10 @@ case $i in
 esac
 done
 
-case $MATURITY in 
+case $MATURITY in
     [dD][eE][vV]|[sS][bB][xX])
     EDL="sbx.urs"
-    MAT="DEV" 
+    MAT="DEV"
     ;;
     [iI][nN][tT]|[sS][iI][tT])
     EDL="sit.urs"
@@ -145,13 +145,13 @@ if [ ! -z "$DESTROY" ]; then
    echo ">> ☠️  Destroying Buckets ..."
    for i in ${DESTROY}-config ${DESTROY}-code ${DESTROY}-restricted ${DESTROY}-public; do
       aws $AWSENV s3 rm --recursive s3://$i
-      aws $AWSENV s3 rb s3://$i 
-   done 
+      aws $AWSENV s3 rb s3://$i
+   done
 
    echo ">> 🎉 Purge Complete."
-   
+
    exit 0
-fi 
+fi
 
 # Check Input
 if [ -z "$STACKNAME" ]; then
@@ -202,9 +202,9 @@ else
 fi
 
 # write out JWT secret
-if [ ! -f ${jwt_key_file} ]; then 
+if [ ! -f ${jwt_key_file} ]; then
    echo ">> Creating JWT Key ${jwt_key_file}"
-   ssh-keygen -t rsa -b 4096 -m PEM -N '' -f $jwt_key_file 
+   ssh-keygen -t rsa -b 4096 -m PEM -N '' -f $jwt_key_file
    chmod 600 ${jwt_key_file} ${jwt_key_file}.pub
 fi
 rsa_priv_key=$(openssl base64 -in $jwt_key_file -A)
@@ -244,10 +244,10 @@ for i in $config_bucket $code_bucket $restricted_bucket $public_bucket; do
    aws $AWSENV s3api head-bucket --bucket "$i" 2>/dev/null
    if [ $? -gt 0 ]; then
       echo ">> creating bucket $i"
-      aws $AWSENV s3 mb s3://$i 2>/dev/null
+      aws $AWSENV s3 mb s3://$i --region ${AWSREGION} #2>/dev/null
    fi
 done
-      
+
 
 # Find the stuff we need to download
 code_zip=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
@@ -270,7 +270,7 @@ aws $AWSENV s3 ls s3://$code_bucket/$code_zip 2>/dev/null
 if [ $? -gt 0 ]; then
    aws $AWSENV s3 cp s3://asf.public.code/$code_zip s3://$code_bucket/$code_zip
 else
-   echo ">> Skipping upload of existing $code_zip to s3://$code_bucket/$code_zip"  
+   echo ">> Skipping upload of existing $code_zip to s3://$code_bucket/$code_zip"
 fi
 aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null
 if [ $? -gt 0 ]; then
@@ -278,7 +278,7 @@ if [ $? -gt 0 ]; then
 else
    echo ">> Skipping upload of existing $layer_zip to s3://$code_bucket/$layer_zip"
 fi
-if [ ! -f "/tmp/$cf_yaml_name" ]; then 
+if [ ! -f "/tmp/$cf_yaml_name" ]; then
    aws $AWSENV s3 cp s3://asf.public.code/$cf_yaml /tmp/$cf_yaml_name
 fi
 
@@ -358,7 +358,7 @@ api_endpoint=$(aws $AWSENV cloudformation describe-stacks \
                            --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
                            --output=text)
 
-if [ $api_endpoint == "None" ]; then 
+if [ $api_endpoint == "None" ]; then
    echo ">> 🤮 CloudFormation stack did not properly deploy"
    exit 0
 fi
@@ -366,14 +366,14 @@ fi
 echo ">> 🎉 API Endpoint is $api_endpoint"
 api_endpoint=${api_endpoint%/}
 
-if [[ -z "$BASTIONNAME" || -z "$KEYFILE" ]]; then 
+if [[ -z "$BASTIONNAME" || -z "$KEYFILE" ]]; then
    echo ">> Skipping TEA Validation because of missing --key-file or --bastion"
    exit 0
 fi
 
 # Look up Bastion instance id & Start tunnel
 echo ">> Finding EC2 Instance id for bastion \"$BASTIONNAME\""
-ssm_bastion=$(aws $AWSENV ec2 describe-instances --filters "Name=tag:Name,Values=$BASTIONNAME" \
+ssm_bastion=$(aws $AWSENV ec2 describe-instances --filters "Name=tag:Name,Values=$BASTIONNAME"  "Name=instance-state-code,Values=16" \
                                                  --query "Reservations[].Instances[].InstanceId" \
                                                  --output=text)
 echo ">> Attempting to connect to bastion $ssm_bastion"
@@ -382,23 +382,23 @@ echo ">> Attempting to connect to bastion $ssm_bastion"
 sshrc=255
 ssh_loop_count=0
 
-while [[ $sshrc -gt 0 && $ssh_loop_count -lt 4 ]]; do 
+while [[ $sshrc -gt 0 && $ssh_loop_count -lt 4 ]]; do
     ssh -o ProxyCommand="sh -c 'aws $AWSENV ssm start-session \
                                     --target %h --document-name AWS-StartSSHSession \
                                     --parameters portNumber=22'" \
         -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
         -i $KEYFILE -q -fN -D 127.0.0.1:8001 ec2-user@$ssm_bastion
 
-    sshrc=$? 
+    sshrc=$?
     if [[ $sshrc -gt 0 ]]; then
        echo ">> 🤮 COULD NOT ESTABLISH SSH TUNNEL, Trying again..."
        ssh_loop_count=$(($ssh_loop_count + 1))
     fi
 done
 
-if [[ $sshrc -gt 0 ]]; then 
-   echo '>> 🤮 COULD NOT ESTABLISH SSH TUNNEL AFTER 5 ATTEMPTS!'
-   exit 1 
+if [[ $sshrc -gt 0 ]]; then
+   echo '>> 🤮 COULD NOT ESTABLISH SSH TUNNEL AFTER 5 ATTEMPTS! Are you on the NASA VPN? Are you hitting the correct bastion?'
+   exit 1
 fi
 
 ssh_tunnel_pid=$(pgrep -f 'ssh -o ProxyCommand')
@@ -434,11 +434,11 @@ if [[ $? -gt 0 ]]; then
     post_resp=$( curl -s --request POST --header "Authorization: Bearer $edl_resp" \
                          --data "uri=$api_endpoint/login" \
                          --url $edl_authbase/api/apps/$EDLUID/redirect_uri )
-    echo $post_resp | grep -q 'Redirect URI added successfully' 
- 
+    echo $post_resp | grep -q 'Redirect URI added successfully'
+
     if [[ $? -gt 0 ]]; then
-       echo ">> 🤮 There was a problem adding redirect URI: $post_resp"
-    else 
+       echo ">> 🤮 There was a problem adding redirect URI: ${post_resp}"
+    else
        echo ">> 🎉 URI successfully added to EDL App"
     fi
 else
@@ -456,7 +456,7 @@ else
    echo ">> 🤮 There was a problem validating auth challenge for restricted data:"
    cat /tmp/res_test.txt
    exit 1
-fi 
+fi
 
 if [[ -z "$EDLUSER" ]]; then
     echo ">> No EDL User creds provided. Cannot validate download."
@@ -465,24 +465,24 @@ else
     echo ">> Generating Session cookie"
     cookie_file="/tmp/$STACKNAME.cookiejar"
     rm -rf $cookie_file
-    
-    # First step, log in 
+
+    # First step, log in
     auth_dl_url="$edl_authbase/oauth/authorize?client_id=$CLIENTID&redirect_uri=$api_endpoint/login&response_type=code"
     echo ">> Login link is $auth_dl_url"
     login_check=$(curl --proxy socks5h://localhost:8001 -u "$EDLUSER" \
                        -c $cookie_file -b $cookie_file \
                        -L -s -o /tmp/login_test.txt  \
                        -w "%{http_code}" $auth_dl_url)
-                                 
-    if [[ $login_check -eq "200" ]]; then 
+
+    if [[ $login_check -eq "200" ]]; then
        echo ">> 🎉 Successfully negotiated login... Attempting download"
        echo ">> Attempting to download authenticated file $api_endpoint/res/test.txt"
-       
+
        download_check=$(curl --proxy socks5h://localhost:8001 \
                              -c $cookie_file -b $cookie_file \
                              -L -s -o /tmp/res_test.txt \
                              -w "%{http_code}" $api_endpoint/res/test.txt )
-       
+
        if [[ $download_check -eq "200" ]]; then
           echo ">> 🎉 Successfully fetched restricted file:"
        else
@@ -492,7 +492,7 @@ else
     else
        echo ">> 🤮 Could not complete login:"
        cat /tmp/login_test.txt
-    fi 
+    fi
 fi
 
 # Kill the proxy

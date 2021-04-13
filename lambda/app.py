@@ -12,12 +12,13 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
 from rain_api_core.general_util import get_log, log_context
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, get_new_token_and_profile
-from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, check_in_region_request
+from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
+    get_new_token_and_profile
+from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
+    check_in_region_request
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, get_jwt_keys, \
-                                    JWT_COOKIE_NAME, JWT_ALGO
+    JWT_COOKIE_NAME, JWT_ALGO
 from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
-
 
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
@@ -30,11 +31,11 @@ bc_client_cache = {}
 s3_resource = get_s3_resource()
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
-header_map = {'date':           'Date',
-              'last-modified':  'Last-Modified',
-              'accept-ranges':  'Accept-Ranges',
-              'etag':           'ETag',
-              'content-type':   'Content-Type',
+header_map = {'date': 'Date',
+              'last-modified': 'Last-Modified',
+              'accept-ranges': 'Accept-Ranges',
+              'etag': 'ETag',
+              'content-type': 'Content-Type',
               'content-length': 'Content-Length'}
 
 
@@ -57,12 +58,13 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
+
 class TeaException(Exception):
     """ base exception for TEA """
 
 
 class EulaException(TeaException):
-    def __init__(self, payload:dict):
+    def __init__(self, payload: dict):
         self.payload = payload
 
 
@@ -120,7 +122,8 @@ def get_user_from_token(token):
         try:
             return msg['uid']
         except KeyError as e:
-            log.error(f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
+            log.error(
+                f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
             return None
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
@@ -142,19 +145,18 @@ def get_user_from_token(token):
     return None
 
 
-def cumulus_log_message(outcome: str, code: int, http_method:str, k_v: dict):
+def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
     k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
     jsonstr = json.dumps(k_v)
     print(f'{jsonstr}')
 
 
 def restore_bucket_vars():
+    global b_map  # pylint: disable=global-statement
 
-    global b_map                                                                       #pylint: disable=global-statement
-
-    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket,bucket_map_file))
+    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket, bucket_map_file))
     if b_map is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket,bucket_map_file))
+        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket, bucket_map_file))
 
         b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
         log.debug('bucket map: {}'.format(b_map))
@@ -163,12 +165,11 @@ def restore_bucket_vars():
 
 
 def do_auth_and_return(ctxt):
-
     log.debug('context: {}'.format(ctxt))
     here = ctxt['path']
     if os.getenv('DOMAIN_NAME'):
         # Pop STAGE value off the request if we have a custom domain
-        here = '/'.join([""]+here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
+        here = '/'.join([""] + here.split('/')[2:]) if here.startswith('/{}/'.format(STAGE)) else here
     log.info("here will be {0}".format(here))
     redirect_here = quote_plus(here)
     urs_url = get_urs_url(ctxt, redirect_here)
@@ -186,7 +187,7 @@ def make_redirect(to_url, headers=None, status_code=301):
     return Response(body='', headers=headers, status_code=status_code)
 
 
-def make_html_response(t_vars: dict, hdrs: dict, status_code: int=200, template_file: str='root.html'):
+def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):
     template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
     template_vars.update(t_vars)
 
@@ -209,7 +210,7 @@ def get_bcconfig(user_id: str) -> dict:
     return bcconfig
 
 
-def get_bucket_region(session, bucketname) ->str:
+def get_bucket_region(session, bucketname) -> str:
     # Figure out bucket region
     params = {}
     if bucketname in b_region_map:
@@ -231,12 +232,10 @@ def get_bucket_region(session, bucketname) ->str:
 
 
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
-
-
     # Attempt to pull userid from profile
     user_id = None
     if isinstance(user_profile, dict):
-        if 'urs-user-id' in user_profile :
+        if 'urs-user-id' in user_profile:
             user_id = user_profile['urs-user-id']
         elif 'uid' in user_profile:
             user_id = user_profile['uid']
@@ -285,7 +284,6 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     log.debug('ET for get_bucket_region(): {}s'.format(t4 - t3))
     log.debug('ET for total: {}'.format(t4 - t0))
 
-
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
 
     try:
@@ -323,14 +321,14 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                                                         'range': get_range_header_val()})
             return Response(body='Invalid Range', status_code=416, headers={})
 
-
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'Could not find requested data.',
                          'title': 'Data Not Available',
-                         'requestid': get_request_id(),}
+                         'requestid': get_request_id(), }
         headers = {}
-        cumulus_log_message('failure', 404, 'GET', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message('failure', 404, 'GET',
+                            {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
 
 
@@ -359,6 +357,7 @@ def root():
     headers = {'Content-Type': 'text/html'}
     return make_html_response(template_vars, headers, 200, 'root.html')
 
+
 @app.route('/logout')
 def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
@@ -381,7 +380,8 @@ def logout():
 @app.route('/login')
 def login():
     try:
-        status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context, os.getenv('COOKIE_DOMAIN', ''))
+        status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
+                                                       os.getenv('COOKIE_DOMAIN', ''))
     except ClientError as e:
         log.error(e)
         status_code = 500
@@ -416,7 +416,7 @@ def locate():
                                                              s3_resource)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
-    if(len(matching_paths) > 0):
+    if (len(matching_paths) > 0):
         return Response(body=json.dumps(matching_paths),
                         status_code=200,
                         headers={'Content-Type': 'application/json'})
@@ -436,7 +436,6 @@ def collapse_bucket_configuration(bucket_map):
 
 
 def get_range_header_val():
-
     if 'Range' in app.current_request.headers:
         return app.current_request.headers['Range']
     if 'range' in app.current_request.headers:
@@ -452,13 +451,13 @@ def get_bc_config_client(user_id):
         # This a new user, generate a new bc_Config client
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
-    elif now - bc_client_cache[user_id]["timestamp"] >= (50*60):
+        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
+    elif now - bc_client_cache[user_id]["timestamp"] >= (50 * 60):
         # Replace the client if is more than 50 minutes old
         log.info(f"Replacing old bc_Config_client for user {user_id}")
         params['config'] = bc_Config(**get_bcconfig(user_id))
         session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now }
+        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
 
     return bc_client_cache[user_id]["client"]
 
@@ -487,9 +486,10 @@ def try_download_head(bucket, filename):
 
         template_vars = {'contentstring': 'File not found',
                          'title': 'File not found',
-                         'requestid': get_request_id(),}
+                         'requestid': get_request_id(), }
         headers = {}
-        cumulus_log_message('failure', 404, 'HEAD', {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message('failure', 404, 'HEAD',
+                            {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
 
@@ -523,7 +523,6 @@ def try_download_head(bucket, filename):
     log.debug('ET for get_role_creds(): {}s'.format(t[4] - t[3]))
     log.debug('ET for get_presigned_url(): {}s'.format(t[5] - t[4]))
 
-
     return make_redirect(presigned_url, {}, 303)
 
 
@@ -545,7 +544,7 @@ def dynamic_url_head():
         if not bucket:
             template_vars = {'contentstring': 'Bucket not available',
                              'title': 'Bucket not available',
-                             'requestid': get_request_id(),}
+                             'requestid': get_request_id(), }
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
         t.append(time.time())
@@ -601,10 +600,10 @@ def dynamic_url():
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename, custom_headers: {}'.format(( path, bucket, filename, custom_headers)))
+        log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
         if not bucket:
             template_vars = {'contentstring': 'File not found', 'title': 'File not found',
-                             'requestid': get_request_id(),}
+                             'requestid': get_request_id(), }
             headers = {}
             return make_html_response(template_vars, headers, 404, 'error.html')
     else:
@@ -627,7 +626,8 @@ def dynamic_url():
     if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
-        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[0].lower() == 'bearer':
+        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
+            0].lower() == 'bearer':
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]
@@ -651,8 +651,8 @@ def dynamic_url():
     t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group
     private_check = check_private_bucket(bucket, b_map, filename)  # NOTE: Is an optimization attempt worth it
-                                                                   # if we're asking for a public file and we
-                                                                   # omit this check?
+    # if we're asking for a public file and we
+    # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
     u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
@@ -665,20 +665,21 @@ def dynamic_url():
         jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
                                                         get_jwt_field(cookievars, 'urs-access-token'),
                                                         user_profile)
-        new_jwt_cookie_headers.update(make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+        new_jwt_cookie_headers.update(
+            make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
     log.debug('user_in_group: {}'.format(u_in_g))
 
     if private_check and not u_in_g:
         template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
-                         'requestid': get_request_id(),}
+                         'requestid': get_request_id(), }
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     if not filename:  # Maybe this belongs up above, right after setting the filename var?
         log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
         template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
-                         'requestid': get_request_id(),}
+                         'requestid': get_request_id(), }
 
         return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 

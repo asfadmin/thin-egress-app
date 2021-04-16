@@ -23,10 +23,11 @@ logging.getLogger('connectionpool').setLevel(logging.ERROR)
 logging.basicConfig(format='%(asctime)s [L%(lineno)s - %(funcName)s()]: %(message)s', level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
-
+default_stackname = "teatest-jenk-same"
+default_region = "us-west-2"
 # Set environment variables
-STACKNAME = os.getenv("STACKNAME_SAME", "teatest-jenk-same")
-AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", "us-west-2")
+STACKNAME = os.getenv("STACKNAME_SAME", default_stackname)
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", default_region)
 aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
 aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
@@ -40,9 +41,13 @@ API = None
 for item in dict['items']:
     if item['name'] == f"{STACKNAME}-EgressGateway":
         API = item['id']
+
+if not API:
+    print(f"Could not find API for the given stackname {STACKNAME}")
+    exit()
+
 APIHOST = f"{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
 APIROOT = f"https://{APIHOST}/API"
-
 
 # Important Objects and strings we'll need for our tests
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
@@ -53,17 +58,48 @@ OBJ_PREFIX_FILE = 'SA/METADATA_GRD_HS_CH/browse/ALAV2A104483200-OORIRFU_000.png'
 MAP_PATHS = sorted(["SA/OCN", "SA/OCN_CH", "SB/OCN", "SB/OCN_CH"])
 
 # Configuration:
-TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", 'asf.public.code')
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", 'thin-egress-app/testresults.json')
-LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", 's1-ocn-1e29d408')
+default_test_result_bucket = "asf.public.code"
+default_test_result_object = "thin-egress-app/testresults.json"
+default_locate_bucket = "s1-ocn-1e29d408"
+TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", default_test_result_bucket)
+TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
+LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 
 # Global variable we'll use for our tests
 cookiejar = []
 urs_username = os.getenv("URS_USERNAME")
 urs_password = os.getenv("URS_PASSWORD")
 
+
+def env_var_check():
+    is_set = True
+    if STACKNAME == default_stackname:
+        print(f"The environment STACKNAME is set to the default value: {default_stackname}")
+    if AWS_DEFAULT_REGION == default_region:
+        print(f"The environment AWS_DEFAULT_REGION is set to the default value: {default_region}")
+    if aws_access_key_id is None:
+        print("The environment variable AWS_ACCESS_KEY_ID is not set")
+        is_set = False
+    if aws_secret_access_key is None:
+        print("The environment variable AWS_SECRET_ACCESS_KEY is not set")
+        is_set = False
+    if TEST_RESULT_BUCKET == default_test_result_bucket:
+        print(f"The environment TEST_RESULT_BUCKET is set to the default value: {default_test_result_bucket}")
+    if TEST_RESULT_OBJECT == default_test_result_object:
+        print(f"The environment TEST_RESULT_OBJECT is set to the default value: {default_test_result_object}")
+    if LOCATE_BUCKET == default_locate_bucket:
+        print(f"The environment LOCATE_BUCKET is set to the default value: {default_locate_bucket}")
+    if urs_username is None:
+        print("The environment variable URS_USERNAME is not set")
+        is_set = False
+    if urs_username is None:
+        print("The environment variable URS_PASSWORD is not set")
+        is_set = False
+    return is_set
+
+
 class unauthed_download_test(unittest.TestCase):
-# Check that public files are returned without auth
+    # Check that public files are returned without auth
     def test_check_that_images_are_public(self):
         url = f'{APIROOT}/{BROWSE_FILE}'
         r = requests.get(url)
@@ -95,7 +131,7 @@ class unauthed_download_test(unittest.TestCase):
     # Check that a bad cookie value causes URS redirect:
     def test_bad_cookie_value_cause_URS_redirect(self):
         url = f"{APIROOT}/{METADATA_FILE}"
-        cookies = {'urs_user_id': 'badusername', 'urs_access_token': 'BLABLABLA'}
+        cookies = {'urs_user_id': 'dmsorensen', 'urs_access_token': '286cde7a25a63433162c8a84c4574a6116aa7d2dc9fa4180ce98b3e34db165b4'}
 
         log.info(f"Attempting to use bad cookies ({cookies}) to access {url}")
         r = requests.get(url, allow_redirects=False)
@@ -316,4 +352,5 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == '__main__':
-    main()
+    if env_var_check():
+        main()

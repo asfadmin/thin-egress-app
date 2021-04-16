@@ -36,6 +36,7 @@ client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_k
 
 # Get EgressGateway Rest API ID from AWS and calculate APIROOT
 dict = client.get_rest_apis()
+API = None
 for item in dict['items']:
     if item['name'] == f"{STACKNAME}-EgressGateway":
         API = item['id']

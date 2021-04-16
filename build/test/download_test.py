@@ -31,6 +31,9 @@ AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION", default_region)
 aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
 aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
+urs_user_id = os.getenv("URS_USER_ID")
+urs_access_token = os.getenv("URS_ACCESS_TOKEN")
+
 # Connect to AWS
 client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_key_id=aws_access_key_id,
                       aws_secret_access_key=aws_secret_access_key)
@@ -83,6 +86,12 @@ def env_var_check():
     if aws_secret_access_key is None:
         print("The environment variable AWS_SECRET_ACCESS_KEY is not set")
         is_set = False
+    if urs_user_id is None:
+        print("The environment variable URS_USER_ID is not set")
+        is_set = False
+    if urs_access_token is None:
+        print("The environment variable URS_ACCESS_TOKEN is not set")
+        is_set = False
     if TEST_RESULT_BUCKET == default_test_result_bucket:
         print(f"The environment TEST_RESULT_BUCKET is set to the default value: {default_test_result_bucket}")
     if TEST_RESULT_OBJECT == default_test_result_object:
@@ -131,7 +140,7 @@ class unauthed_download_test(unittest.TestCase):
     # Check that a bad cookie value causes URS redirect:
     def test_bad_cookie_value_cause_URS_redirect(self):
         url = f"{APIROOT}/{METADATA_FILE}"
-        cookies = {'urs_user_id': 'dmsorensen', 'urs_access_token': '286cde7a25a63433162c8a84c4574a6116aa7d2dc9fa4180ce98b3e34db165b4'}
+        cookies = {'urs_user_id': urs_user_id, 'urs_access_token': urs_access_token}
 
         log.info(f"Attempting to use bad cookies ({cookies}) to access {url}")
         r = requests.get(url, allow_redirects=False)

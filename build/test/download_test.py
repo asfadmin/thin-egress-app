@@ -46,7 +46,7 @@ for item in dict['items']:
         API = item['id']
 
 if not API:
-    print(f"Could not find API for the given stackname {STACKNAME}")
+    log.info(f"Could not find API for the given stackname {STACKNAME}")
     exit()
 
 APIHOST = f"{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
@@ -77,32 +77,32 @@ urs_password = os.getenv("URS_PASSWORD")
 def env_var_check():
     is_set = True
     if STACKNAME == default_stackname:
-        print(f"The environment STACKNAME is set to the default value: {default_stackname}")
+        log.info(f"The environment STACKNAME is set to the default value: {default_stackname}")
     if AWS_DEFAULT_REGION == default_region:
-        print(f"The environment AWS_DEFAULT_REGION is set to the default value: {default_region}")
+        log.info(f"The environment AWS_DEFAULT_REGION is set to the default value: {default_region}")
     if aws_access_key_id is None:
-        print("The environment variable AWS_ACCESS_KEY_ID is not set")
+        log.info("The environment variable AWS_ACCESS_KEY_ID is not set")
         is_set = False
     if aws_secret_access_key is None:
-        print("The environment variable AWS_SECRET_ACCESS_KEY is not set")
+        log.info("The environment variable AWS_SECRET_ACCESS_KEY is not set")
         is_set = False
     if urs_user_id is None:
-        print("The environment variable URS_USER_ID is not set")
+        log.info("The environment variable URS_USER_ID is not set")
         is_set = False
     if urs_access_token is None:
-        print("The environment variable URS_ACCESS_TOKEN is not set")
+        log.info("The environment variable URS_ACCESS_TOKEN is not set")
         is_set = False
     if TEST_RESULT_BUCKET == default_test_result_bucket:
-        print(f"The environment TEST_RESULT_BUCKET is set to the default value: {default_test_result_bucket}")
+        log.info(f"The environment TEST_RESULT_BUCKET is set to the default value: {default_test_result_bucket}")
     if TEST_RESULT_OBJECT == default_test_result_object:
-        print(f"The environment TEST_RESULT_OBJECT is set to the default value: {default_test_result_object}")
+        log.info(f"The environment TEST_RESULT_OBJECT is set to the default value: {default_test_result_object}")
     if LOCATE_BUCKET == default_locate_bucket:
-        print(f"The environment LOCATE_BUCKET is set to the default value: {default_locate_bucket}")
+        log.info(f"The environment LOCATE_BUCKET is set to the default value: {default_locate_bucket}")
     if urs_username is None:
-        print("The environment variable URS_USERNAME is not set")
+        log.info("The environment variable URS_USERNAME is not set")
         is_set = False
     if urs_username is None:
-        print("The environment variable URS_PASSWORD is not set")
+        log.info("The environment variable URS_PASSWORD is not set")
         is_set = False
     return is_set
 

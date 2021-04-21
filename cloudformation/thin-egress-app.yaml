@@ -947,3 +947,28 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UpdatePolicyLambda.Arn
 
+  BumperLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
+    Properties:
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Role: !GetAtt EgressLambdaIamRole.Arn
+      FunctionName: !Sub "${AWS::StackName}-BumperLambda"
+      VpcConfig:
+        !If
+        - UsePrivateVPC
+        - SecurityGroupIds:
+            !Split [ ',', !Ref VPCSecurityGroupIDs ]
+          SubnetIds:
+            !Split [ ',', !Ref VPCSubnetIDs ]
+        - !Ref "AWS::NoValue"
+      Environment:
+        Variables:
+          TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
+      Handler: tea_bumper.lambda_handler
+      Runtime: 'python3.7'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer

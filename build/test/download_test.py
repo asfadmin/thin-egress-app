@@ -168,7 +168,9 @@ class auth_download_test(unittest.TestCase):
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")
+        log.info(f"COOKIE JAR: {cookiejar}")
         self.assertTrue(final_request.status_code == 200)
+
 
 class authed_download_test(unittest.TestCase):
     # Check that we get a URS auth redirect for auth'd downloads
@@ -298,6 +300,11 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
+
+#
+# def test_jwt_blacklist():
+#     pass
+
 
 def main():
 

@@ -743,6 +743,14 @@ for your TEA deployment, you'll need to update the `DomainName` and `CookieName`
 parameters of your [TEA Deployment](#all-parameters) with the new CloudFront 
 domain name.
 
+### Updating configuration of a live TEA
+
+If the bucket map is updated, because of caching it can take quite some time before TEA loads it. 
+If you would like to force TEA to load the new configs immediately, invoke the bumper lambda:
+```bash
+aws $AWSENV lambda invoke --function-name="${STACK_NAME}-BumperLambda" output.txt 
+```
+
 ### Using custom domain names
 
 There is a process by which you can request an Alternate Domain name to your

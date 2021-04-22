@@ -144,6 +144,7 @@ class auth_download_test(unittest.TestCase):
     # Validate that auth process is successful
     def test_auth_process_is_successful(self):
         url = f"{APIROOT}/{METADATA_FILE}"
+        log.info(f"URL with API Root: {url}")
         global cookiejar
 
         log.info(f"Hitting {url} to get redirect to URS for auth")

@@ -13,7 +13,12 @@ def lambda_handler(event, context):
 
     log.info('teabumper!')
 
-    response = client.update_function_configuration(
+    response = client.get_function_configuration(
+        FunctionName=os.getenv('TEA_LAMBDA_NAME'),
+
+    )
+    log.info(f"cfg for {os.getenv('TEA_LAMBDA_NAME')}: {response}")
+    '''response = client.update_function_configuration(
         FunctionName=os.getenv('TEA_LAMBDA_NAME'),
         Environment={
             'Variables': {
@@ -21,16 +26,7 @@ def lambda_handler(event, context):
             }
         }
     )
-    log.info(response)
-    response = client.update_function_configuration(
-        FunctionName=os.getenv('TEA_LAMBDA_NAME'),
-        Environment={
-            'Variables': {
-                'env_var': 'hello'
-            }
-        }
-    )
-    log.info(response)
+    log.info(response)'''
 
 
 def version():

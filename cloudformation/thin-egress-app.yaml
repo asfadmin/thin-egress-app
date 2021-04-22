@@ -950,6 +950,7 @@ Resources:
   BumperLambda:
     Type: AWS::Lambda::Function
     Properties:
+      Description: Invoke this lambda to force reload of the egress lambda's config, including bucket map.
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
         S3Key: !Ref LambdaCodeS3Key

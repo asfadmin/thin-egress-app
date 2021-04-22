@@ -1,34 +1,31 @@
 import json
 import boto3
-import urllib.request
 import os
 
+from datetime import datetime
 from rain_api_core.general_util import get_log
 log = get_log()
 
 client = boto3.client('lambda')
-
+TEA_LAMBDA_NAME = os.getenv('TEA_LAMBDA_NAME')
 
 def lambda_handler(event, context):
 
     log.info('teabumper!')
 
-    response = client.get_function_configuration(
-        FunctionName=os.getenv('TEA_LAMBDA_NAME'),
+    egress_env = client.get_function_configuration(
+        FunctionName=TEA_LAMBDA_NAME,
+    )['Environment']
 
+    egress_env['Variables'].update({'BUMP': f'{str(datetime.utcnow())}, {context.aws_request_id}'})
+
+    log.debug(f"envvar for {TEA_LAMBDA_NAME}: {egress_env['Variables']}")
+    response = client.update_function_configuration(
+        FunctionName=TEA_LAMBDA_NAME,
+        Environment=egress_env
     )
-    log.info(f"cfg for {os.getenv('TEA_LAMBDA_NAME')}: {response}")
-    '''response = client.update_function_configuration(
-        FunctionName=os.getenv('TEA_LAMBDA_NAME'),
-        Environment={
-            'Variables': {
-                'env_var': 'hello'
-            }
-        }
-    )
-    log.info(response)'''
+    log.debug(response)
 
 
 def version():
-    log.info("Got a version request!")
     return json.dumps({'version_id': '<BUILD_ID>'})

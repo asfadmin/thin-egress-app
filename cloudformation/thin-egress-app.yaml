@@ -949,8 +949,6 @@ Resources:
 
   BumperLambda:
     Type: AWS::Lambda::Function
-    DependsOn:
-      - EgressLambdaDependencyLayer
     Properties:
       Code:
         S3Bucket: !Ref LambdaCodeS3Bucket
@@ -970,8 +968,6 @@ Resources:
           TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'
-      Layers:
-        - !Ref EgressLambdaDependencyLayer
 
   BumperLambdaIamRole:
     Type: AWS::IAM::Role

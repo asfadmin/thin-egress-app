@@ -63,6 +63,7 @@ for a quick and easy TEA bootstrapping script.
   * [Validating a Deployment](#validating-a-deployment)
     * [Accessing the API Gateway inside EDC](#accessing-the-api-gateway-inside-edc)
   * [Requesting an EDC Public App](#requesting-an-edc-public-app)
+  * [Updating configuration of a live TEA](#updating-configuration-of-a-live-tea)
   * [Using custom domain names](#using-custom-domain-names)
 * [Logs](#logs) - What TEA does with logs
   * [CloudWatch Logs](#cloudwatch-logs)

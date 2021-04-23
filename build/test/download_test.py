@@ -311,6 +311,18 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info(f"Using the endpoint: {os.getenv('BLACKLIST_ENDPOINT')} to test JWT blacklist functionality")
         log.debug(f"The cookiejar {cookiejar}")
 
+        headers = {{
+            "first_name": "Brian",
+            "last_name": "Badguy",
+            "urs-user-id": "badguy1231",
+            "urs-access-token": "longtokenvalue",
+            "urs-groups": [],
+            "iat": 1619103148,
+            "exp": 1619707948
+        }}
+
+        r = requests.get(url, headers=headers)
+        print(f"JWT BLACKLIST test code: {r.status_code}")
 
 
 def main():

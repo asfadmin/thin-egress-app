@@ -301,6 +301,9 @@ class authed_download_test(unittest.TestCase):
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
+
+class jwt_blacklist_test(unittest.TestCase):
+
     def test_validate_jwt_blacklist(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
@@ -315,7 +318,7 @@ def main():
     tests = 0
 
     # We need the tests to run in this order.
-    for test in (unauthed_download_test, auth_download_test, authed_download_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

@@ -62,7 +62,7 @@ default_test_result_bucket = "asf.public.code"
 default_test_result_object = "thin-egress-app/testresults.json"
 default_locate_bucket = "s1-ocn-1e29d408"
 TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", default_test_result_bucket)
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
+TEST_RESULT_OBJECT = os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
 LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 
 # Global variable we'll use for our tests
@@ -151,8 +151,9 @@ class auth_download_test(unittest.TestCase):
         request = session.get(url)
         url_earthdata = request.url
 
-        secret_password = urs_password[0] + "*"*(len(urs_password)-2) + urs_password[-1]
-        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
+        secret_password = urs_password[0] + "*" * (len(urs_password) - 2) + urs_password[-1]
+        log.info(
+            f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
         login2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, urs_password))
 
         log.info(f"Login attempt results in status_code: {login2.status_code}")
@@ -161,14 +162,15 @@ class auth_download_test(unittest.TestCase):
         # Copy .asf.alaska.edu cookies to match API Address
         for z in cookiejar:
             if "asf.alaska.edu" in z.domain:
-                 logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
-                 cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
+                logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
+                cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
         log.info(f"Generated cookies: {cookiejar}")
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")
         self.assertTrue(final_request.status_code == 200)
+
 
 class authed_download_test(unittest.TestCase):
     # Check that we get a URS auth redirect for auth'd downloads
@@ -283,7 +285,7 @@ class authed_download_test(unittest.TestCase):
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
                 # Fix the padding:
-                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
+                cookie_b64 += '=' * (4 - (len(cookie_b64) % 4))
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
@@ -293,19 +295,27 @@ class authed_download_test(unittest.TestCase):
         self.assertTrue(token is not None)
 
         log.info(f"Attempting to download {url} using the token as a Bearer token")
-        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
+        r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
-def main():
+    def test_validate_jwt_blacklist(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        global cookiejar
+        os.environ["BLACKLIST_ENDPOINT"] = "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"
+        log.info(f"Using the endpoint: {os.getenv('BLACKLIST_ENDPOINT')} to test JWT blacklist functionality")
+        log.debug(f"The cookiejar {cookiejar}")
 
+
+
+def main():
     failures = 0
     tests = 0
 
     # We need the tests to run in this order.
-    for test in ( unauthed_download_test, auth_download_test, authed_download_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 
@@ -324,11 +334,11 @@ def main():
 
     log.info(f"Test had {failures} failures in {tests} tests")
     # Build Test File Json Object
-    if(failures < 1):
+    if (failures < 1):
         message = "All Tests Passed"
         color = "success"
         exit_code = 0
-    elif(failures < 3):
+    elif (failures < 3):
         message = f"{failures} of {tests} Tests Failed ⚠z"
         color = "important"
         exit_code = 1
@@ -338,11 +348,11 @@ def main():
         exit_code = 1
 
     # Write out the string
-    testresults = json.dumps( {"schemaVersion": 1, "label": "Tests", "message": message, "color": color } )
+    testresults = json.dumps({"schemaVersion": 1, "label": "Tests", "message": message, "color": color})
 
     # Required to make the file public and usable as input for the badge.
-    acls_and_stuff = { "CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
-                       "ContentType": "application/json", "ACL": "public-read" }
+    acls_and_stuff = {"CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
+                      "ContentType": "application/json", "ACL": "public-read"}
 
     # Dump results to S3.
     log.info(f"Writing test results: {testresults}")
@@ -350,6 +360,7 @@ def main():
 
     # We need a non-zero exit code if we had any failures
     sys.exit(exit_code)
+
 
 if __name__ == '__main__':
     if env_var_check():

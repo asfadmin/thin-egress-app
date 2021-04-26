@@ -320,7 +320,7 @@ class jwt_blacklist_test(unittest.TestCase):
             "last_name": "Badguy",
             "urs-user-id": "badguy1231",
             "urs-access-token": "longtokenvalue",
-            "urs-groups": [],
+            "urs-groups": "",
             "iat": 1619103148,
             "exp": 1619707948
         }

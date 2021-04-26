@@ -310,8 +310,11 @@ class jwt_blacklist_test(unittest.TestCase):
         os.environ["BLACKLIST_ENDPOINT"] = "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"
         log.info(f"Using the endpoint: {os.getenv('BLACKLIST_ENDPOINT')} to test JWT blacklist functionality")
 
+        os.system("export ENV_VARS=$(aws lambda  get-function-configuration --function-name teadev2-jenk-same-EgressLambda)")
+        old_env_vars = str(os.getenv()["Environment"]["Variables"]).translate({ord(i): None for i in '{}'})
+
         aws_lambda = "teadev2-jenk-same-EgressLambda"  # TODO: update to be  dynamic
-        test_env_vars = 'Variables="{BLACKLIST_ENDPOINT=https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json}"'
+        test_env_vars = f'Variables={old_env_vars}, {{BLACKLIST_ENDPOINT=https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json}}"'
         os.system(f'aws lambda update-function-configuration --function-name {aws_lambda} --environment {test_env_vars}')
 
         headers = {
@@ -326,7 +329,6 @@ class jwt_blacklist_test(unittest.TestCase):
 
         r = requests.get(url, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")
-
         self.assertTrue(r.status_code == 401)
 
 

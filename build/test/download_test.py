@@ -315,7 +315,7 @@ class jwt_blacklist_test(unittest.TestCase):
         test_env_vars = '{"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}'
         os.system(f'aws lambda update-function-configuration --function-name {aws_lambda} --environment {test_env_vars}')
 
-        headers = {{
+        headers = {
             "first_name": "Brian",
             "last_name": "Badguy",
             "urs-user-id": "badguy1231",
@@ -323,7 +323,7 @@ class jwt_blacklist_test(unittest.TestCase):
             "urs-groups": [],
             "iat": 1619103148,
             "exp": 1619707948
-        }}
+        }
 
         r = requests.get(url, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")

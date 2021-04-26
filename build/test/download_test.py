@@ -312,7 +312,7 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info(f"Using the endpoint: {os.getenv('BLACKLIST_ENDPOINT')} to test JWT blacklist functionality")
         # log.debug(f"The cookiejar {cookiejar}")
         aws_lambda = "teadev2-jenk-same-EgressLambda"  # TODO: update to be  dynamic
-        test_env_vars = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
+        test_env_vars = '{"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}'
         os.system(f'aws lambda update-function-configuration --function-name {aws_lambda} --environment {test_env_vars}')
 
         headers = {{

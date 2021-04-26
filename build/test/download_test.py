@@ -328,6 +328,8 @@ class jwt_blacklist_test(unittest.TestCase):
         r = requests.get(url, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")
 
+        self.assertTrue(r.status_code == 401)
+
 
 def main():
     failures = 0

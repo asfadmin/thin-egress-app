@@ -321,8 +321,8 @@ class jwt_blacklist_test(unittest.TestCase):
             "urs-user-id": "badguy1231",
             "urs-access-token": "longtokenvalue",
             "urs-groups": "",
-            "iat": 1619103148,
-            "exp": 1619707948
+            "iat": "1619103148",
+            "exp": "1619707948"
         }
 
         r = requests.get(url, headers=headers)

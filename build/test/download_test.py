@@ -307,20 +307,18 @@ class jwt_blacklist_test(unittest.TestCase):
     def test_validate_jwt_blacklist(self):
         url = f"{APIROOT}/{METADATA_FILE}"
 
-        os.environ["BLACKLIST_ENDPOINT"] = "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"
-        log.info(f"Using the endpoint: {os.getenv('BLACKLIST_ENDPOINT')} to test JWT blacklist functionality")
+        endpoint = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
+        log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
 
         aws_lambda_client = boto3.client('lambda')
-        aws_function_name = 'teadev2-jenk-same-EgressLambda'
+        # aws_function_name = 'teadev2-jenk-same-EgressLambda'
+        aws_function_name = os.getenv("AWS_FUNCTION_NAME")
 
-        response = aws_lambda_client.get_function_configuration(
+        lambda_configuration = aws_lambda_client.get_function_configuration(
             FunctionName=aws_function_name
         )
 
-        endpoint = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
-
-        old_env_vars = response["Environment"]
-        new_env_vars = response["Environment"]
+        new_env_vars = lambda_configuration["Environment"]
         new_env_vars["Variables"].update(endpoint)
 
         log.info(f"Temporarily updated function {aws_function_name}'s env variables")
@@ -341,11 +339,9 @@ class jwt_blacklist_test(unittest.TestCase):
         print(f"JWT BLACKLIST test code: {r.status_code}")
 
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
-                                                                          Environment=new_env_vars)
+                                                                          Environment=lambda_configuration["Environment"])
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
         self.assertTrue(r.status_code == 401)
-
-
 
 
 def main():

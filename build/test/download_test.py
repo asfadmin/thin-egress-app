@@ -339,10 +339,11 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info(f"Attempting with invalid credentials: {headers}")
         r = requests.get(url, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")
-        self.assertTrue(r.status_code == 401)
 
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
                                                                           Environment=new_env_vars)
+        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+        self.assertTrue(r.status_code == 401)
 
 
 

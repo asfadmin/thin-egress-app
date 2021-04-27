@@ -306,6 +306,7 @@ class jwt_blacklist_test(unittest.TestCase):
 
     def test_validate_jwt_blacklist(self):
         url = f"{APIROOT}/{METADATA_FILE}"
+        global cookiejar
 
         endpoint = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
         log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
@@ -335,7 +336,7 @@ class jwt_blacklist_test(unittest.TestCase):
             "exp": "1619707948"
         }
         log.info(f"Attempting with invalid credentials: {headers}")
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, cookies=cookiejar, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")
 
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,

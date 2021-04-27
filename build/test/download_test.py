@@ -311,8 +311,8 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
 
         aws_lambda_client = boto3.client('lambda')
-        # aws_function_name = 'teadev2-jenk-same-EgressLambda'
-        aws_function_name = os.getenv("AWS_FUNCTION_NAME")
+        aws_function_name = 'teadev2-jenk-same-EgressLambda'
+        # aws_function_name = os.getenv("AWS_FUNCTION_NAME")
 
         lambda_configuration = aws_lambda_client.get_function_configuration(
             FunctionName=aws_function_name

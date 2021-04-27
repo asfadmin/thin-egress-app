@@ -214,6 +214,8 @@ class authed_download_test(unittest.TestCase):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         global cookiejar
 
+        log.info(f"COOKIEJAR: {cookiejar}")
+
         log.info(f"Attempting to access an approved PRIVATE file: {url}")
         r = requests.get(url, cookies=cookiejar)
 

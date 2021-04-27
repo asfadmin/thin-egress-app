@@ -2,7 +2,6 @@ import argparse
 import sys
 import unittest
 import os
-import jwt
 import boto3
 import requests
 from requests.auth import HTTPBasicAuth

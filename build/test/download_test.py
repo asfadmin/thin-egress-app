@@ -214,8 +214,6 @@ class authed_download_test(unittest.TestCase):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         global cookiejar
 
-        log.info(f"COOKIEJAR: {cookiejar}")
-
         log.info(f"Attempting to access an approved PRIVATE file: {url}")
         r = requests.get(url, cookies=cookiejar)
 
@@ -256,7 +254,7 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Checking custom header ({header_name}) value for {url}")
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
         log.info(f"Got headers {r.headers}")
-
+        log.info(f"HEADER: {r.headers}")
         header_value = r.headers.get(header_name)
         log.info(f"{header_name} had value '{header_value}' (Expect 'rainheader1 value')")
         self.assertTrue(r.headers.get(header_name) is not None)
@@ -338,13 +336,13 @@ class jwt_blacklist_test(unittest.TestCase):
             "exp": "1619707948"
         }
         log.info(f"Attempting with invalid credentials: {headers}")
-        r = requests.get(url, cookies=cookiejar, headers=headers)
+        r = requests.get(url, headers=headers)
         print(f"JWT BLACKLIST test code: {r.status_code}")
 
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
                                                                           Environment=lambda_configuration["Environment"])
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
-        self.assertTrue(r.status_code == 401)
+        self.assertTrue(r.is_redirect)
 
 
 def main():

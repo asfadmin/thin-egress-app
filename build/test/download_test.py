@@ -307,14 +307,14 @@ class jwt_blacklist_test(unittest.TestCase):
     def test_validate_jwt_blacklist(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
+        global STACKNAME
 
         # TODO: Wrap into a try block
         endpoint = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
         log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
 
         aws_lambda_client = boto3.client('lambda')
-        aws_function_name = 'teadev2-jenk-same-EgressLambda'
-        # aws_function_name = os.getenv("AWS_FUNCTION_NAME")
+        aws_function_name = f'{STACKNAME}-EgressLambda'
 
         lambda_configuration = aws_lambda_client.get_function_configuration(
             FunctionName=aws_function_name
@@ -338,6 +338,8 @@ class jwt_blacklist_test(unittest.TestCase):
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
                                                                           Environment=lambda_configuration["Environment"])
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
+        #TODO: Figure out what error is supposed to be thrown
         self.assertTrue(True)
 
 

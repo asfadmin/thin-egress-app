@@ -340,7 +340,7 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
 
         #TODO: Figure out what error is supposed to be thrown
-        self.assertTrue(True)
+        self.assertTrue(r.status_code == 403)
 
 
 def main():

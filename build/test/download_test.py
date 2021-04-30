@@ -338,7 +338,7 @@ class jwt_blacklist_test(unittest.TestCase):
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
                                                                           Environment=lambda_configuration["Environment"])
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
-
+        print(r.status_code)
         #TODO: Figure out what error is supposed to be thrown
         self.assertTrue(r.status_code == 403)
 

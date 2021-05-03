@@ -62,7 +62,7 @@ default_test_result_bucket = "asf.public.code"
 default_test_result_object = "thin-egress-app/testresults.json"
 default_locate_bucket = "s1-ocn-1e29d408"
 TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", default_test_result_bucket)
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
+TEST_RESULT_OBJECT = os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
 LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 
 # Global variable we'll use for our tests
@@ -151,8 +151,9 @@ class auth_download_test(unittest.TestCase):
         request = session.get(url)
         url_earthdata = request.url
 
-        secret_password = urs_password[0] + "*"*(len(urs_password)-2) + urs_password[-1]
-        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
+        secret_password = urs_password[0] + "*" * (len(urs_password) - 2) + urs_password[-1]
+        log.info(
+            f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
         login2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, urs_password))
 
         log.info(f"Login attempt results in status_code: {login2.status_code}")
@@ -161,14 +162,15 @@ class auth_download_test(unittest.TestCase):
         # Copy .asf.alaska.edu cookies to match API Address
         for z in cookiejar:
             if "asf.alaska.edu" in z.domain:
-                 logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
-                 cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
+                logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
+                cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
         log.info(f"Generated cookies: {cookiejar}")
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")
         self.assertTrue(final_request.status_code == 200)
+
 
 class authed_download_test(unittest.TestCase):
     # Check that we get a URS auth redirect for auth'd downloads
@@ -283,7 +285,7 @@ class authed_download_test(unittest.TestCase):
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
                 # Fix the padding:
-                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
+                cookie_b64 += '=' * (4 - (len(cookie_b64) % 4))
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
@@ -293,19 +295,65 @@ class authed_download_test(unittest.TestCase):
         self.assertTrue(token is not None)
 
         log.info(f"Attempting to download {url} using the token as a Bearer token")
-        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
+        r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
-def main():
 
+class jwt_blacklist_test(unittest.TestCase):
+
+    def set_original_env_vars(self, aws_lambda_client, function_name, env):
+        orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=function_name,
+                                                                          Environment=env)
+        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
+    def test_validate_jwt_blacklist(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        global cookiejar
+        global STACKNAME
+
+        try:
+            endpoint = os.getenv("BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
+            endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+            log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
+
+            aws_lambda_client = boto3.client('lambda')
+            aws_function_name = f'{STACKNAME}-EgressLambda'
+
+            lambda_configuration = aws_lambda_client.get_function_configuration(
+                FunctionName=aws_function_name
+            )
+
+            new_env_vars = lambda_configuration["Environment"]
+            new_env_vars["Variables"].update(endpoint_dict)
+
+            log.info(f"Temporarily updated function {aws_function_name}'s env variables")
+            env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
+            log.info(f"Update status: {env_vars_update}")
+
+            JWT_COOKIE_NAME = os.getenv('JWT_COOKIENAME', 'asf-urs')
+            jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJmaXJzdF9uYW1lIjoiRG91Z2xhcyIsImxhc3RfbmFtZSI6IlNvcmVuc2VuIiwiZW1haWwiOiJkbXNvcmVuc2VuQGFsYXNrYS5lZHUiLCJ1cnMtdXNlci1pZCI6ImRtc29yZW5zZW4iLCJ1cnMtYWNjZXNzLXRva2VuIjoiZXlKMGVYQWlPaUpLVjFRaUxDSnZjbWxuYVc0aU9pSkZZWEowYUdSaGRHRWdURzluYVc0aUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SjBlWEJsSWpvaVQwRjFkR2dpTENKMWFXUWlPaUprYlhOdmNtVnVjMlZ1SWl3aVkyeHBaVzUwWDJsa0lqb2lNRUZUTkhCdVJWVnVNV2MxYUdSbVIwUkdTMUkxWnlJc0ltVjRjQ0k2TVRZeU1qRTFOVGc0TXl3aWFXRjBJam94TmpFNU5UWXpPRGd6TENKcGMzTWlPaUpGWVhKMGFHUmhkR0VnVEc5bmFXNGlmUS56OHhXTGdWcldLdE5GYjBBVnpwcmpZYWsyaFduMnl3MWlyYUU3RVpTUVhzIiwidXJzLWdyb3VwcyI6W10sImlhdCI6MTYxOTU2Mzg4NCwiZXhwIjoxNjIwMTY4Njg0fQ.hKHmU239tgYoByeS7WIF5a7gg4vq0162TAI0Vgy_inxBurnart2QGMrOOgtE4GZW-8_5EI21713KQRsMKRBqhPh-SB9KrxJ9A3K9oYZdM-QEgSJ2sozGLYeS0pXAwGSxIy7mEgX2DbSNZFhEWfhsumViurhBW8EeB8fH2iymwlaqA05H9ZzrxCTBgpRsnfK9329BqDSWxqFLaZl0dUoR0evss82fcfZn6lskvo8dHgZDuZATcuMaloHu50R_sXicmIvCBTqoNfAqGygNff5VasBmZrRBA4Cz8Gq8bG_TTCm1GfwXwweBPcgZv59UvoPpfxoQav8sAdfH13KFpBuedBTeESg8iflZTALrCXdzhX-lND6QtWOiq8XArItTyEkIQj0l7iuZ291UZGOYvr3GUOl-YkwG3TbesOIQxdckog6Xlv8BP4S8GXhWphbyxnlOo9lgSLeYjZ9J-e5dg2hR3Rr6ZLMQmbwyehgoT9bXxdrxdmr4JRCkol0AydrfFeBBipSgzkMrLSVVDAmBs5CTehK7DjXSCRT5mKFVq1UqWK7Ww9nAoWycJ6LpblO-mCzLChhYdRA342jns15_RnEsddYqPEgigg_kTOyAk4ws97WUsNuA8kxaN8NDnpAxhhR6Qow2tp1rxBRPByzfwZxA4oiI4KVoPxrFBJ4iHHdkIDo"
+            header = {"cookie": f"{JWT_COOKIE_NAME}={jwt}"}
+
+            log.info(f"Attempting with invalid credentials: {jwt}")
+            r = requests.get(url, headers=header)
+            print(f"JWT BLACKLIST test code: {r.status_code}")
+            self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+        except Exception as e:
+            log.info(e)
+            self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+
+        self.assertTrue(r.status_code == 401)
+
+
+def main():
     failures = 0
     tests = 0
 
     # We need the tests to run in this order.
-    for test in ( unauthed_download_test, auth_download_test, authed_download_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 
@@ -324,11 +372,11 @@ def main():
 
     log.info(f"Test had {failures} failures in {tests} tests")
     # Build Test File Json Object
-    if(failures < 1):
+    if (failures < 1):
         message = "All Tests Passed"
         color = "success"
         exit_code = 0
-    elif(failures < 3):
+    elif (failures < 3):
         message = f"{failures} of {tests} Tests Failed ⚠z"
         color = "important"
         exit_code = 1
@@ -338,11 +386,11 @@ def main():
         exit_code = 1
 
     # Write out the string
-    testresults = json.dumps( {"schemaVersion": 1, "label": "Tests", "message": message, "color": color } )
+    testresults = json.dumps({"schemaVersion": 1, "label": "Tests", "message": message, "color": color})
 
     # Required to make the file public and usable as input for the badge.
-    acls_and_stuff = { "CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
-                       "ContentType": "application/json", "ACL": "public-read" }
+    acls_and_stuff = {"CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
+                      "ContentType": "application/json", "ACL": "public-read"}
 
     # Dump results to S3.
     log.info(f"Writing test results: {testresults}")
@@ -350,6 +398,7 @@ def main():
 
     # We need a non-zero exit code if we had any failures
     sys.exit(exit_code)
+
 
 if __name__ == '__main__':
     if env_var_check():

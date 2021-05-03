@@ -400,7 +400,13 @@ def login():
 @app.route('/version')
 def version():
     log.info("Got a version request!")
-    return json.dumps({'version_id': '<BUILD_ID>'})
+    version_return = {'version_id': '<BUILD_ID>'}
+    
+    # If we've flushed, lets return the flush time. 
+    if os.getenv('BUMP'):
+        version_return['last_flush'] = os.getenv('BUMP')
+    
+    return json.dumps(version_return)
 
 
 @app.route('/locate')

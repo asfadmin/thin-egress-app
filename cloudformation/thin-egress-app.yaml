@@ -967,6 +967,10 @@ Resources:
       Environment:
         Variables:
           TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
+          LOGLEVEL: !Ref Loglevel
+          LOGTYPE: !Ref Logtype
+          BUILD_VERSION: "<BUILD_ID>"
+          MATURITY: !Ref Maturity
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'
 

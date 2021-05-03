@@ -332,15 +332,14 @@ class jwt_blacklist_test(unittest.TestCase):
         header = {"cookie": f"{JWT_COOKIE_NAME}={jwt}"}
 
         log.info(f"Attempting with invalid credentials: {jwt}")
-        r = requests.get(url, headers=header)  # TODO: Update
+        r = requests.get(url, headers=header)
         print(f"JWT BLACKLIST test code: {r.status_code}")
 
         orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
                                                                           Environment=lambda_configuration["Environment"])
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
-        print(r.status_code)
-        #TODO: Figure out what error is supposed to be thrown
-        self.assertTrue(r.status_code == 403)
+
+        self.assertTrue(r.status_code == 401)
 
 
 def main():

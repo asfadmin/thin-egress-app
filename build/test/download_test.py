@@ -304,40 +304,46 @@ class authed_download_test(unittest.TestCase):
 
 class jwt_blacklist_test(unittest.TestCase):
 
+    def set_original_env_vars(self, aws_lambda_client, function_name, env):
+        orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=function_name,
+                                                                          Environment=env
+        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
     def test_validate_jwt_blacklist(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
         global STACKNAME
 
-        # TODO: Wrap into a try block
-        endpoint = {"BLACKLIST_ENDPOINT": "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json"}
-        log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
+        try:
+            endpoint = os.getenv("BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
+            endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+            log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
 
-        aws_lambda_client = boto3.client('lambda')
-        aws_function_name = f'{STACKNAME}-EgressLambda'
+            aws_lambda_client = boto3.client('lambda')
+            aws_function_name = f'{STACKNAME}-EgressLambda'
 
-        lambda_configuration = aws_lambda_client.get_function_configuration(
-            FunctionName=aws_function_name
-        )
+            lambda_configuration = aws_lambda_client.get_function_configuration(
+                FunctionName=aws_function_name
+            )
 
-        new_env_vars = lambda_configuration["Environment"]
-        new_env_vars["Variables"].update(endpoint)
+            new_env_vars = lambda_configuration["Environment"]
+            new_env_vars["Variables"].update(endpoint_dict)
 
-        log.info(f"Temporarily updated function {aws_function_name}'s env variables")
-        env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
-        log.info(f"Update status: {env_vars_update}")
+            log.info(f"Temporarily updated function {aws_function_name}'s env variables")
+            env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
+            log.info(f"Update status: {env_vars_update}")
 
-        JWT_COOKIE_NAME = os.getenv('JWT_COOKIENAME', 'asf-urs')
-        jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJmaXJzdF9uYW1lIjoiRG91Z2xhcyIsImxhc3RfbmFtZSI6IlNvcmVuc2VuIiwiZW1haWwiOiJkbXNvcmVuc2VuQGFsYXNrYS5lZHUiLCJ1cnMtdXNlci1pZCI6ImRtc29yZW5zZW4iLCJ1cnMtYWNjZXNzLXRva2VuIjoiZXlKMGVYQWlPaUpLVjFRaUxDSnZjbWxuYVc0aU9pSkZZWEowYUdSaGRHRWdURzluYVc0aUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SjBlWEJsSWpvaVQwRjFkR2dpTENKMWFXUWlPaUprYlhOdmNtVnVjMlZ1SWl3aVkyeHBaVzUwWDJsa0lqb2lNRUZUTkhCdVJWVnVNV2MxYUdSbVIwUkdTMUkxWnlJc0ltVjRjQ0k2TVRZeU1qRTFOVGc0TXl3aWFXRjBJam94TmpFNU5UWXpPRGd6TENKcGMzTWlPaUpGWVhKMGFHUmhkR0VnVEc5bmFXNGlmUS56OHhXTGdWcldLdE5GYjBBVnpwcmpZYWsyaFduMnl3MWlyYUU3RVpTUVhzIiwidXJzLWdyb3VwcyI6W10sImlhdCI6MTYxOTU2Mzg4NCwiZXhwIjoxNjIwMTY4Njg0fQ.hKHmU239tgYoByeS7WIF5a7gg4vq0162TAI0Vgy_inxBurnart2QGMrOOgtE4GZW-8_5EI21713KQRsMKRBqhPh-SB9KrxJ9A3K9oYZdM-QEgSJ2sozGLYeS0pXAwGSxIy7mEgX2DbSNZFhEWfhsumViurhBW8EeB8fH2iymwlaqA05H9ZzrxCTBgpRsnfK9329BqDSWxqFLaZl0dUoR0evss82fcfZn6lskvo8dHgZDuZATcuMaloHu50R_sXicmIvCBTqoNfAqGygNff5VasBmZrRBA4Cz8Gq8bG_TTCm1GfwXwweBPcgZv59UvoPpfxoQav8sAdfH13KFpBuedBTeESg8iflZTALrCXdzhX-lND6QtWOiq8XArItTyEkIQj0l7iuZ291UZGOYvr3GUOl-YkwG3TbesOIQxdckog6Xlv8BP4S8GXhWphbyxnlOo9lgSLeYjZ9J-e5dg2hR3Rr6ZLMQmbwyehgoT9bXxdrxdmr4JRCkol0AydrfFeBBipSgzkMrLSVVDAmBs5CTehK7DjXSCRT5mKFVq1UqWK7Ww9nAoWycJ6LpblO-mCzLChhYdRA342jns15_RnEsddYqPEgigg_kTOyAk4ws97WUsNuA8kxaN8NDnpAxhhR6Qow2tp1rxBRPByzfwZxA4oiI4KVoPxrFBJ4iHHdkIDo"
-        header = {"cookie": f"{JWT_COOKIE_NAME}={jwt}"}
+            JWT_COOKIE_NAME = os.getenv('JWT_COOKIENAME', 'asf-urs')
+            jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJmaXJzdF9uYW1lIjoiRG91Z2xhcyIsImxhc3RfbmFtZSI6IlNvcmVuc2VuIiwiZW1haWwiOiJkbXNvcmVuc2VuQGFsYXNrYS5lZHUiLCJ1cnMtdXNlci1pZCI6ImRtc29yZW5zZW4iLCJ1cnMtYWNjZXNzLXRva2VuIjoiZXlKMGVYQWlPaUpLVjFRaUxDSnZjbWxuYVc0aU9pSkZZWEowYUdSaGRHRWdURzluYVc0aUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SjBlWEJsSWpvaVQwRjFkR2dpTENKMWFXUWlPaUprYlhOdmNtVnVjMlZ1SWl3aVkyeHBaVzUwWDJsa0lqb2lNRUZUTkhCdVJWVnVNV2MxYUdSbVIwUkdTMUkxWnlJc0ltVjRjQ0k2TVRZeU1qRTFOVGc0TXl3aWFXRjBJam94TmpFNU5UWXpPRGd6TENKcGMzTWlPaUpGWVhKMGFHUmhkR0VnVEc5bmFXNGlmUS56OHhXTGdWcldLdE5GYjBBVnpwcmpZYWsyaFduMnl3MWlyYUU3RVpTUVhzIiwidXJzLWdyb3VwcyI6W10sImlhdCI6MTYxOTU2Mzg4NCwiZXhwIjoxNjIwMTY4Njg0fQ.hKHmU239tgYoByeS7WIF5a7gg4vq0162TAI0Vgy_inxBurnart2QGMrOOgtE4GZW-8_5EI21713KQRsMKRBqhPh-SB9KrxJ9A3K9oYZdM-QEgSJ2sozGLYeS0pXAwGSxIy7mEgX2DbSNZFhEWfhsumViurhBW8EeB8fH2iymwlaqA05H9ZzrxCTBgpRsnfK9329BqDSWxqFLaZl0dUoR0evss82fcfZn6lskvo8dHgZDuZATcuMaloHu50R_sXicmIvCBTqoNfAqGygNff5VasBmZrRBA4Cz8Gq8bG_TTCm1GfwXwweBPcgZv59UvoPpfxoQav8sAdfH13KFpBuedBTeESg8iflZTALrCXdzhX-lND6QtWOiq8XArItTyEkIQj0l7iuZ291UZGOYvr3GUOl-YkwG3TbesOIQxdckog6Xlv8BP4S8GXhWphbyxnlOo9lgSLeYjZ9J-e5dg2hR3Rr6ZLMQmbwyehgoT9bXxdrxdmr4JRCkol0AydrfFeBBipSgzkMrLSVVDAmBs5CTehK7DjXSCRT5mKFVq1UqWK7Ww9nAoWycJ6LpblO-mCzLChhYdRA342jns15_RnEsddYqPEgigg_kTOyAk4ws97WUsNuA8kxaN8NDnpAxhhR6Qow2tp1rxBRPByzfwZxA4oiI4KVoPxrFBJ4iHHdkIDo"
+            header = {"cookie": f"{JWT_COOKIE_NAME}={jwt}"}
 
-        log.info(f"Attempting with invalid credentials: {jwt}")
-        r = requests.get(url, headers=header)
-        print(f"JWT BLACKLIST test code: {r.status_code}")
-
-        orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
-                                                                          Environment=lambda_configuration["Environment"])
-        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+            log.info(f"Attempting with invalid credentials: {jwt}")
+            r = requests.get(url, headers=header)
+            print(f"JWT BLACKLIST test code: {r.status_code}")
+            self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+        except Exception as e:
+            log.info(e)
+            self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
         self.assertTrue(r.status_code == 401)
 

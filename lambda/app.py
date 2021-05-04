@@ -146,7 +146,7 @@ def get_user_from_token(token):
 
 
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
-    k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
+    k_v.update({'code': code, 'http_method': http_method, 'status': outcome, 'requestid': get_request_id()})
     jsonstr = json.dumps(k_v)
     print(f'{jsonstr}')
 
@@ -401,11 +401,11 @@ def login():
 def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
-    
-    # If we've flushed, lets return the flush time. 
+
+    # If we've flushed, lets return the flush time.
     if os.getenv('BUMP'):
         version_return['last_flush'] = os.getenv('BUMP')
-    
+
     return json.dumps(version_return)
 
 

@@ -1,0 +1,2 @@
+# PyUp should us the devel branch for scanning.
+branch: devel

@@ -6,7 +6,7 @@ flatdict==4.0.1
 jinja2==2.11.3
 jwcrypto==0.8
 netaddr==0.8.0
-pyjwt==2.0.1
+pyjwt==2.1.0
 pyOpenSSL==20.0.1 # maybe not necessary
 python-jose==3.2.0
 PyYAML==5.4.1

@@ -337,10 +337,11 @@ class jwt_blacklist_test(unittest.TestCase):
             self.assertTrue(r.status_code == 401)
         except Exception as e:
             log.info(e)
+            self.assertTrue(False)
 
         log.info("Reverting to original environment variables")
         self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
-        self.assertTrue(False)
+
 
 
 def main():

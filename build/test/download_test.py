@@ -312,7 +312,6 @@ class jwt_blacklist_test(unittest.TestCase):
         global cookiejar
         global STACKNAME
 
-        r = None
         try:
             endpoint = os.getenv("BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
             endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
@@ -333,13 +332,15 @@ class jwt_blacklist_test(unittest.TestCase):
             log.info(f"Update status: {env_vars_update}")
 
             r = requests.get(url, cookies=cookiejar)
+            log.info(f"R STATUS: {r.status_code}")
             print(f"JWT BLACKLIST test code: {r.status_code}")
+            self.assertTrue(r.status_code == 401)
         except Exception as e:
             log.info(e)
 
         log.info("Reverting to original environment variables")
         self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
-        self.assertTrue(r.status_code == 401)
+        self.assertTrue(False)
 
 
 def main():

@@ -307,7 +307,7 @@ class jwt_blacklist_test(unittest.TestCase):
                                                                           Environment=env)
         log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
 
-    def test_validate_jwt_blacklist(self):
+    def test_validate_invalid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
         global STACKNAME
@@ -341,7 +341,7 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info("Reverting to original environment variables")
         self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
-    def test_valid_jwt(self):
+    def test_validate_valid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
         global STACKNAME

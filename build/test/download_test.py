@@ -331,7 +331,7 @@ class jwt_blacklist_test(unittest.TestCase):
             env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
             log.info(f"Update status: {env_vars_update}")
 
-            r = requests.get(url, cookies=cookiejar)
+            r = requests.get(url, cookies=cookiejar, allow_redirects=False)
             log.info(f"R STATUS: {r.status_code}")
             print(f"JWT BLACKLIST test code: {r.status_code}")
             self.assertTrue(r.status_code == 401)

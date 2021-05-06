@@ -299,13 +299,55 @@ class authed_download_test(unittest.TestCase):
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
+
+class jwt_blacklist_test(unittest.TestCase):
+
+    def set_original_env_vars(self, aws_lambda_client, function_name, env):
+        orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=function_name,
+                                                                          Environment=env)
+        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
+    def test_validate_jwt_blacklist(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        global cookiejar
+        global STACKNAME
+
+        try:
+            endpoint = os.getenv("BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
+            endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+            log.info(f"Using the endpoint: {endpoint} to test JWT blacklist functionality")
+
+            aws_lambda_client = boto3.client('lambda')
+            aws_function_name = f'{STACKNAME}-EgressLambda'
+
+            lambda_configuration = aws_lambda_client.get_function_configuration(
+                FunctionName=aws_function_name
+            )
+
+            new_env_vars = lambda_configuration["Environment"]
+            new_env_vars["Variables"].update(endpoint_dict)
+
+            log.info(f"Temporarily updated function {aws_function_name}'s env variables")
+            env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
+            log.info(f"Update status: {env_vars_update}")
+
+            r = requests.get(url, cookies=cookiejar)
+            print(f"JWT BLACKLIST test code: {r.status_code}")
+        except Exception as e:
+            log.info(e)
+
+        log.info("Reverting to original environment variables")
+        self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+        self.assertTrue(r.status_code == 401)
+
+
 def main():
 
     failures = 0
     tests = 0
 
     # We need the tests to run in this order.
-    for test in ( unauthed_download_test, auth_download_test, authed_download_test):
+    for test in ( unauthed_download_test, auth_download_test, authed_download_test,jwt_blacklist_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

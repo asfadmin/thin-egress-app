@@ -332,9 +332,8 @@ class jwt_blacklist_test(unittest.TestCase):
             log.info(f"Update status: {env_vars_update}")
 
             r = requests.get(url, cookies=cookiejar, allow_redirects=False)
-            log.info(f"R STATUS: {r.status_code}")
-            print(f"JWT BLACKLIST test code: {r.status_code}")
-            self.assertTrue(r.status_code == 401)
+            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            self.assertTrue(r.is_redirect)
         except Exception as e:
             log.info(e)
             self.assertTrue(False)

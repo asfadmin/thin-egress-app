@@ -366,7 +366,7 @@ class jwt_blacklist_test(unittest.TestCase):
             log.info(f"Update status: {env_vars_update}")
 
             r = requests.get(url, cookies=cookiejar)
-            log.info(f"R STATUS: {r}")
+            self.assertTrue(r.status_code == 200)
         except Exception as e:
             log.info(e)
             self.assertTrue(False)

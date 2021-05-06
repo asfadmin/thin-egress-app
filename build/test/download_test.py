@@ -341,6 +341,38 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info("Reverting to original environment variables")
         self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
+    def test_valid_jwt(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        global cookiejar
+        global STACKNAME
+
+        try:
+            endpoint = os.getenv("VALID_JWT_BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json")
+            endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+            log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
+
+            aws_lambda_client = boto3.client('lambda')
+            aws_function_name = f'{STACKNAME}-EgressLambda'
+
+            lambda_configuration = aws_lambda_client.get_function_configuration(
+                FunctionName=aws_function_name
+            )
+
+            new_env_vars = lambda_configuration["Environment"]
+            new_env_vars["Variables"].update(endpoint_dict)
+
+            log.info(f"Temporarily updated function {aws_function_name}'s env variables")
+            env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name, Environment=new_env_vars)
+            log.info(f"Update status: {env_vars_update}")
+
+            r = requests.get(url, cookies=cookiejar)
+            self.assertTrue(r.is_redirect)
+        except Exception as e:
+            log.info(e)
+            self.assertTrue(False)
+
+        log.info("Reverting to original environment variables")
+        self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
 
 def main():

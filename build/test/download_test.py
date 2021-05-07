@@ -300,29 +300,31 @@ class authed_download_test(unittest.TestCase):
         # self.assertEqual(r.status_code, 200)
 
 
+def jwt_blacklist_set_original_env_vars(aws_lambda_client, function_name, env):
+    orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=function_name,
+                                                                      Environment=env)
+    log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
+
+def jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name):
+    global STACKNAME
+    endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+    lambda_configuration = aws_lambda_client.get_function_configuration(
+        FunctionName=aws_function_name
+    )
+
+    new_env_vars = lambda_configuration["Environment"]
+    new_env_vars["Variables"].update(endpoint_dict)
+
+    log.info(f"Temporarily updated function {aws_function_name}'s env variables")
+    env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
+                                                                      Environment=new_env_vars)
+    log.info(f"Update status: {env_vars_update}")
+
+    return lambda_configuration
+
+
 class jwt_blacklist_test(unittest.TestCase):
-
-    def set_original_env_vars(self, aws_lambda_client, function_name, env):
-        orignal_env_vars = aws_lambda_client.update_function_configuration(FunctionName=function_name,
-                                                                          Environment=env)
-        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
-
-    def set_up_temp_env_vars(self, aws_lambda_client, endpoint, aws_function_name):
-        global STACKNAME
-        endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
-        lambda_configuration = aws_lambda_client.get_function_configuration(
-            FunctionName=aws_function_name
-        )
-
-        new_env_vars = lambda_configuration["Environment"]
-        new_env_vars["Variables"].update(endpoint_dict)
-
-        log.info(f"Temporarily updated function {aws_function_name}'s env variables")
-        env_vars_update = aws_lambda_client.update_function_configuration(FunctionName=aws_function_name,
-                                                                          Environment=new_env_vars)
-        log.info(f"Update status: {env_vars_update}")
-
-        return lambda_configuration
 
     def test_validate_invalid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
@@ -335,7 +337,7 @@ class jwt_blacklist_test(unittest.TestCase):
             aws_function_name = f'{STACKNAME}-EgressLambda'
             log.info(f"Using the endpoint: {endpoint} to test a invalid JWT with the blacklist functionality")
 
-            lambda_configuration = self.set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
+            lambda_configuration = jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
 
             r = requests.get(url, cookies=cookiejar, allow_redirects=False)
             log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
@@ -345,7 +347,7 @@ class jwt_blacklist_test(unittest.TestCase):
             self.assertTrue(False)
 
         log.info("Reverting to original environment variables")
-        self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+        jwt_blacklist_set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
     def test_validate_valid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
@@ -359,7 +361,7 @@ class jwt_blacklist_test(unittest.TestCase):
             log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
 
             aws_function_name = f'{STACKNAME}-EgressLambda'
-            lambda_configuration = self.set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
+            lambda_configuration = jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
 
             r = requests.get(url, cookies=cookiejar)
             self.assertTrue(r.status_code == 200)
@@ -368,7 +370,7 @@ class jwt_blacklist_test(unittest.TestCase):
             self.assertTrue(False)
 
         log.info("Reverting to original environment variables")
-        self.set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
+        jwt_blacklist_set_original_env_vars(aws_lambda_client, aws_function_name, lambda_configuration["Environment"])
 
 
 def main():

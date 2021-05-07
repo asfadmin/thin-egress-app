@@ -299,13 +299,81 @@ class authed_download_test(unittest.TestCase):
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
+class jwt_blacklist_test(unittest.TestCase):
+
+    def __init__(self):
+        unittest.TestCase.__init__(self)
+        global STACKNAME
+        aws_lambda_client = boto3.client('lambda')
+        aws_function_name = f'{STACKNAME}-EgressLambda'
+        url = f"{APIROOT}/{METADATA_FILE}"
+
+    def set_original_env_vars(self, env):
+        orignal_env_vars = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
+                                                                          Environment=env)
+        log.info(f"Attempt to set environment variables back to their orignal state: {orignal_env_vars}")
+
+    def set_up_temp_env_vars(self, endpoint):
+        endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+        lambda_configuration = self.aws_lambda_client.get_function_configuration(
+            FunctionName=self.aws_function_name
+        )
+
+        new_env_vars = lambda_configuration["Environment"]
+        new_env_vars["Variables"].update(endpoint_dict)
+
+        log.info(f"Temporarily updated function {self.aws_function_name}'s env variables")
+        env_vars_update = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
+                                                                          Environment=new_env_vars)
+        log.info(f"Update status: {env_vars_update}")
+
+        return lambda_configuration
+
+    def test_validate_invalid_jwt(self):
+        global cookiejar
+
+        try:
+            endpoint = os.getenv("BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
+            log.info(f"Using the endpoint: {endpoint} to test a invalid JWT with the blacklist functionality")
+
+            lambda_configuration = self.set_up_temp_env_vars(endpoint)
+
+            r = requests.get(self.url, cookies=cookiejar, allow_redirects=False)
+            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            self.assertTrue(r.is_redirect)
+        except Exception as e:
+            log.info(e)
+            self.assertTrue(False)
+
+        log.info("Reverting to original environment variables")
+        self.set_original_env_vars(lambda_configuration["Environment"])
+
+    def test_validate_valid_jwt(self):
+        global cookiejar
+
+        try:
+            endpoint = os.getenv("VALID_JWT_BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json")
+            log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
+
+            lambda_configuration = self.set_up_temp_env_vars(endpoint)
+
+            r = requests.get(self.url, cookies=cookiejar)
+            self.assertTrue(r.status_code == 200)
+        except Exception as e:
+            log.info(e)
+            self.assertTrue(False)
+
+        log.info("Reverting to original environment variables")
+        self.set_original_env_vars(lambda_configuration["Environment"])
+
+
 def main():
 
     failures = 0
     tests = 0
 
     # We need the tests to run in this order.
-    for test in ( unauthed_download_test, auth_download_test, authed_download_test):
+    for test in ( unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

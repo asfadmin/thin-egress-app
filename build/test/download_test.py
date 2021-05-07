@@ -358,7 +358,6 @@ class jwt_blacklist_test(unittest.TestCase):
     def test_validate_valid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
-        global STACKNAME
 
         try:
             endpoint_env = "VALID_JWT_BLACKLIST_ENDPOINT"

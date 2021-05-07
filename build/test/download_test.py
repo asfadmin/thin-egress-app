@@ -138,6 +138,12 @@ class unauthed_download_test(unittest.TestCase):
 
         log.info(f"Bad cookies should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
         self.assertTrue(r.is_redirect)
+                     
+        log.info(f"Result r.headers['Location']: {r.headers['Location']}")
+        self.assertTrue(r.headers['Location'] is not None)
+
+        log.info(f"Make sure 'Location' header is redirecting to URS")
+        self.assertTrue('oauth/authorize' in r.headers['Location'])
 
 
 class auth_download_test(unittest.TestCase):
@@ -344,6 +350,13 @@ class jwt_blacklist_test(unittest.TestCase):
             r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
             log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
             self.assertTrue(r.is_redirect)
+                 
+            log.info(f"Result r.headers['Location']: {r.headers['Location']}")
+            self.assertTrue(r.headers['Location'] is not None)
+
+            log.info(f"Make sure 'Location' header is redirecting to URS")
+            self.assertTrue('oauth/authorize' in r.headers['Location'])
+                     
         except Exception as e:
             log.info(e)
             self.assertTrue(False)

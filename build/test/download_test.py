@@ -301,8 +301,8 @@ class authed_download_test(unittest.TestCase):
 
 class jwt_blacklist_test(unittest.TestCase):
 
-    def __init__(self, *args, **kwargs):
-        super(unittest.TestCase, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(unittest.TestCase, self).__init__()
         self.gen_stubs()
         global STACKNAME
         aws_lambda_client = boto3.client('lambda')

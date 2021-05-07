@@ -324,23 +324,29 @@ def jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function
     return lambda_configuration
 
 
-class jwt_blacklist_test(unittest.TestCase):
+def jwt_blacklist_create_variables(env_endpoint_key, endpoint_url):
+    aws_lambda_client = boto3.client('lambda')
+    endpoint = os.getenv(env_endpoint_key, endpoint_url)
+    aws_function_name = f'{STACKNAME}-EgressLambda'
+    lambda_configuration = jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
+    return aws_lambda_client, endpoint, aws_function_name, lambda_configuration
 
+
+class jwt_blacklist_test(unittest.TestCase):
     def test_validate_invalid_jwt(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
 
         try:
-            aws_lambda_client = boto3.client('lambda')
-            endpoint = os.getenv("BLACKLIST_ENDPOINT",
-                                 "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
-            aws_function_name = f'{STACKNAME}-EgressLambda'
+            endpoint_env = "VALID_JWT_BLACKLIST_ENDPOINT"
+            endpoint_default = "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json"
+            aws_lambda_client, endpoint, aws_function_name, lambda_configuration = jwt_blacklist_create_variables(
+                endpoint_env, endpoint_default)
             log.info(f"Using the endpoint: {endpoint} to test a invalid JWT with the blacklist functionality")
 
-            lambda_configuration = jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
-
             r = requests.get(url, cookies=cookiejar, allow_redirects=False)
-            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            log.info(
+                f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
             self.assertTrue(r.is_redirect)
         except Exception as e:
             log.info(e)
@@ -355,13 +361,11 @@ class jwt_blacklist_test(unittest.TestCase):
         global STACKNAME
 
         try:
-            aws_lambda_client = boto3.client('lambda')
-            endpoint = os.getenv("VALID_JWT_BLACKLIST_ENDPOINT", "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json")
-            endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
+            endpoint_env = "VALID_JWT_BLACKLIST_ENDPOINT"
+            endpoint_default = "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json"
+            aws_lambda_client, endpoint, aws_function_name, lambda_configuration = jwt_blacklist_create_variables(
+                endpoint_env, endpoint_default)
             log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
-
-            aws_function_name = f'{STACKNAME}-EgressLambda'
-            lambda_configuration = jwt_blacklist_set_up_temp_env_vars(aws_lambda_client, endpoint, aws_function_name)
 
             r = requests.get(url, cookies=cookiejar)
             self.assertTrue(r.status_code == 200)

@@ -299,6 +299,7 @@ class authed_download_test(unittest.TestCase):
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
 
+
 class jwt_blacklist_test(unittest.TestCase):
 
     def set_original_env_vars(self, aws_lambda_client, function_name, env):

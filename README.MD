@@ -63,6 +63,7 @@ for a quick and easy TEA bootstrapping script.
   * [Validating a Deployment](#validating-a-deployment)
     * [Accessing the API Gateway inside EDC](#accessing-the-api-gateway-inside-edc)
   * [Requesting an EDC Public App](#requesting-an-edc-public-app)
+  * [Updating configuration of a live TEA](#updating-configuration-of-a-live-tea)
   * [Using custom domain names](#using-custom-domain-names)
 * [Logs](#logs) - What TEA does with logs
   * [CloudWatch Logs](#cloudwatch-logs)
@@ -742,6 +743,14 @@ After the NASD has been processed and a new CloudFront domain is generated
 for your TEA deployment, you'll need to update the `DomainName` and `CookieName`
 parameters of your [TEA Deployment](#all-parameters) with the new CloudFront 
 domain name.
+
+### Updating configuration of a live TEA
+
+If the bucket map is updated, because of caching it can take quite some time before TEA loads it. 
+If you would like to force TEA to load the new configs immediately, invoke the bumper lambda:
+```bash
+aws $AWSENV lambda invoke --function-name="${STACK_NAME}-BumperLambda" output.txt 
+```
 
 ### Using custom domain names
 

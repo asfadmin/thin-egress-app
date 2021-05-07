@@ -947,3 +947,64 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UpdatePolicyLambda.Arn
 
+  BumperLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Invoke this lambda to force reload of the egress lambda's config, including bucket map.
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Role: !GetAtt BumperLambdaIamRole.Arn
+      FunctionName: !Sub "${AWS::StackName}-BumperLambda"
+      VpcConfig:
+        !If
+        - UsePrivateVPC
+        - SecurityGroupIds:
+            !Split [ ',', !Ref VPCSecurityGroupIDs ]
+          SubnetIds:
+            !Split [ ',', !Ref VPCSubnetIDs ]
+        - !Ref "AWS::NoValue"
+      Environment:
+        Variables:
+          TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
+          LOGLEVEL: !Ref Loglevel
+          LOGTYPE: !Ref Logtype
+          BUILD_VERSION: "<BUILD_ID>"
+          MATURITY: !Ref Maturity
+      Handler: tea_bumper.lambda_handler
+      Runtime: 'python3.8'
+
+  BumperLambdaIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-BumperLambdaIamRole"
+      MaxSessionDuration: 43200
+      PermissionsBoundary:
+        !If
+          - UsePermissionsBoundary
+          - !Sub "arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundaryName}"
+          - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Action: sts:AssumeRole
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Effect: Allow
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-BumperLambdaIamPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:GetFunctionConfiguration
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-EgressLambda"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"

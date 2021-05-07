@@ -146,6 +146,8 @@ pipeline {
             sh """ cd ${WORKSPACE}/lambda  && \
                    sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
                    zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
+                   sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./tea_bumper.py && \
+                   zip -g ../${CODE_ARCHIVE_FILENAME} ./tea_bumper.py && \
                    zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
                    zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
                    cd .. && \
@@ -161,7 +163,7 @@ pipeline {
             sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
             sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
             sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
-            sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/" ./cloudformation/thin-egress-app.yaml'
+            sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" ./cloudformation/thin-egress-app.yaml'
             sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
 
             // Zip up terraform

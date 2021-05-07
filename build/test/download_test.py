@@ -302,7 +302,7 @@ class authed_download_test(unittest.TestCase):
 class jwt_blacklist_test(unittest.TestCase):
 
     def __init__(self):
-        super().__init__()
+        unittest.TestCase.__init__(self)
         global STACKNAME
         aws_lambda_client = boto3.client('lambda')
         aws_function_name = f'{STACKNAME}-EgressLambda'

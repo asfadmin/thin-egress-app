@@ -331,7 +331,7 @@ class authed_download_test(unittest.TestCase):
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
-        # self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 200)
 
 
 class jwt_blacklist_test(unittest.TestCase):

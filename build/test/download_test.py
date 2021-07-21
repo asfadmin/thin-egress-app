@@ -276,13 +276,10 @@ class authed_download_test(unittest.TestCase):
         paths = sorted(json.loads(r.content))
         self.assertEqual(paths, MAP_PATHS)
 
-    def validate_bearer_token_works(self, url):
+    @staticmethod
+    def find_bearer_token():
         global cookiejar
-
-        token = None
-        # Find the token
         for cookie in cookiejar:
-            # Find the 'asf-urs' cookie...
             if cookie.name == 'asf-urs':
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
@@ -291,7 +288,11 @@ class authed_download_test(unittest.TestCase):
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
-                    token = cookie_json['urs-access-token']
+                    return cookie_json['urs-access-token']
+        return ''
+
+    def validate_bearer_token_works(self, url):
+        token = self.find_bearer_token()
 
         log.info(f"Make sure we were able to decode a token from the cookie: {token} (Expect not None)")
         self.assertTrue(token is not None)
@@ -303,7 +304,6 @@ class authed_download_test(unittest.TestCase):
         # FIXME: This should work, but not until its release into production
         self.assertEqual(r.status_code, 200)
 
-    # Validate EDL token works (if a little incestously)
     def test_validate_bearer_token_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         self.validate_bearer_token_works(url)

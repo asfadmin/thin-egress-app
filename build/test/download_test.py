@@ -120,7 +120,6 @@ class unauthed_download_test(unittest.TestCase):
         log.info(f'Public prefix in restricted bucket {url} Return Code: {r.status_code} (Expect 200)')
         self.assertTrue(r.status_code == 200)
 
-    # Check for 404 on bad request
     def test_404_on_bad_request(self):
         url = f"{APIROOT}/bad/url.ext"
         r = requests.get(url)
@@ -128,7 +127,6 @@ class unauthed_download_test(unittest.TestCase):
         log.info(f"Checking that a non-existent file ({url}) returns a 404: r.status_code (Expect 404)")
         self.assertTrue(r.status_code == 404)
 
-    # Check that a bad cookie value causes URS redirect:
     def test_bad_cookie_value_cause_URS_redirect(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         cookies = {'urs_user_id': "badusername", 'urs_access_token': "blah"}
@@ -147,7 +145,6 @@ class unauthed_download_test(unittest.TestCase):
 
 
 class auth_download_test(unittest.TestCase):
-    # Validate that auth process is successful
     def test_auth_process_is_successful(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
@@ -179,7 +176,6 @@ class auth_download_test(unittest.TestCase):
 
 
 class authed_download_test(unittest.TestCase):
-    # Check that we get a URS auth redirect for auth'd downloads
     def test_urs_auth_redirect_for_auth_downloads(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         global cookiejar
@@ -199,7 +195,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Make sure 'Location' header is not redirecting to URS")
         self.assertTrue('oauth/authorize' not in r.headers['Location'])
 
-    # Check that range requests work
     def test_range_request_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         headers = {"Range": "bytes=1035-1042"}
@@ -215,7 +210,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Range Data: {r.text}")
         self.assertTrue(len(r.text) == 8)
 
-    # Check that approved users can access PRIVATE data:
     def test_approved_user_can_access_private_data(self):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         global cookiejar
@@ -226,7 +220,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"APPROVED Private File check: {r.status_code} (Expect 200)")
         self.assertTrue(r.status_code == 200)
 
-    # Check that approved users CAN'T access PRIVATE data they don't have access to:
     def test_approved_user_cant_access_private_data(self):
         url = f"{APIROOT}/PRIVATE/NOACCESS/testfile"
         global cookiejar
@@ -237,7 +230,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"UNAPPROVED Private File check: {r.status_code} (Expect 403)")
         self.assertTrue(r.status_code == 403)
 
-    # Validating objects with prefix, works
     def test_validating_objects_with_prefix(self):
         url = f"{APIROOT}/SA/BROWSE/dir1/dir2/deepfile.txt"
         global cookiejar
@@ -251,7 +243,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Pre-fixed object Return Code: {r.status_code} (Expect 200)")
         self.assertTrue(r.status_code == 200)
 
-    # Validating custom headers
     def test_validate_custom_headers(self):
         url = f"{APIROOT}/{METADATA_FILE_CH}"
         header_name = 'x-rainheader1'
@@ -265,7 +256,6 @@ class authed_download_test(unittest.TestCase):
         log.info(f"{header_name} had value '{header_value}' (Expect 'rainheader1 value')")
         self.assertTrue(r.headers.get(header_name) is not None)
 
-    # Validate /locate handles complex configuration keys
     def test_validate_locate_handles_complex_configuration_key(self):
         url = f"{APIROOT}/locate?bucket_name={LOCATE_BUCKET}"
         global cookiejar
@@ -278,15 +268,10 @@ class authed_download_test(unittest.TestCase):
         paths = sorted(json.loads(r.content))
         self.assertEqual(paths, MAP_PATHS)
 
-    # Validate EDL token works (if a little incestously)
-    def test_vallidate_bearer_token_works(self):
-        url = f"{APIROOT}/{METADATA_FILE}"
+    @staticmethod
+    def find_bearer_token():
         global cookiejar
-
-        # Find the token
-        token = None
         for cookie in cookiejar:
-            # Find the 'asf-urs' cookie...
             if cookie.name == 'asf-urs':
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
@@ -295,7 +280,11 @@ class authed_download_test(unittest.TestCase):
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
-                    token = cookie_json['urs-access-token']
+                    return cookie_json['urs-access-token']
+        return None
+
+    def validate_bearer_token_works(self, url):
+        token = self.find_bearer_token()
 
         log.info(f"Make sure we were able to decode a token from the cookie: {token} (Expect not None)")
         self.assertTrue(token is not None)
@@ -304,8 +293,15 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
-        # FIXME: This should work, but not until its release into production
-        # self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 200)
+
+    def test_validate_bearer_token_works(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        self.validate_bearer_token_works(url)
+
+    def test_validate_private_file_bearer_token_works(self):
+        url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
+        self.validate_bearer_token_works(url)
 
 
 class jwt_blacklist_test(unittest.TestCase):

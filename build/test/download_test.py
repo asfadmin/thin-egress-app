@@ -279,7 +279,7 @@ class authed_download_test(unittest.TestCase):
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
                     return cookie_json['urs-access-token']
-        return ''
+        return None
 
     def validate_bearer_token_works(self, url):
         token = self.find_bearer_token()

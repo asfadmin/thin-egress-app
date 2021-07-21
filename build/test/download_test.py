@@ -155,8 +155,7 @@ class auth_download_test(unittest.TestCase):
         url_earthdata = request.url
 
         secret_password = urs_password[0] + "*" * (len(urs_password) - 2) + urs_password[-1]
-        log.info(
-            f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
+        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
         login2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, urs_password))
 
         log.info(f"Login attempt results in status_code: {login2.status_code}")
@@ -347,8 +346,7 @@ class jwt_blacklist_test(unittest.TestCase):
             lambda_configuration = self.set_up_temp_env_vars(endpoint)
 
             r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
-            log.info(
-                f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
             self.assertTrue(r.is_redirect)
 
             log.info(f"Result r.headers['Location']: {r.headers['Location']}")

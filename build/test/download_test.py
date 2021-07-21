@@ -301,7 +301,6 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
-        # FIXME: This should work, but not until its release into production
         self.assertEqual(r.status_code, 200)
 
     def test_validate_bearer_token_works(self):

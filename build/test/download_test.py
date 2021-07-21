@@ -276,20 +276,18 @@ class authed_download_test(unittest.TestCase):
         paths = sorted(json.loads(r.content))
         self.assertEqual(paths, MAP_PATHS)
 
-    # Validate EDL token works (if a little incestously)
-    def test_vallidate_bearer_token_works(self):
-        url = f"{APIROOT}/{METADATA_FILE}"
+    def validate_bearer_token_works(self, url):
         global cookiejar
 
-        # Find the token
         token = None
+        # Find the token
         for cookie in cookiejar:
             # Find the 'asf-urs' cookie...
             if cookie.name == 'asf-urs':
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
                 # Fix the padding:
-                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
+                cookie_b64 += '=' * (4 - (len(cookie_b64) % 4))
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
@@ -299,39 +297,20 @@ class authed_download_test(unittest.TestCase):
         self.assertTrue(token is not None)
 
         log.info(f"Attempting to download {url} using the token as a Bearer token")
-        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
-
-        log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
-        # FIXME: This should work, but not until its release into production
-        # self.assertEqual(r.status_code, 200)
-
-    def test_validate_bearer_access_private_fie(self):
-        url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
-        global cookiejar
-
-        # Find the token
-        token = None
-        for cookie in cookiejar:
-            # Find the 'asf-urs' cookie...
-            if cookie.name == 'asf-urs':
-                # Grab the JWT payload:
-                cookie_b64 = cookie.value.split(".")[1]
-                # Fix the padding:
-                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
-                # Decode & Load...
-                cookie_json = json.loads(base64.b64decode(cookie_b64))
-                if 'urs-access-token' in cookie_json:
-                    token = cookie_json['urs-access-token']
-
-        log.info(f"Make sure we were able to decode a token from the cookie: {token} (Expect not None)")
-        self.assertTrue(token is not None)
-
-        log.info(f"Attempting to download {url} using the token as a Bearer token")
-        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
+        r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         self.assertEqual(r.status_code, 200)
+
+    # Validate EDL token works (if a little incestously)
+    def test_validate_bearer_token_works(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        self.validate_bearer_token_works(url)
+
+    def test_validate_private_file_bearer_token_works(self):
+        url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
+        self.validate_bearer_token_works(url)
 
 
 class jwt_blacklist_test(unittest.TestCase):

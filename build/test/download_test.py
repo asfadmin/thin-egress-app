@@ -62,7 +62,7 @@ default_test_result_bucket = "asf.public.code"
 default_test_result_object = "thin-egress-app/testresults.json"
 default_locate_bucket = "s1-ocn-1e29d408"
 TEST_RESULT_BUCKET = os.getenv("TEST_RESULT_BUCKET", default_test_result_bucket)
-TEST_RESULT_OBJECT =  os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
+TEST_RESULT_OBJECT = os.getenv("TEST_RESULT_OBJECT", default_test_result_object)
 LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 
 # Global variable we'll use for our tests
@@ -138,7 +138,7 @@ class unauthed_download_test(unittest.TestCase):
 
         log.info(f"Bad cookies should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
         self.assertTrue(r.is_redirect)
-                     
+
         log.info(f"Result r.headers['Location']: {r.headers['Location']}")
         self.assertTrue(r.headers['Location'] is not None)
 
@@ -157,8 +157,9 @@ class auth_download_test(unittest.TestCase):
         request = session.get(url)
         url_earthdata = request.url
 
-        secret_password = urs_password[0] + "*"*(len(urs_password)-2) + urs_password[-1]
-        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
+        secret_password = urs_password[0] + "*" * (len(urs_password) - 2) + urs_password[-1]
+        log.info(
+            f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
         login2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, urs_password))
 
         log.info(f"Login attempt results in status_code: {login2.status_code}")
@@ -167,14 +168,15 @@ class auth_download_test(unittest.TestCase):
         # Copy .asf.alaska.edu cookies to match API Address
         for z in cookiejar:
             if "asf.alaska.edu" in z.domain:
-                 logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
-                 cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
+                logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
+                cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
         log.info(f"Generated cookies: {cookiejar}")
         final_request = session.get(url, cookies=cookiejar)
 
         log.info(f"Final request returned: {final_request.status_code} (Expect 200)")
         self.assertTrue(final_request.status_code == 200)
+
 
 class authed_download_test(unittest.TestCase):
     # Check that we get a URS auth redirect for auth'd downloads
@@ -289,7 +291,7 @@ class authed_download_test(unittest.TestCase):
                 # Grab the JWT payload:
                 cookie_b64 = cookie.value.split(".")[1]
                 # Fix the padding:
-                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
+                cookie_b64 += '=' * (4 - (len(cookie_b64) % 4))
                 # Decode & Load...
                 cookie_json = json.loads(base64.b64decode(cookie_b64))
                 if 'urs-access-token' in cookie_json:
@@ -299,11 +301,12 @@ class authed_download_test(unittest.TestCase):
         self.assertTrue(token is not None)
 
         log.info(f"Attempting to download {url} using the token as a Bearer token")
-        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
+        r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
 
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
+
 
 class jwt_blacklist_test(unittest.TestCase):
 
@@ -319,7 +322,7 @@ class jwt_blacklist_test(unittest.TestCase):
 
     def set_original_env_vars(self, env):
         original_env_vars = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
-                                                                          Environment=env)
+                                                                                 Environment=env)
         log.info(f"Attempt to set environment variables back to their original state: {original_env_vars}")
 
     def set_up_temp_env_vars(self, endpoint):
@@ -333,7 +336,7 @@ class jwt_blacklist_test(unittest.TestCase):
 
         log.info(f"Temporarily updated function {self.aws_function_name}'s env variables")
         env_vars_update = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
-                                                                          Environment=new_env_vars)
+                                                                               Environment=new_env_vars)
         log.info(f"Update status: {env_vars_update}")
 
         return lambda_configuration
@@ -348,15 +351,16 @@ class jwt_blacklist_test(unittest.TestCase):
             lambda_configuration = self.set_up_temp_env_vars(endpoint)
 
             r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
-            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            log.info(
+                f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
             self.assertTrue(r.is_redirect)
-                 
+
             log.info(f"Result r.headers['Location']: {r.headers['Location']}")
             self.assertTrue(r.headers['Location'] is not None)
 
             log.info(f"Make sure 'Location' header is redirecting to URS")
             self.assertTrue('oauth/authorize' in r.headers['Location'])
-                     
+
         except Exception as e:
             log.info(e)
             self.assertTrue(False)
@@ -383,12 +387,11 @@ class jwt_blacklist_test(unittest.TestCase):
 
 
 def main():
-
     failures = 0
     tests = 0
 
     # We need the tests to run in this order.
-    for test in ( unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 
@@ -407,11 +410,11 @@ def main():
 
     log.info(f"Test had {failures} failures in {tests} tests")
     # Build Test File Json Object
-    if(failures < 1):
+    if (failures < 1):
         message = "All Tests Passed"
         color = "success"
         exit_code = 0
-    elif(failures < 3):
+    elif (failures < 3):
         message = f"{failures} of {tests} Tests Failed ⚠z"
         color = "important"
         exit_code = 1
@@ -421,11 +424,11 @@ def main():
         exit_code = 1
 
     # Write out the string
-    testresults = json.dumps( {"schemaVersion": 1, "label": "Tests", "message": message, "color": color } )
+    testresults = json.dumps({"schemaVersion": 1, "label": "Tests", "message": message, "color": color})
 
     # Required to make the file public and usable as input for the badge.
-    acls_and_stuff = { "CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
-                       "ContentType": "application/json", "ACL": "public-read" }
+    acls_and_stuff = {"CacheControl": "no-cache", "Expires": datetime(2015, 1, 1),
+                      "ContentType": "application/json", "ACL": "public-read"}
 
     # Dump results to S3.
     log.info(f"Writing test results: {testresults}")
@@ -433,6 +436,7 @@ def main():
 
     # We need a non-zero exit code if we had any failures
     sys.exit(exit_code)
+
 
 if __name__ == '__main__':
     if env_var_check():

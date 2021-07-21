@@ -68,7 +68,7 @@ LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 # Global variable we'll use for our tests
 cookiejar = []
 urs_username = os.getenv("URS_USERNAME")
-urs_password = os.getenv("URS_PASSWORD", "0x5&I!]F0C{)_.c@5py")
+urs_password = os.getenv("URS_PASSWORD")
 
 
 def env_var_check():

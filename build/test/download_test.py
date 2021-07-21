@@ -68,7 +68,7 @@ LOCATE_BUCKET = os.getenv("LOCATE_BUCKET", default_locate_bucket)
 # Global variable we'll use for our tests
 cookiejar = []
 urs_username = os.getenv("URS_USERNAME")
-urs_password = os.getenv("URS_PASSWORD")
+urs_password = os.getenv("URS_PASSWORD", "0x5&I!]F0C{)_.c@5py")
 
 
 def env_var_check():
@@ -304,6 +304,35 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
         # FIXME: This should work, but not until its release into production
         # self.assertEqual(r.status_code, 200)
+
+    def test_validate_bearer_access_private_fie(self):
+        url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
+        global cookiejar
+
+        # Find the token
+        token = None
+        for cookie in cookiejar:
+            # Find the 'asf-urs' cookie...
+            if cookie.name == 'asf-urs':
+                # Grab the JWT payload:
+                cookie_b64 = cookie.value.split(".")[1]
+                # Fix the padding:
+                cookie_b64 += '='* (4 - (len(cookie_b64)%4))
+                # Decode & Load...
+                cookie_json = json.loads(base64.b64decode(cookie_b64))
+                if 'urs-access-token' in cookie_json:
+                    token = cookie_json['urs-access-token']
+
+        log.info(f"Make sure we were able to decode a token from the cookie: {token} (Expect not None)")
+        self.assertTrue(token is not None)
+
+        log.info(f"Attempting to download {url} using the token as a Bearer token")
+        r = requests.get(url, headers = {"Authorization": f"Bearer {token}"})
+
+        log.info(f"Bearer Token Download attempt Return Code: {r.status_code} (Expect 200)")
+        # FIXME: This should work, but not until its release into production
+        # self.assertEqual(r.status_code, 200)
+
 
 class jwt_blacklist_test(unittest.TestCase):
 

@@ -217,7 +217,7 @@ class authed_download_test(unittest.TestCase):
 
         log.info(f"APPROVED Private File check: {r.status_code} (Expect 200)")
         self.assertTrue(r.status_code == 200)
-:
+
     def test_approved_user_cant_access_private_data(self):
         url = f"{APIROOT}/PRIVATE/NOACCESS/testfile"
         global cookiejar

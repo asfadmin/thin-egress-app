@@ -530,6 +530,8 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          CORS_ORIGIN:
+            !If [!Ref UseCorsCookieDomain, !Ref  CookieDomain]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

@@ -534,7 +534,7 @@ Resources:
       Environment:
         Variables:
           CORS_ORIGIN:
-            !If [CORS_ORIGIN_CHECK, !Ref CookieDomain, None]
+            !If [CORS_ORIGIN_CHECK, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

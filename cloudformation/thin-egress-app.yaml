@@ -531,7 +531,7 @@ Resources:
       Environment:
         Variables:
           CORS_ORIGIN:
-            !If [!Ref UseCorsCookieDomain, !Ref  CookieDomain]
+            !If [!Ref UseCorsCookieDomain, !Ref  CookieDomain, None]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

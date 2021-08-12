@@ -529,16 +529,13 @@ Resources:
             !Split [ ',', !Ref VPCSubnetIDs ]
         - !Ref "AWS::NoValue"
       Conditions:
-        CHECK_COOKIE_DOMAIN:
-          !Not [!Equals [!Ref CookieDomain, ""]]
-        CHECK_CORS_ORIGIN:
-          !Not [!Equals [!Ref UseCorsCookieDomain, "False"]]
-        CHECK_INSURTION_OF_CORS_ORIGIN:
-          !And [!Condition CHECK_COOKIE_DOMAIN, !Condition CHECK_CORS_ORIGIN]
+        CHECK_COOKIE_DOMAIN: !Not [!Equals [!Ref CookieDomain, ""]]
+        CHECK_CORS_ORIGIN: !Not [!Equals [!Ref UseCorsCookieDomain, "False"]]
+        CHECK_INSURTION_OF_CORS_ORIGIN: !And [!Condition CHECK_COOKIE_DOMAIN, !Condition CHECK_CORS_ORIGIN]
       Environment:
         Variables:
           CORS_ORIGIN:
-            !If [!Condition CHECK_INSURTION_OF_CORS_ORIGIN, !Ref CookieDomain, !Ref "AWS::NoValue"]
+            !If [CHECK_INSURTION_OF_CORS_ORIGIN, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

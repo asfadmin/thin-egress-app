@@ -268,9 +268,9 @@ Conditions:
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
   SuppressHead: !Equals [ !Ref SuppressHeadCheck, "True" ]
-  CHECK_COOKIE_DOMAIN: !Not [ !Equals [ !Ref CookieDomain, "" ] ]
-  CHECK_CORS_ORIGIN: !Not [ !Equals [ !Ref UseCorsCookieDomain, "False" ] ]
-  CHECK_INSURTION_OF_CORS_ORIGIN: !And [ !Condition CHECK_COOKIE_DOMAIN, !Condition CHECK_CORS_ORIGIN ]
+  CheckForCookieDomain: !Not [ !Equals [ !Ref CookieDomain, "" ] ]
+  CheckForCorsOrigin: !Not [ !Equals [ !Ref UseCorsCookieDomain, "False" ] ]
+  CheckIfCorsHeadersNeedConfigured: !And [ !Condition CheckForCookieDomain, !Condition CheckForCorsOrigin ]
 
 Outputs:
   ExternalEndpoint:
@@ -534,7 +534,7 @@ Resources:
       Environment:
         Variables:
           CORS_ORIGIN:
-            !If [CHECK_INSURTION_OF_CORS_ORIGIN, !Ref CookieDomain, !Ref "AWS::NoValue"]
+            !If [CheckIfCorsHeadersNeedConfigured, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

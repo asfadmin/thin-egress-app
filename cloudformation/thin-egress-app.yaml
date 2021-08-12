@@ -528,10 +528,13 @@ Resources:
           SubnetIds:
             !Split [ ',', !Ref VPCSubnetIDs ]
         - !Ref "AWS::NoValue"
+      Conditions:
+        CORS_ORIGIN_CHECK:
+          !Not [!Equals [!Ref UseCorsCookieDomain, None]]
       Environment:
         Variables:
           CORS_ORIGIN:
-            !If [!Ref UseCorsCookieDomain, !Ref  CookieDomain, None]
+            !If [CORS_ORIGIN_CHECK, !Ref CookieDomain, None]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

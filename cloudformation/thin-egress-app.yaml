@@ -530,7 +530,7 @@ Resources:
         - !Ref "AWS::NoValue"
       Conditions:
         CORS_ORIGIN_CHECK:
-          !Not [!Equals [!Ref UseCorsCookieDomain, None]]
+          !Not [!Equals [!Ref UseCorsCookieDomain, !Ref "AWS::NoValue"]]
       Environment:
         Variables:
           CORS_ORIGIN:

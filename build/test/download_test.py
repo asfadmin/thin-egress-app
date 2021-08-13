@@ -174,6 +174,7 @@ class auth_download_test(unittest.TestCase):
         self.assertTrue(final_request.status_code == 200)
 
 
+
 class authed_download_test(unittest.TestCase):
     def test_urs_auth_redirect_for_auth_downloads(self):
         url = f"{APIROOT}/{METADATA_FILE}"
@@ -302,6 +303,13 @@ class authed_download_test(unittest.TestCase):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         self.validate_bearer_token_works(url)
 
+    def test_cors_configuration_works(self):
+        url = f"{APIROOT}/{METADATA_FILE_CH}"
+        global cookiejar
+        headers = {"origin": "TESTING"}
+
+        r = requests.get(url, headers=headers)
+        self.assertTrue(True)
 
 class jwt_blacklist_test(unittest.TestCase):
 

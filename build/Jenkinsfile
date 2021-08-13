@@ -119,6 +119,7 @@ pipeline {
             echo "params.DOMAIN_CERT_ARN: ${params.DOMAIN_CERT_ARN}"
             echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
             echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
+            echo "params.USE_CORS: ${params.USE_CORS}"
 
         }
       }

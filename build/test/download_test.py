@@ -303,13 +303,18 @@ class authed_download_test(unittest.TestCase):
         url = f'{APIROOT}/PRIVATE/ACCESS/testfile'
         self.validate_bearer_token_works(url)
 
+
+class cors_test(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.url = self.url = f"{APIROOT}/{METADATA_FILE}"
+
     def test_cors_configuration_works(self):
-        url = f"{APIROOT}/{METADATA_FILE_CH}"
-        global cookiejar
         headers = {"origin": "TESTING"}
 
-        r = requests.get(url, headers=headers)
+        r = requests.get(self.url, headers=headers)
         self.assertTrue(True)
+
 
 class jwt_blacklist_test(unittest.TestCase):
 

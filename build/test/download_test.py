@@ -307,13 +307,17 @@ class authed_download_test(unittest.TestCase):
 class cors_test(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.url = self.url = f"{APIROOT}/{METADATA_FILE}"
+        self.version = f"{APIROOT}/version"
+        self.url = f"{APIROOT}/{METADATA_FILE}"
 
     def test_cors_configuration_works(self):
         headers = {"origin": "TESTING"}
 
         r = requests.get(self.url, headers=headers)
         self.assertTrue(True)
+
+    def test_version_cors_header(self):
+        r = requests.get(self.version)
 
 
 class jwt_blacklist_test(unittest.TestCase):
@@ -398,7 +402,7 @@ def main():
     tests = 0
 
     # We need the tests to run in this order.
-    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test, cors_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

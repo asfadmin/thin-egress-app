@@ -556,7 +556,8 @@ def try_download_head(bucket, filename):
 
 
 # Attempt to validate HEAD request
-@app.route('/{proxy+}', methods=['HEAD'], cors=app.api.cors)
+# cors=app.api.cors
+@app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
@@ -618,7 +619,8 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'], cors=app.api.cors)
+# cors=app.api.cors
+@app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}

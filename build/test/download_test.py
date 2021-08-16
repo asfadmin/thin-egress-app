@@ -403,7 +403,7 @@ def main():
     tests = 0
 
     # We need the tests to run in this order.
-    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test, cors_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

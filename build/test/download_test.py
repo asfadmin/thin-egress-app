@@ -314,6 +314,7 @@ class cors_test(unittest.TestCase):
         headers = {"origin": "TESTING"}
 
         r = requests.get(self.url, headers=headers)
+        log.info(f"Response {r.text}")
         self.assertTrue(True)
 
     def test_version_cors_header(self):

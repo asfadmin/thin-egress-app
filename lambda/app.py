@@ -187,31 +187,29 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
+def is_cors_headers_configured(origin):
+    if 'origin' and origin in app.current_request.headers:
+        return True
+    log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {origin}')
+    return False
+
+
 def send_cors_headers(headers):
-    # send CORS headers if we're configured to use them
-    print(f"APP.CURRENT_REQUEST.HEADERS: {app.current_request.headers}")
-    print(f"APP.CURRENT_REQUEST: {app.current_request}")
-    print(f"APP: {app}")
-    print(f"APP CORS T/F: {app.api.cors}")
-    if 'origin' in app.current_request.headers:
-        print(f"ORIGIN IS HERE!!!")
-        cors_origin = os.getenv("CORS_ORIGIN")
-        if cors_origin and cors_origin in app.current_request.headers['origin']:
-            headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
-            headers['Access-Control-Allow-Credentials'] = 'true'
-        else:
-            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
+    headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+    headers['Access-Control-Allow-Credentials'] = 'true'
 
 
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    send_cors_headers(headers)
+    if is_cors_headers_configured(os.getenv('CORS_ORIGIN')):
+        send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
+
 
 
 def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):

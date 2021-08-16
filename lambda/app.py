@@ -61,10 +61,7 @@ app = TeaChalice(app_name='egress-lambda')
 origin = os.getenv("CORS_ORIGIN")
 if origin:
     print("CORS_ORIGIN IS HERE")
-    app.api.cors  = CORSConfig(
-    allow_origin=app.current_request.headers[origin],
-    allow_credentials=True
-)
+    app.api.cors  = True
 else:
     print("CORS_ORGIN IS NOT HERE")
 

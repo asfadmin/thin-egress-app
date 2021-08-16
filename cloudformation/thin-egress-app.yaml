@@ -65,6 +65,14 @@ Metadata:
           - PermissionsBoundaryName
 
 Parameters:
+  UseCorsCookieDomain:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Use cookie domain for CORS header support'
+
   DomainName:
     Type: String
     Default: ""
@@ -252,15 +260,6 @@ Parameters:
       - "True"
     Description: 'Optional flag to enable (True) Api Gateway logging to CloudWatch. If "True", you must add an ARN for a role with write access to CloudWatch Logs in your account here: https://console.aws.amazon.com/apigateway/home?region=[REGION]#/settings'
 
-  UseCorsCookieDomain:
-    Type: String
-    Default: "False"
-    AllowedValues:
-      - "False"
-      - "True"
-    Description: 'Use cookie domain for CORS header support'
-
-
 
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
@@ -270,6 +269,9 @@ Conditions:
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
   SuppressHead: !Equals [ !Ref SuppressHeadCheck, "True" ]
+  CheckForCookieDomain: !Not [ !Equals [ !Ref CookieDomain, "" ] ]
+  CheckForCorsOrigin: !Not [ !Equals [ !Ref UseCorsCookieDomain, "False" ] ]
+  CheckIfCorsHeadersNeedConfigured: !And [ !Condition CheckForCookieDomain, !Condition CheckForCorsOrigin ]
 
 Outputs:
   ExternalEndpoint:
@@ -532,6 +534,8 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          CORS_ORIGIN:
+            !If [CheckIfCorsHeadersNeedConfigured, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

@@ -188,6 +188,7 @@ def send_cors_headers(headers):
     print(f"APP.CURRENT_REQUEST.HEADERS: {app.current_request.headers}")
     print(f"APP.CURRENT_REQUEST: {app.current_request}")
     print(f"APP: {app}")
+    print(f"APP CORS T/F: {app.api.cors}")
     if 'origin' in app.current_request.headers:
         print(f"ORIGIN IS HERE!!!")
         cors_origin = os.getenv("CORS_ORIGIN")

@@ -183,6 +183,7 @@ def is_cors_headers_configured(origin):
     if 'origin' and origin in app.current_request.headers:
         return True
     log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {origin}')
+    return False
 
 
 def send_cors_headers(headers):

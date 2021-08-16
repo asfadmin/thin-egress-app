@@ -179,11 +179,24 @@ def do_auth_and_return(ctxt):
     log.info("Redirecting for auth: {0}".format(urs_url))
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
+def is_cors_headers_configured(origin):
+    if 'origin' and origin in app.current_request.headers:
+        return True
+    log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {origin}')
+
+
+def send_cors_headers(headers):
+    # send CORS headers if we're configured to use them
+    headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+    headers['Access-Control-Allow-Credentials'] = 'true'
+
 
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
+    if is_cors_headers_configured(os.getenv('CORS_ORIGIN')):
+        send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')

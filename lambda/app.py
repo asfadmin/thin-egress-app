@@ -1,4 +1,4 @@
-from chalice import Chalice, Response
+from chalice import Chalice, Response, CORSConfig
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import flatdict
@@ -58,9 +58,13 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-if os.getenv("CORS_ORIGIN"):
+origin = os.getenv("CORS_ORIGIN")
+if origin:
     print("CORS_ORIGIN IS HERE")
-    app.api.cors = True
+    app.api.cors  = CORSConfig(
+    allow_origin=app.current_request.headers[origin],
+    allow_credentials=True
+)
 else:
     print("CORS_ORGIN IS NOT HERE")
 

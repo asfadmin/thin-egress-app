@@ -1,4 +1,4 @@
-from chalice import Chalice, Response, CORSConfig
+from chalice import Chalice, Response
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import flatdict
@@ -58,12 +58,8 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-origin = os.getenv("CORS_ORIGIN")
-if origin:
-    print("CORS_ORIGIN IS HERE")
-    app.api.cors  = True
-else:
-    print("CORS_ORGIN IS NOT HERE")
+if os.getenv("CORS_ORIGIN"):
+    app.api.cors = True
 
 
 class TeaException(Exception):
@@ -184,29 +180,26 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
-def is_cors_headers_configured(origin):
-    if 'origin' and origin in app.current_request.headers:
-        return True
-    log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {origin}')
-    return False
-
-
 def send_cors_headers(headers):
-    headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
-    headers['Access-Control-Allow-Credentials'] = 'true'
+    # send CORS headers if we're configured to use them
+    if 'origin' in app.current_request.headers:
+        cors_origin = os.getenv("CORS_ORIGIN")
+        if cors_origin and cors_origin in app.current_request.headers['origin']:
+            headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+            headers['Access-Control-Allow-Credentials'] = 'true'
+        else:
+            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
 
 
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    if is_cors_headers_configured(os.getenv('CORS_ORIGIN')):
-        send_cors_headers(headers)
+    send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
-
 
 
 def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):
@@ -555,7 +548,6 @@ def try_download_head(bucket, filename):
 
 
 # Attempt to validate HEAD request
-# cors=app.api.cors
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
     t = [time.time()]
@@ -618,7 +610,6 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-# cors=app.api.cors
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]

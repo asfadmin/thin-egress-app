@@ -308,19 +308,19 @@ class cors_test(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.version = f"{APIROOT}/version"
-        self.url = f"{APIROOT}/{METADATA_FILE}"
+        url = f"{APIROOT}/{METADATA_FILE_CH}"
         global cookiejar
         self.cookie_jar = cookiejar
 
     def test_cors_configuration_works(self):
-        headers = {"origin": "TESTING"}
+        header_name = 'origin'
+        global cookiejar
+        r = requests.get(self.url, cookies=cookiejar, allow_redirects=False)
+        log.info(f"Got headers {r.headers}")
 
-        r = requests.get(self.url, cookies=self.cookie_jar, headers=headers)
-        log.info(f"Response {r.headers}")
-        self.assertTrue(True)
-
-    def test_version_cors_header(self):
-        r = requests.get(self.version)
+        header_value = r.headers.get(header_name)
+        log.info(r.headers)
+        self.assertTrue(r.headers.get(header_name) is not None)
 
 
 class jwt_blacklist_test(unittest.TestCase):

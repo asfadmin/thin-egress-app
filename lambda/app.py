@@ -1,4 +1,4 @@
-from chalice import Chalice, Response
+from chalice import Chalice, Response, CORSConfig
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import flatdict
@@ -58,8 +58,15 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-if os.getenv("CORS_ORIGIN"):
-    app.api.cors = True
+origin = os.getenv("CORS_ORIGIN")
+if origin:
+    cors_config = CORSConfig(
+        allow_origin=origin,
+        allow_credentials=True
+    )
+    log.info(f"CORS CONFIG is set to: {cors_config}")
+else:
+    cors_config = None
 
 
 class TeaException(Exception):
@@ -180,17 +187,17 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
-def send_cors_headers(headers):
-    # send CORS headers if we're configured to use them
-    if 'CORS_ORIGIN' in app.current_request.headers:
-        cors_origin = os.getenv("CORS_ORIGIN")
-        print(f"CORS_ORIGIN: {cors_origin}")
-        if cors_origin and cors_origin in app.current_request.headers['CORS_ORIGIN']:
-            print(f"CORS_ORIGIN 2: {cors_origin}")
-            headers['Access-Control-Allow-Origin'] = app.current_request.headers['CORS_ORIGIN']
-            headers['Access-Control-Allow-Credentials'] = 'true'
-        else:
-            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
+# def send_cors_headers(headers):
+#     # send CORS headers if we're configured to use them
+#     if 'origin' in app.current_request.headers:
+#         cors_origin = os.getenv("CORS_ORIGIN")
+#         print(f"CORS_ORIGIN: {cors_origin}")
+#         if cors_origin and cors_origin in app.current_request.headers['origin']:
+#             print(f"CORS_ORIGIN 2: {cors_origin}")
+#             headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+#             headers['Access-Control-Allow-Credentials'] = 'true'
+#         else:
+#             log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
 
 
 def make_redirect(to_url, headers=None, status_code=301):
@@ -612,7 +619,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'])
+@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}

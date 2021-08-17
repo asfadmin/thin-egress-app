@@ -310,13 +310,13 @@ class cors_test(unittest.TestCase):
 
     def test_cors_configuration_works(self):
         url = f"{APIROOT}/{METADATA_FILE_CH}"
-        header_name = 'origin'
+        header_name = 'Access-Control-Allow-Origin'
         global cookiejar
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
         log.info(f"Got headers {r.headers}")
 
         header_value = r.headers.get(header_name)
-        log.info(f"{header_name} had value '{header_value}' (Expect 'rainheader1 value')")
+        log.info(f"{header_name} had value '{header_value}' (Expect 'Access-Control-Allow-Origin value')")
         self.assertTrue(r.headers.get(header_name) is not None)
 
 

@@ -64,7 +64,7 @@ if origin:
         allow_origin=origin,
         allow_credentials=True
     )
-    log.info(f"CORS CONFIG is set to: {cors_config}")
+    log.info(f"CORS ORIGIN is set to: {cors_config.allow_origin}")
 else:
     cors_config = None
 
@@ -401,7 +401,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login')
+@app.route('/login', cors=cors_config)
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,

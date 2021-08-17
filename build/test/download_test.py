@@ -303,6 +303,22 @@ class authed_download_test(unittest.TestCase):
         self.validate_bearer_token_works(url)
 
 
+class cors_test(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def test_cors_configuration_works(self):
+        url = f"{APIROOT}/{METADATA_FILE_CH}"
+        header_name = 'Access-Control-Allow-Origin'
+        global cookiejar
+        r = requests.get(url, cookies=cookiejar, allow_redirects=False)
+        log.info(f"Got headers {r.headers}")
+
+        header_value = r.headers.get(header_name)
+        log.info(f"{header_name} had value '{header_value}' (Expect '.asf.alaska.edu value')")
+        self.assertTrue(r.headers.get(header_name) is not None)
+
+
 class jwt_blacklist_test(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
@@ -385,7 +401,7 @@ def main():
     tests = 0
 
     # We need the tests to run in this order.
-    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test):
+    for test in (unauthed_download_test, auth_download_test, authed_download_test, jwt_blacklist_test, cors_test):
         suite = unittest.TestLoader().loadTestsFromTestCase(test)
         result = unittest.TextTestRunner().run(suite)
 

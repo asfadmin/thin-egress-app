@@ -316,7 +316,7 @@ class cors_test(unittest.TestCase):
         log.info(f"Got headers {r.headers}")
 
         header_value = r.headers.get(header_name)
-        log.info(f"{header_name} had value '{header_value}' (Expect 'Access-Control-Allow-Origin value')")
+        log.info(f"{header_name} had value '{header_value}' (Expect '.asf.alaska.edu value')")
         self.assertTrue(r.headers.get(header_name) is not None)
 
 

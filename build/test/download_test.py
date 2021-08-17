@@ -307,18 +307,18 @@ class authed_download_test(unittest.TestCase):
 class cors_test(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.version = f"{APIROOT}/version"
-        self.url = f"{APIROOT}/{METADATA_FILE_CH}"
-        self.cookie_jar = cookiejar
 
     def test_cors_configuration_works(self):
-        header = {"origin": ".asf.alaska.edu"}
+        url = f"{APIROOT}/{METADATA_FILE_CH}"
+        header_name = 'origin'
         global cookiejar
-        r = requests.get(self.url, cookies=cookiejar, headers=header)
+        r = requests.get(url, cookies=cookiejar, allow_redirects=False)
         log.info(f"Got headers {r.headers}")
 
-        log.info(r.headers)
-        self.assertTrue(True)
+        header_value = r.headers.get(header_name)
+        log.info(f"{header_name} had value '{header_value}' (Expect 'rainheader1 value')")
+        self.assertTrue(r.headers.get(header_name) is not None)
+
 
 
 class jwt_blacklist_test(unittest.TestCase):

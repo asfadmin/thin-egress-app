@@ -308,8 +308,7 @@ class cors_test(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.version = f"{APIROOT}/version"
-        url = f"{APIROOT}/{METADATA_FILE_CH}"
-        global cookiejar
+        self.url = f"{APIROOT}/{METADATA_FILE_CH}"
         self.cookie_jar = cookiejar
 
     def test_cors_configuration_works(self):

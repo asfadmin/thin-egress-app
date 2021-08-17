@@ -182,7 +182,7 @@ def do_auth_and_return(ctxt):
 
 def send_cors_headers(headers):
     # send CORS headers if we're configured to use them
-    if app.api.cors:
+    if 'origin' in app.current_request.headers:
         cors_origin = os.getenv("CORS_ORIGIN")
         print(f"CORS_ORIGIN: {cors_origin}")
         if cors_origin and cors_origin in app.current_request.headers['origin']:

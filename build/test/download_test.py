@@ -312,12 +312,11 @@ class cors_test(unittest.TestCase):
         self.cookie_jar = cookiejar
 
     def test_cors_configuration_works(self):
-        header_name = 'origin'
+        header = {"origin": ".asf.alaska.edu"}
         global cookiejar
-        r = requests.get(self.url, cookies=cookiejar, allow_redirects=False)
+        r = requests.get(self.url, cookies=cookiejar, headers=header)
         log.info(f"Got headers {r.headers}")
 
-        header_value = r.headers.get(header_name)
         log.info(r.headers)
         self.assertTrue(True)
 

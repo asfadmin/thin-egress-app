@@ -60,13 +60,7 @@ app = TeaChalice(app_name='egress-lambda')
 
 origin = os.getenv("CORS_ORIGIN")
 if origin:
-    cors_config = CORSConfig(
-        allow_origin=origin,
-        allow_credentials=True
-    )
-    log.info(f"CORS ORIGIN is set to: {cors_config.allow_origin}")
-else:
-    cors_config = {}
+    app.api.cors = True
 
 
 class TeaException(Exception):
@@ -402,7 +396,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login', cors=cors_config)
+@app.route('/login')
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
@@ -620,7 +614,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
+@app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}

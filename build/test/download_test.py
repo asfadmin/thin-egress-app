@@ -312,7 +312,7 @@ class cors_test(unittest.TestCase):
             url = f"{APIROOT}/{METADATA_FILE_CH}"
             header_name = 'Access-Control-Allow-Origin'
             global cookiejar
-            print(os.getnv("USE_CORS"))
+            print(os.getenv("USE_CORS"))
 
             r = requests.get(url, cookies=cookiejar, allow_redirects=False)
             log.info(f"Got headers {r.headers}")

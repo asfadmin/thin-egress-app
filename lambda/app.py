@@ -1,4 +1,4 @@
-from chalice import Chalice, Response
+from chalice import Chalice, Response, CORSConfig
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import flatdict
@@ -58,8 +58,15 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-if os.getenv("CORS_ORIGIN"):
-    app.api.cors = True
+origin = os.getenv("CORS_ORIGIN")
+if origin:
+    cors_config = CORSConfig(
+        allow_origin=origin,
+        allow_credentials=True
+    )
+    log.info(f"CORS ORIGIN is set to: {cors_config.allow_origin}")
+else:
+    cors_config = {}
 
 
 class TeaException(Exception):
@@ -179,25 +186,11 @@ def do_auth_and_return(ctxt):
     log.info("Redirecting for auth: {0}".format(urs_url))
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
-def is_cors_headers_configured(origin):
-    if 'origin' and origin in app.current_request.headers:
-        return True
-    log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {origin}')
-    return False
-
-
-def send_cors_headers(headers):
-    # send CORS headers if we're configured to use them
-    headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
-    headers['Access-Control-Allow-Credentials'] = 'true'
-
 
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    if is_cors_headers_configured(os.getenv('CORS_ORIGIN')):
-        send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
@@ -394,7 +387,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login')
+@app.route('/login', cors=cors_config)
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
@@ -612,7 +605,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'])
+@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}

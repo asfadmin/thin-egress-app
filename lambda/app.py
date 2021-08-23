@@ -59,6 +59,7 @@ class TeaChalice(Chalice):
 app = TeaChalice(app_name='egress-lambda')
 
 app.api.cors = True
+print(f"app.api.cors: {app.api.cors}")
 
 
 class TeaException(Exception):

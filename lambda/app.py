@@ -58,7 +58,7 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-d
+
 class TeaException(Exception):
     """ base exception for TEA """
 

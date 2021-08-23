@@ -58,8 +58,10 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-app.api.cors = True
-print(f"app.api.cors: {app.api.cors}")
+cors_config = CORSConfig(
+    allow_origin=os.getenv('COOKIE_DOMAIN'),
+    allow_credentials=True
+)
 
 
 class TeaException(Exception):
@@ -395,7 +397,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login')
+@app.route('/login', cors=cors_config)
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
@@ -613,7 +615,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'])
+@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}
@@ -728,7 +730,7 @@ def profile():
                     status_code=200, headers={})
 
 
-@app.route('/pubkey', methods=['GET'])
+@app.route('/pubkey', methods=['GET'], cors=cors_config)
 def pubkey():
     thebody = json.dumps({
         'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),

@@ -58,16 +58,6 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-origin = os.getenv("CORS_ORIGIN")
-if origin:
-    cors_config = CORSConfig(
-        allow_origin=origin,
-        allow_credentials=True
-    )
-    log.info(f"CORS ORIGIN is set to: {cors_config.allow_origin}")
-else:
-    cors_config = {}
-
 
 class TeaException(Exception):
     """ base exception for TEA """
@@ -187,10 +177,25 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
+def send_cors_headers(headers):
+    # send CORS headers if we're configured to use them
+    if 'origin' in app.current_request.headers:
+        cors_origin = os.getenv("CORS_ORIGIN")
+        print(f"CORS_ORIGIN: {cors_origin}")
+        print(f"current_requests.headers HEADERS: {app.current_request.headers}")
+        if cors_origin and cors_origin in app.current_request.headers['origin']:
+            print(f"CORS_ORIGIN 2: {cors_origin}")
+            headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+            headers['Access-Control-Allow-Credentials'] = 'true'
+        else:
+            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
+
+
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
+    send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')

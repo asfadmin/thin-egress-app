@@ -58,7 +58,7 @@ class TeaChalice(Chalice):
 
 app = TeaChalice(app_name='egress-lambda')
 
-
+d
 class TeaException(Exception):
     """ base exception for TEA """
 
@@ -392,7 +392,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login', cors=cors_config)
+@app.route('/login')
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
@@ -610,7 +610,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
+@app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}

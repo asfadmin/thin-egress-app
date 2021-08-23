@@ -356,7 +356,7 @@ def get_jwt_field(cookievar: dict, fieldname: str):
     return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
 
-@app.route('/')
+@app.route('/', cors=cors_config)
 def root():
     user_profile = False
     template_vars = {'title': 'Welcome'}
@@ -378,7 +378,7 @@ def root():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/logout')
+@app.route('/logout', cors=cors_config)
 def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
@@ -417,7 +417,7 @@ def login():
     return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
-@app.route('/version')
+@app.route('/version', cors=cors_config)
 def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
@@ -429,7 +429,7 @@ def version():
     return json.dumps(version_return)
 
 
-@app.route('/locate')
+@app.route('/locate', cors=cors_config)
 def locate():
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
@@ -553,7 +553,7 @@ def try_download_head(bucket, filename):
 
 
 # Attempt to validate HEAD request
-@app.route('/{proxy+}', methods=['HEAD'])
+@app.route('/{proxy+}', methods=['HEAD'], cors=cors_config)
 def dynamic_url_head():
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
@@ -724,7 +724,7 @@ def dynamic_url():
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
-@app.route('/profile')
+@app.route('/profile', cors=cors_config)
 def profile():
     return Response(body='Profile not available.',
                     status_code=200, headers={})

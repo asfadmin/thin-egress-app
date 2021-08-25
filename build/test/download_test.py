@@ -315,7 +315,7 @@ class cors_test(unittest.TestCase):
         r = requests.get(url, cookies=cookiejar, headers=origin_headers, allow_redirects=False)
         log.info(f"Got headers {r.headers}")
         self.access_control_allow_origin_configuration_test(r)
-        self.access_control_allow_headers_test(r)
+        self.access_control_allow_creds_test(r)
 
     def access_control_allow_origin_configuration_test(self, r):
         header_name = 'Access-Control-Allow-Origin'
@@ -325,13 +325,13 @@ class cors_test(unittest.TestCase):
         log.info(f"{header_name} had value '{header_value}' (Expect {expected_value})")
         self.assertTrue(header_value == expected_value)
 
-    def access_control_allow_headers_test(self, r):
-        header_name = 'Access-Control-Allow-Headers'
+    def access_control_allow_creds_test(self, r):
+        header_name = 'Access-Control-Allow-Credentials'
 
         header_value = r.headers.get(header_name)
         expected_value = 'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'
         log.info(f"{header_name} had value '{header_value}' (Expect {expected_value}")
-        self.assertTrue(header_value == expected_value)
+        self.assertTrue(header_value is True)
 
 
 class jwt_blacklist_test(unittest.TestCase):

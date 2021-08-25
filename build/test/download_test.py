@@ -321,7 +321,7 @@ class cors_test(unittest.TestCase):
         header_name = 'Access-Control-Allow-Origin'
 
         header_value = r.headers.get(header_name)
-        expected_value = '.asf.alaska.edu'
+        expected_value = '<something>.asf.alaska.edu'
         log.info(f"{header_name} had value '{header_value}' (Expect {expected_value})")
         self.assertTrue(header_value == expected_value)
 
@@ -329,8 +329,7 @@ class cors_test(unittest.TestCase):
         header_name = 'Access-Control-Allow-Credentials'
 
         header_value = r.headers.get(header_name)
-        expected_value = 'Authorization,Content-Type,X-Amz-Date,X-Amz-Security-Token,X-Api-Key'
-        log.info(f"{header_name} had value '{header_value}' (Expect {expected_value}")
+        log.info(f"{header_name} had value '{header_value}' (Expect True")
         self.assertTrue(header_value is True)
 
 

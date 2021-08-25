@@ -330,7 +330,7 @@ class cors_test(unittest.TestCase):
 
         header_value = r.headers.get(header_name)
         log.info(f"{header_name} had value '{header_value}' (Expect True")
-        self.assertTrue(header_value is True)
+        self.assertTrue(header_value == 'true')
 
 
 class jwt_blacklist_test(unittest.TestCase):

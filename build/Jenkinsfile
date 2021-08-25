@@ -73,6 +73,7 @@ pipeline {
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""
     CHATSERVER_SECRET_URL = credentials("${params.CHATSERVER_SECRET_URL_ID}")
     GIT_CREDS_ID = "6af85197-f063-4c10-aa7e-04c881211997"
+    USE_CORS = params.USE_CORS
   }
 
   // Build on a slave with docker on kubernetes

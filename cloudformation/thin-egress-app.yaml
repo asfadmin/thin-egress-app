@@ -65,6 +65,14 @@ Metadata:
           - PermissionsBoundaryName
 
 Parameters:
+  UseCorsCookieDomain:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Use cookie domain for CORS header support'
+
   DomainName:
     Type: String
     Default: ""
@@ -229,7 +237,6 @@ Parameters:
       - "True"
     Description: "Do not validate if a file exists before creating pre-signed URL. "
 
-
   DownloadRoleArn:
     Type: String
     Default: ""
@@ -262,6 +269,9 @@ Conditions:
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
   SuppressHead: !Equals [ !Ref SuppressHeadCheck, "True" ]
+  CheckForCookieDomain: !Not [ !Equals [ !Ref CookieDomain, "" ] ]
+  CheckForCorsOrigin: !Not [ !Equals [ !Ref UseCorsCookieDomain, "False" ] ]
+  CheckIfCorsHeadersNeedConfigured: !And [ !Condition CheckForCookieDomain, !Condition CheckForCorsOrigin ]
 
 Outputs:
   ExternalEndpoint:
@@ -524,6 +534,8 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          CORS_ORIGIN:
+            !If [CheckIfCorsHeadersNeedConfigured, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

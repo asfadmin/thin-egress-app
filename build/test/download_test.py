@@ -314,7 +314,7 @@ class cors_test(unittest.TestCase):
 
         r = requests.get(url, cookies=cookiejar, headers=origin_headers, allow_redirects=False)
         log.info(f"Got headers {r.headers}")
-        if os.getenv("USE_CORS"):
+        if 'Access-Control-Allow-Origin' in r.headers and 'Access-Control-Allow-Credentials' in r.headers:
             self.access_control_allow_origin_configuration_test(r)
             self.access_control_allow_creds_test(r)
         else:

@@ -146,7 +146,7 @@ def get_user_from_token(token):
 
 
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
-    k_v.update({'code': code, 'http_method': http_method, 'status': outcome})
+    k_v.update({'code': code, 'http_method': http_method, 'status': outcome, 'requestid': get_request_id()})
     jsonstr = json.dumps(k_v)
     print(f'{jsonstr}')
 
@@ -177,10 +177,22 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
+def send_cors_headers(headers):
+    # send CORS headers if we're configured to use them
+    if 'origin' in app.current_request.headers:
+        cors_origin = os.getenv("CORS_ORIGIN")
+        if cors_origin and app.current_request.headers['origin'].endswith(cors_origin):
+            headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+            headers['Access-Control-Allow-Credentials'] = 'true'
+        else:
+            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
+
+
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
+    send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
@@ -400,7 +412,13 @@ def login():
 @app.route('/version')
 def version():
     log.info("Got a version request!")
-    return json.dumps({'version_id': '<BUILD_ID>'})
+    version_return = {'version_id': '<BUILD_ID>'}
+
+    # If we've flushed, lets return the flush time.
+    if os.getenv('BUMP'):
+        version_return['last_flush'] = os.getenv('BUMP')
+
+    return json.dumps(version_return)
 
 
 @app.route('/locate')
@@ -644,6 +662,7 @@ def dynamic_url():
             jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
             log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
             custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+            cookievars[JWT_COOKIE_NAME] = jwt_payload
 
         else:
             return do_auth_and_return(app.current_request.context)

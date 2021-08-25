@@ -49,7 +49,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     aws_s3_bucket_object.lambda_code_dependency_archive,
     aws_s3_bucket_object.cloudformation_template
   ]
-  name         = substr(var.stack_name, 0, 35)
+  name         = substr(var.stack_name, 0, 36)
   template_url = "https://s3.amazonaws.com/${aws_s3_bucket_object.lambda_source.bucket}/${aws_s3_bucket_object.cloudformation_template.key}"
   capabilities = ["CAPABILITY_NAMED_IAM"]
   parameters = {
@@ -83,6 +83,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     UseReverseBucketMap             = var.use_reverse_bucket_map ? "True" : "False"
     VPCSecurityGroupIDs             = local.vpc_security_group_ids_set ? join(",", var.vpc_security_group_ids) : aws_security_group.egress_lambda[0].id
     VPCSubnetIDs                    = join(",", var.vpc_subnet_ids)
+    UseCorsCookieDomain             = var.use_cors
   }
   tags = var.tags
 }

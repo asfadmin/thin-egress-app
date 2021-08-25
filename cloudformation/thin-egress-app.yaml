@@ -65,6 +65,14 @@ Metadata:
           - PermissionsBoundaryName
 
 Parameters:
+  UseCorsCookieDomain:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Use cookie domain for CORS header support'
+
   DomainName:
     Type: String
     Default: ""
@@ -229,7 +237,6 @@ Parameters:
       - "True"
     Description: "Do not validate if a file exists before creating pre-signed URL. "
 
-
   DownloadRoleArn:
     Type: String
     Default: ""
@@ -262,6 +269,9 @@ Conditions:
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
   DomainNotInNgap: !And [ !Condition DomainNameIsSet, !Not [ !Condition UsePrivateVPC ] ]
   SuppressHead: !Equals [ !Ref SuppressHeadCheck, "True" ]
+  CheckForCookieDomain: !Not [ !Equals [ !Ref CookieDomain, "" ] ]
+  CheckForCorsOrigin: !Not [ !Equals [ !Ref UseCorsCookieDomain, "False" ] ]
+  CheckIfCorsHeadersNeedConfigured: !And [ !Condition CheckForCookieDomain, !Condition CheckForCorsOrigin ]
 
 Outputs:
   ExternalEndpoint:
@@ -524,6 +534,8 @@ Resources:
         - !Ref "AWS::NoValue"
       Environment:
         Variables:
+          CORS_ORIGIN:
+            !If [CheckIfCorsHeadersNeedConfigured, !Ref CookieDomain, !Ref "AWS::NoValue"]
           DOMAIN_NAME:
             !If
               - DomainNameIsSet
@@ -967,6 +979,10 @@ Resources:
       Environment:
         Variables:
           TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
+          LOGLEVEL: !Ref Loglevel
+          LOGTYPE: !Ref Logtype
+          BUILD_VERSION: "<BUILD_ID>"
+          MATURITY: !Ref Maturity
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'
 
@@ -1004,3 +1020,9 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                Resource: '*'

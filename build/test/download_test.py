@@ -310,7 +310,7 @@ class cors_test(unittest.TestCase):
     def test_cors(self):
         url = f"{APIROOT}/{METADATA_FILE_CH}"
         global cookiejar
-        origin_headers = {"origin": ".asf.alaska.edu"}
+        origin_headers = {"origin": "<something>.asf.alaska.edu"}
 
         r = requests.get(url, cookies=cookiejar, headers=origin_headers, allow_redirects=False)
         log.info(f"Got headers {r.headers}")

@@ -230,7 +230,8 @@ pipeline {
                            LambdaMemory=${LAMBDA_MEMORY} \
                            JwtAlgo=${JWTALGO} \
                            JwtKeySecretName=${JWTKEYSECRETNAME} \
-                           UseReverseBucketMap="False" """
+                           UseReverseBucketMap="False" \
+                           UseCorsCookieDomain=${params.USE_CORS} """
 
               // This will be the stack for downloading from 2nd account.
               /*sh """ ${AWS_BIN} cloudformation deploy --region=${AWS_DEFAULT_REGION} \

@@ -1,4 +1,4 @@
-from chalice import Chalice, Response
+from chalice import Chalice, Response, CORSConfig
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 import flatdict
@@ -57,6 +57,11 @@ class TeaChalice(Chalice):
 
 
 app = TeaChalice(app_name='egress-lambda')
+
+cors_config = CORSConfig(
+    allow_origin=os.getenv('COOKIE_DOMAIN'),
+    allow_credentials=True
+)
 
 
 class TeaException(Exception):
@@ -177,10 +182,25 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
+def send_cors_headers(headers):
+    # send CORS headers if we're configured to use them
+    if 'origin' in app.current_request.headers:
+        cors_origin = os.getenv("CORS_ORIGIN")
+        print(f"CORS_ORIGIN: {cors_origin}")
+        print(f"current_requests.headers HEADERS: {app.current_request.headers}")
+        if cors_origin and cors_origin in app.current_request.headers['origin']:
+            print(f"CORS_ORIGIN 2: {cors_origin}")
+            headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
+            headers['Access-Control-Allow-Credentials'] = 'true'
+        else:
+            log.warning(f'Origin {app.current_request.headers["origin"]} is not an approved CORS host: {cors_origin}')
+
+
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
+    send_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
@@ -336,7 +356,7 @@ def get_jwt_field(cookievar: dict, fieldname: str):
     return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
 
-@app.route('/')
+@app.route('/', cors=cors_config)
 def root():
     user_profile = False
     template_vars = {'title': 'Welcome'}
@@ -358,7 +378,7 @@ def root():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/logout')
+@app.route('/logout', cors=cors_config)
 def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
@@ -377,7 +397,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
-@app.route('/login')
+@app.route('/login', cors=cors_config)
 def login():
     try:
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
@@ -397,7 +417,7 @@ def login():
     return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
-@app.route('/version')
+@app.route('/version', cors=cors_config)
 def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
@@ -409,7 +429,7 @@ def version():
     return json.dumps(version_return)
 
 
-@app.route('/locate')
+@app.route('/locate', cors=cors_config)
 def locate():
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
@@ -533,7 +553,7 @@ def try_download_head(bucket, filename):
 
 
 # Attempt to validate HEAD request
-@app.route('/{proxy+}', methods=['HEAD'])
+@app.route('/{proxy+}', methods=['HEAD'], cors=cors_config)
 def dynamic_url_head():
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
@@ -595,7 +615,7 @@ def handle_auth_bearer_header(token):
     return 'return', do_auth_and_return(app.current_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'])
+@app.route('/{proxy+}', methods=['GET'], cors=cors_config)
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}
@@ -704,13 +724,13 @@ def dynamic_url():
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
-@app.route('/profile')
+@app.route('/profile', cors=cors_config)
 def profile():
     return Response(body='Profile not available.',
                     status_code=200, headers={})
 
 
-@app.route('/pubkey', methods=['GET'])
+@app.route('/pubkey', methods=['GET'], cors=cors_config)
 def pubkey():
     thebody = json.dumps({
         'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),

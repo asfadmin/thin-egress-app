@@ -36,17 +36,17 @@ client = boto3.client('apigateway', region_name=AWS_DEFAULT_REGION, aws_access_k
                       aws_secret_access_key=aws_secret_access_key)
 
 # Get EgressGateway Rest API ID from AWS and calculate APIROOT
-dict = client.get_rest_apis()
-API = None
-for item in dict['items']:
-    if item['name'] == f"{STACKNAME}-EgressGateway":
-        API = item['id']
+rest_apis = client.get_rest_apis()
+API_ID = None
+for api in rest_apis['items']:
+    if api['name'] == f"{STACKNAME}-EgressGateway":
+        API_ID = api['id']
 
-if not API:
+if not API_ID:
     log.info(f"Could not find API for the given stackname {STACKNAME}")
     exit()
 
-APIHOST = f"{API}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
+APIHOST = f"{API_ID}.execute-api.{AWS_DEFAULT_REGION}.amazonaws.com"
 APIROOT = f"https://{APIHOST}/API"
 
 # Important Objects and strings we'll need for our tests

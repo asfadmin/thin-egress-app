@@ -182,7 +182,6 @@ def send_cors_headers(headers):
     if 'origin' in app.current_request.headers:
         cors_origin = os.getenv("CORS_ORIGIN")
         if cors_origin and cors_origin in app.current_request.headers['origin']:
-            print(f"CORS_ORIGIN 2: {cors_origin}")
             headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
             headers['Access-Control-Allow-Credentials'] = 'true'
         else:

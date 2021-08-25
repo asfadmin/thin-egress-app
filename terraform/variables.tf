@@ -186,3 +186,9 @@ variable "vpc_subnet_ids" {
   default     = []
   description = "Optional list of Subnets for the Lambda function."
 }
+
+variable "use_cors"{
+  type  = bool
+  default = false
+  description = "Enable cross origin resource sharing"
+}

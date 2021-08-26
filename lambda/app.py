@@ -246,7 +246,7 @@ def get_bucket_region(session, bucketname) -> str:
 def get_user_ip():
     if app.current_request.headers['x-forwarded-for']:
         return app.current_request.headers['x-forwarded-for'].replace(',', '').split()[0]
-    return check_in_region_request(app.current_request.context['identity']['sourceIp'])
+    return app.current_request.context['identity']['sourceIp']
 
 
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
@@ -261,7 +261,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     log_context(user_id=user_id)
 
     t0 = time.time()
-    is_in_region = get_user_ip()
+    is_in_region = check_in_region_request(get_user_ip())
     t1 = time.time()
     creds, offset = get_role_creds(user_id, is_in_region)
     t2 = time.time()

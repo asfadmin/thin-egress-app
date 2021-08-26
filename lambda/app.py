@@ -245,8 +245,14 @@ def get_bucket_region(session, bucketname) -> str:
 
 def get_user_ip():
     if app.current_request.headers['x-forwarded-for']:
-        return app.current_request.headers['x-forwarded-for'].replace(' ', '').split(',')[0]
-    return app.current_request.context['identity']['sourceIp']
+        x_forwarded_for = app.current_request.headers['x-forwarded-for']
+        ip = app.current_request.headers['x-forwarded-for'].replace(' ', '').split(',')[0]
+        log.info(f"x-fowarded-for: {x_forwarded_for}")
+        log.info(f"Assuming {ip} is the users IP")
+        return ip
+    ip = app.current_request.context['identity']['sourceIp']
+    log.inf(f"NO x_fowarded_for, using sourceIp: {ip} instead")
+    return ip
 
 
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):

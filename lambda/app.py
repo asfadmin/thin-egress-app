@@ -245,7 +245,7 @@ def get_bucket_region(session, bucketname) -> str:
 
 def get_user_ip():
     if app.current_request.headers['x-forwarded-for']:
-        return app.current_request.headers['x-forwarded-for'].replace(',', '').split()[0]
+        return app.current_request.headers['x-forwarded-for'].replace(' ', '').split(',')[0]
     return app.current_request.context['identity']['sourceIp']
 
 

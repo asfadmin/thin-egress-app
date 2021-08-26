@@ -251,7 +251,7 @@ def get_user_ip():
         log.info(f"Assuming {ip} is the users IP")
         return ip
     ip = app.current_request.context['identity']['sourceIp']
-    log.inf(f"NO x_fowarded_for, using sourceIp: {ip} instead")
+    log.info(f"NO x_fowarded_for, using sourceIp: {ip} instead")
     return ip
 
 

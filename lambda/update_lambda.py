@@ -61,6 +61,7 @@ def get_region_cidrs(current_region):
 
 
 def get_base_policy(prefix):
+    vpcid = os.getenv('vpcid')
     policy = """
 
     {
@@ -77,6 +78,23 @@ def get_base_policy(prefix):
                 """ + f'"arn:aws:s3:::{prefix}' + """*"
             ],
             "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": [
+                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
+                """ + f'"arn:aws:s3:::{prefix}' + """*"
+            ],
+            "Effect": "Allow",
+            "Condition": {
+                "StringEquals": {
+                    "aws:SourceVpc": """ + f'"{vpcid}"' + """
+                }
+            }
         }
     ]
 }

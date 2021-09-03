@@ -58,7 +58,7 @@ def get_region_cidrs(current_region):
     in_region_amazon_ips = [item['ip_prefix'] for item in ip_ranges if
                             item["service"] == "AMAZON" and item["region"] == current_region]
     # Add in Privagte IP Space
-    in_region_amazon_ips.append('10.0.0.0/8') 
+    in_region_amazon_ips.append('10.0.0.0/8')
     return (in_region_amazon_ips)
 
 

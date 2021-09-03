@@ -97,6 +97,23 @@ def get_base_policy(prefix):
                     "aws:SourceVpc": """ + f'"{vpcid}"' + """
                 }
             }
+        },
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": [
+                "arn:aws:s3:::asf-ngap2w-p-*/*",
+                "arn:aws:s3:::asf-ngap2w-p-*"
+            ],
+            "Effect": "Allow",
+            "Condition": {
+                "StringLike": {
+                    "aws:SourceVpc": "vpc-*"
+                }
+            }
         }
     ]
 }

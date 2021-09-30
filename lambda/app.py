@@ -42,7 +42,8 @@ header_map = {'date': 'Date',
 class TeaChalice(Chalice):
     def __call__(self, event, context):
         resource_path = event.get('requestContext', {}).get('resourcePath')
-        log_context(route=resource_path, request_id=context.aws_request_id)
+        origin_request_id = event.get('headers', {}).get('x-origin-request-id')
+        log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
         # get_jwt_field() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
         userid = get_jwt_field(get_cookie_vars(event.get('headers', {}) or {}), 'urs-user-id')
@@ -181,7 +182,8 @@ def send_cors_headers(headers):
     # send CORS headers if we're configured to use them
     if 'origin' in app.current_request.headers:
         cors_origin = os.getenv("CORS_ORIGIN")
-        if cors_origin and app.current_request.headers['origin'].endswith(cors_origin):
+        origin_header = app.current_request.headers['origin']
+        if cors_origin and ( origin_header.endswith(cors_origin) or origin_header.lower() == 'null' ):
             headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
             headers['Access-Control-Allow-Credentials'] = 'true'
         else:

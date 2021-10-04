@@ -52,6 +52,10 @@ class TeaChalice(Chalice):
         resp = super().__call__(event, context)
 
         resp['headers'].update({'x-request-id': context.aws_request_id})
+        if origin_request_id:
+            # If we were passed in an x-origin-request-id header, pass it out too
+            resp['headers'].update({'x-origin-request-id': origin_request_id})
+            
         log_context(user_id=None, route=None, request_id=None)
 
         return resp
@@ -71,7 +75,15 @@ class EulaException(TeaException):
 
 def get_request_id() -> str:
     return app.lambda_context.aws_request_id
-
+    
+def get_origin_request_id() -> str:
+    return app.current_request.headers.get("x-origin-request-id")
+    
+def get_aux_request_headers():
+    req_headers = { "x-request-id": get_request_id() }
+    if get_origin_request_id():
+        req_headers.update( { "x-origin-request-id": get_origin_request_id() } )
+    return req_headers
 
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
@@ -97,6 +109,9 @@ def get_user_from_token(token):
 
     authval = "Basic {}".format(get_urs_creds()['UrsAuth'])
     headers = {'Authorization': authval}
+    
+    # Tack on auxillary headers 
+    headers.update(get_aux_request_headers())
 
     log.debug(f'headers: {headers}, params: {params}')
 
@@ -246,7 +261,7 @@ def get_bucket_region(session, bucketname) -> str:
 
 
 def get_user_ip():
-    if app.current_request.headers['x-forwarded-for']:
+    if app.current_request.headers.get('x-forwarded-for'):
         x_forwarded_for = app.current_request.headers['x-forwarded-for']
         ip = x_forwarded_for.replace(' ', '').split(',')[0]
         log.debug(f"x-fowarded-for: {x_forwarded_for}")
@@ -311,17 +326,20 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     log.debug('ET for total: {}'.format(t4 - t0))
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
+    
+    # We'll cache the size later.
+    head_check = {}
 
     try:
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
         if not range_header:
             if not os.getenv("SUPPRESS_HEAD"):
-                client.head_object(Bucket=bucket, Key=filename)
+                head_check = client.head_object(Bucket=bucket, Key=filename)
             redirheaders = {}
         else:
             if not os.getenv("SUPPRESS_HEAD"):
-                client.head_object(Bucket=bucket, Key=filename, Range=range_header)
+                head_check = client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
         expires_in = 3600 - offset
@@ -334,6 +352,13 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
+
+        download_stat = {"bucket": bucket, "object": filename, "range": range_header} 
+        download_stat.update({ "InRegion": "True" if is_in_region else "False"})
+        if head_check.get("ContentLength"):
+            download_stat.update({ "size": head_check["ContentLength"]})
+        
+        log.info({"download": download_stat})
 
         return make_redirect(presigned_url, redirheaders, 303)
 
@@ -406,8 +431,9 @@ def logout():
 @app.route('/login')
 def login():
     try:
+        aux_headers = get_aux_request_headers()
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
-                                                       os.getenv('COOKIE_DOMAIN', ''))
+                                                       os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
     except ClientError as e:
         log.error(e)
         status_code = 500
@@ -426,7 +452,7 @@ def login():
 @app.route('/version')
 def version():
     log.info("Got a version request!")
-    version_return = {'version_id': '<BUILD_ID>'}
+    version_return = {'version_id': '<BUILD_ID>''}
 
     # If we've flushed, lets return the flush time.
     if os.getenv('BUMP'):
@@ -614,7 +640,8 @@ def handle_auth_bearer_header(token):
 
     if user_id:
         log_context(user_id=user_id)
-        user_profile = get_new_token_and_profile(user_id, True)
+        aux_headers = get_aux_request_headers()
+        user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
         if user_profile:
             return 'user_profile', user_profile
 
@@ -688,7 +715,8 @@ def dynamic_url():
     # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    aux_headers = get_aux_request_headers()
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False, aux_headers=aux_headers)
     t.append(time.time())  # 6
 
     new_jwt_cookie_headers = {}

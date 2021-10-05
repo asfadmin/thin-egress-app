@@ -505,9 +505,9 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
-def get_new_session_client(session, **params):
+def get_new_session_client(user_id):
     # Default Config
-    params['config'] = bc_Config(**get_bcconfig(user_id))
+    params = { "config": bc_Config(**get_bcconfig(user_id)) }
     session = get_role_session(user_id=user_id)
     
     timer = time.time()
@@ -515,19 +515,21 @@ def get_new_session_client(session, **params):
     duration = time.time() - timer
     log.info(return_timing_object(service="S3", endpoint="session.client()", method="Instantiation", duration=duration))
     return new_bc_client
+    
+def bc_client_is_old(bc_client):
+    # refresh bc_client after 50 minutes
+    return (time.time() - bc_client["timestamp"]) >= (50 * 60)
 
 def get_bc_config_client(user_id):
-    params = {}
-    now = time.time()
     
     if user_id not in bc_client_cache:
         # This a new user, generate a new bc_Config client
-        bc_client_cache[user_id] = get_new_session_client(session, **params)
+        bc_client_cache[user_id] = get_new_session_client(user_id)
         
-    elif now - bc_client_cache[user_id]["timestamp"] >= (50 * 60):
+    elif bc_client_is_old(bc_client_cache[user_id]):
         # Replace the client if is more than 50 minutes old
         log.info(f"Replacing old bc_Config_client for user {user_id}")
-        bc_client_cache[user_id] = get_new_session_client(session, **params)
+        bc_client_cache[user_id] = get_new_session_client(user_id)
         
     return bc_client_cache[user_id]["client"]
 

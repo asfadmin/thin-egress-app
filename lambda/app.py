@@ -250,9 +250,12 @@ def get_bucket_region(session, bucketname) -> str:
         return b_region_map[bucketname]
 
     try:
+        timer = time.time()
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
-
+        
+        duration = time.time() - timer
+        log.info(return_timing_object(service="s3", endpoint="client().get_bucket_location()", duration=duration))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
@@ -513,7 +516,7 @@ def get_new_session_client(user_id):
     timer = time.time()
     new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
     duration = time.time() - timer
-    log.info(return_timing_object(service="S3", endpoint="session.client()", method="Instantiation", duration=duration))
+    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration))
     return new_bc_client
     
 def bc_client_is_old(bc_client):
@@ -554,7 +557,7 @@ def try_download_head(bucket, filename):
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
         duration = time.time() - timer
-        log.info(return_timing_object(service="S3", endpoint="client.get_object()", duration=duration))
+        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration))
         t.append(time.time()) #t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
@@ -678,6 +681,8 @@ def dynamic_url():
     restore_bucket_vars()
     log.debug(f'b_map: {b_map}')
     t.append(time.time())
+    
+    log.info(app.current_request.headers)
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)

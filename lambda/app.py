@@ -11,7 +11,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log, log_context
+from rain_api_core.general_util import get_log, log_context, return_timing_object
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
     get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
@@ -112,8 +112,9 @@ def get_user_from_token(token):
     
     # Tack on auxillary headers 
     headers.update(get_aux_request_headers())
-
     log.debug(f'headers: {headers}, params: {params}')
+
+    timer = time.time()
 
     req = request.Request(url, headers=headers, method='POST')
     try:
@@ -123,6 +124,9 @@ def get_user_from_token(token):
         log.debug(e)
 
     payload = response.read()
+
+    duration = time.time() - timer
+    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration))
 
     try:
         msg = json.loads(payload)
@@ -339,6 +343,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             redirheaders = {}
         else:
             if not os.getenv("SUPPRESS_HEAD"):
+                log.info(f"Range Header was {range_header}")
                 head_check = client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
@@ -452,7 +457,7 @@ def login():
 @app.route('/version')
 def version():
     log.info("Got a version request!")
-    version_return = {'version_id': '<BUILD_ID>''}
+    version_return = {'version_id': '<BUILD_ID>'}
 
     # If we've flushed, lets return the flush time.
     if os.getenv('BUMP'):
@@ -500,23 +505,30 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+def get_new_session_client(session, **params):
+    # Default Config
+    params['config'] = bc_Config(**get_bcconfig(user_id))
+    session = get_role_session(user_id=user_id)
+    
+    timer = time.time()
+    new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
+    duration = time.time() - timer
+    log.info(return_timing_object(service="S3", endpoint="session.client()", method="Instantiation", duration=duration))
+    return new_bc_client
 
 def get_bc_config_client(user_id):
     params = {}
     now = time.time()
-
+    
     if user_id not in bc_client_cache:
         # This a new user, generate a new bc_Config client
-        params['config'] = bc_Config(**get_bcconfig(user_id))
-        session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
+        bc_client_cache[user_id] = get_new_session_client(session, **params)
+        
     elif now - bc_client_cache[user_id]["timestamp"] >= (50 * 60):
         # Replace the client if is more than 50 minutes old
         log.info(f"Replacing old bc_Config_client for user {user_id}")
-        params['config'] = bc_Config(**get_bcconfig(user_id))
-        session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
-
+        bc_client_cache[user_id] = get_new_session_client(session, **params)
+        
     return bc_client_cache[user_id]["client"]
 
 
@@ -526,18 +538,22 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-    t = [time.time()]
+    t = [time.time()]  #t0
     client = get_data_dl_s3_client()
-    t.append(time.time())
+    t.append(time.time()) #t1
     # Check for range request
     range_header = get_range_header_val()
     try:
+        timer = time.time()
         if not range_header:
             download = client.get_object(Bucket=bucket, Key=filename)
         else:
+            # Should both `client.get_object()` be `client.head_object()` ?!?!?!
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
-        t.append(time.time())
+        duration = time.time() - timer
+        log.info(return_timing_object(service="S3", endpoint="client.get_object()", duration=duration))
+        t.append(time.time()) #t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         # cumulus uses this log message for metrics purposes.
@@ -551,6 +567,7 @@ def try_download_head(bucket, filename):
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
 
+    #WTF is happening here?
     response_headers = {'Content-Type': download['ContentType']}
     for header in download['ResponseMetadata']['HTTPHeaders']:
         name = header_map[header] if header in header_map else header
@@ -563,14 +580,16 @@ def try_download_head(bucket, filename):
     log_context(user_id=user_id)
 
     # Generate URL
-    t.append(time.time())
+    t.append(time.time()) #t3
     creds, offset = get_role_creds(user_id=user_id)
     url_lifespan = 3600 - offset
-    bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
-    bucket_region = 'us-east-1' if not bucket_region else bucket_region
-    t.append(time.time())
+    
+    session = get_role_session(creds=creds, user_id=user_id)
+    t.append(time.time()) #t4
+    bucket_region = get_bucket_region(session, bucket)
+    t.append(time.time()) #t5
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
-    t.append(time.time())
+    t.append(time.time()) #t6
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
@@ -579,7 +598,8 @@ def try_download_head(bucket, filename):
     log.debug('ET for get_data_dl_s3_client(): {}s'.format(t[1] - t[0]))
     log.debug('ET for client.get_object(): {}s'.format(t[2] - t[1]))
     log.debug('ET for get_role_creds(): {}s'.format(t[4] - t[3]))
-    log.debug('ET for get_presigned_url(): {}s'.format(t[5] - t[4]))
+    log.debug('ET for get_bucket_region(): {}s'.format(t[5] - t[4]))
+    log.debug('ET for get_presigned_url(): {}s'.format(t[6] - t[5]))
 
     return make_redirect(presigned_url, {}, 303)
 

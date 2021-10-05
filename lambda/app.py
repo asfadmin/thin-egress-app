@@ -11,7 +11,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log, log_context, return_timing_object
+from rain_api_core.general_util import get_log, log_context, return_timing_object, d
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
     get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
@@ -124,9 +124,7 @@ def get_user_from_token(token):
         log.debug(e)
 
     payload = response.read()
-
-    duration = time.time() - timer
-    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration))
+    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=d(timer)))
 
     try:
         msg = json.loads(payload)
@@ -253,9 +251,7 @@ def get_bucket_region(session, bucketname) -> str:
         timer = time.time()
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
-        
-        duration = time.time() - timer
-        log.info(return_timing_object(service="s3", endpoint="client().get_bucket_location()", duration=duration))
+        log.info(return_timing_object(service="s3", endpoint=f"client().get_bucket_location({bucketname})", duration=d(timer)))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
@@ -515,8 +511,7 @@ def get_new_session_client(user_id):
     
     timer = time.time()
     new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
-    duration = time.time() - timer
-    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration))
+    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=d(timer)))
     return new_bc_client
     
 def bc_client_is_old(bc_client):
@@ -557,7 +552,7 @@ def try_download_head(bucket, filename):
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
         duration = time.time() - timer
-        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration))
+        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=d(timer)))
         t.append(time.time()) #t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))

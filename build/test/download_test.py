@@ -9,6 +9,7 @@ import logging
 import json
 import base64
 from datetime import datetime
+from uuid import uuid1
 
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -193,6 +194,29 @@ class authed_download_test(unittest.TestCase):
 
         log.info(f"Make sure 'Location' header is not redirecting to URS")
         self.assertTrue('oauth/authorize' not in r.headers['Location'])
+
+    def test_origin_request_header(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        origin_request_value = uuid1()
+        headers = {"x-origin-request-id": origin_request_value }
+        global cookiejar
+
+        log.info(f"Hitting {url} with x-origin-request-id={origin_request_value} Header")
+        r = requests.get(url, cookies=cookiejar, allow_redirects=False)
+
+        log.info(f"Validating x-origin-request-id is passed back out successfully")
+        self.assertTrue(r.headers['x-origin-request-id'] == origin_request_value)
+
+    def test_origin_cors_request_header(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        headers = {"Origin": "null"}
+        global cookiejar
+
+        log.info(f"Hitting {url} with Origin=null Header")
+        r = requests.get(url, cookies=cookiejar, allow_redirects=False)
+
+        log.info(f"Validating Access-Control-Allow-Origin=null is returned")
+        self.assertTrue(r.headers['Access-Control-Allow-Origin'] == 'null')
 
     def test_range_request_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"

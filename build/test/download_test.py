@@ -205,7 +205,7 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
 
         log.info(f"Validating x-origin-request-id is passed back out successfully")
-        self.assertTrue(r.headers['x-origin-request-id'] == origin_request_value)
+        self.assertTrue(r.headers.get('x-origin-request-id') == origin_request_value)
 
     def test_origin_cors_request_header(self):
         url = f"{APIROOT}/{METADATA_FILE}"
@@ -216,7 +216,7 @@ class authed_download_test(unittest.TestCase):
         r = requests.get(url, cookies=cookiejar, allow_redirects=False)
 
         log.info(f"Validating Access-Control-Allow-Origin=null is returned")
-        self.assertTrue(r.headers['Access-Control-Allow-Origin'] == 'null')
+        self.assertTrue(r.headers.get('Access-Control-Allow-Origin') == 'null')
 
     def test_range_request_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"

@@ -11,7 +11,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log, log_context, return_timing_object, d
+from rain_api_core.general_util import get_log, log_context, return_timing_object, duration
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
     get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
@@ -124,7 +124,7 @@ def get_user_from_token(token):
         log.debug(e)
 
     payload = response.read()
-    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=d(timer)))
+    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(timer)))
 
     try:
         msg = json.loads(payload)
@@ -176,7 +176,7 @@ def restore_bucket_vars():
     if b_map is None:
         log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket, bucket_map_file))
 
-        b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
+        b_map = get_yaml_file(conf_bucket, bucket_map_file)
         log.debug('bucket map: {}'.format(b_map))
     else:
         log.info('reusing old bucket configs')
@@ -251,7 +251,7 @@ def get_bucket_region(session, bucketname) -> str:
         timer = time.time()
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
-        log.info(return_timing_object(service="s3", endpoint=f"client().get_bucket_location({bucketname})", duration=d(timer)))
+        log.info(return_timing_object(service="s3", endpoint=f"client().get_bucket_location({bucketname})", duration=duration(timer)))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
@@ -473,9 +473,7 @@ def locate():
                         status_code=400,
                         headers={'Content-Type': 'text/plain'})
     bucket_name = app.current_request.query_params.get('bucket_name', None)
-    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,
-                                                             bucket_map_file,
-                                                             s3_resource)['MAP'])
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if (len(matching_paths) > 0):
@@ -511,7 +509,7 @@ def get_new_session_client(user_id):
     
     timer = time.time()
     new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
-    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=d(timer)))
+    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
     return new_bc_client
     
 def bc_client_is_old(bc_client):
@@ -551,8 +549,7 @@ def try_download_head(bucket, filename):
             # Should both `client.get_object()` be `client.head_object()` ?!?!?!
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
-        duration = time.time() - timer
-        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=d(timer)))
+        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(timer)))
         t.append(time.time()) #t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
@@ -738,7 +735,7 @@ def dynamic_url():
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
     aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False, aux_headers=aux_headers)
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
     t.append(time.time())  # 6
 
     new_jwt_cookie_headers = {}

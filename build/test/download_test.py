@@ -9,6 +9,7 @@ import logging
 import json
 import base64
 from datetime import datetime
+from uuid import uuid1
 
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -194,6 +195,19 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Make sure 'Location' header is not redirecting to URS")
         self.assertTrue('oauth/authorize' not in r.headers['Location'])
 
+    def test_origin_request_header(self):
+        url = f"{APIROOT}/{METADATA_FILE}"
+        origin_request_value = "{0}".format(uuid1())
+        headers = {"x-origin-request-id": origin_request_value }
+        global cookiejar
+
+        log.info(f"Hitting {url} with x-origin-request-id={origin_request_value} Header")
+        r = requests.get(url, cookies=cookiejar, headers=headers, allow_redirects=False)
+
+        log.info(f"Validating x-origin-request-id is passed back out successfully")
+        log.info(f"Response Headers: {r.headers}")
+        self.assertTrue(r.headers.get('x-origin-request-id') == origin_request_value)
+
     def test_range_request_works(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         headers = {"Range": "bytes=1035-1042"}
@@ -308,26 +322,30 @@ class cors_test(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
     def test_cors(self):
-        url = f"{APIROOT}/{METADATA_FILE_CH}"
-        global cookiejar
-        origin_headers = {"origin": "<something>.asf.alaska.edu"}
 
-        r = requests.get(url, cookies=cookiejar, headers=origin_headers, allow_redirects=False)
-        log.info(f"Got headers {r.headers}")
-        if 'Access-Control-Allow-Origin' in r.headers and 'Access-Control-Allow-Credentials' in r.headers:
-            self.access_control_allow_origin_configuration_test(r)
-            self.access_control_allow_creds_test(r)
-        else:
+        origin_host = "https://something.asf.alaska.edu"
+
+        if os.getenv('USE_CORS','') == 'False':
             log.info("CORS is not enabled")
             self.assertTrue(True)
 
-    def access_control_allow_origin_configuration_test(self, r):
+        url = f"{APIROOT}/{METADATA_FILE_CH}"
+        global cookiejar
+        origin_headers = {"origin": origin_host}
+
+        r = requests.get(url, cookies=cookiejar, headers=origin_headers, allow_redirects=False)
+        log.info(f"Got headers {r.headers}")
+
+        self.access_control_allow_origin_configuration_test(r, origin_host)
+        self.access_control_allow_creds_test(r)
+        self.null_origin_cors_request_header(url, cookiejar)
+
+    def access_control_allow_origin_configuration_test(self, r, origin_host):
         header_name = 'Access-Control-Allow-Origin'
 
         header_value = r.headers.get(header_name)
-        expected_value = '<something>.asf.alaska.edu'
-        log.info(f"{header_name} had value '{header_value}' (Expect {expected_value})")
-        self.assertTrue(header_value == expected_value)
+        log.info(f"{header_name} had value '{origin_host}' (Expect {origin_host})")
+        self.assertTrue(header_value == origin_host)
 
     def access_control_allow_creds_test(self, r):
         header_name = 'Access-Control-Allow-Credentials'
@@ -335,6 +353,15 @@ class cors_test(unittest.TestCase):
         header_value = r.headers.get(header_name)
         log.info(f"{header_name} had value '{header_value}' (Expect True")
         self.assertTrue(header_value == 'true')
+
+    def null_origin_cors_request_header(self, url, cookiejar):
+        headers = {"origin": "null"}
+
+        log.info(f"Hitting {url} with Origin=null Header")
+        r = requests.get(url, cookies=cookiejar, headers=headers, allow_redirects=False)
+
+        log.info(f"Validating Access-Control-Allow-Origin=null is returned in {r.headers}")
+        self.assertTrue(r.headers.get('Access-Control-Allow-Origin') == 'null')
 
 
 class jwt_blacklist_test(unittest.TestCase):

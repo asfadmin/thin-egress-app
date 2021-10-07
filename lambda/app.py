@@ -11,7 +11,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import urlparse, quote_plus, urlencode
 
-from rain_api_core.general_util import get_log, log_context
+from rain_api_core.general_util import get_log, log_context, return_timing_object, duration
 from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
     get_new_token_and_profile
 from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
@@ -42,7 +42,8 @@ header_map = {'date': 'Date',
 class TeaChalice(Chalice):
     def __call__(self, event, context):
         resource_path = event.get('requestContext', {}).get('resourcePath')
-        log_context(route=resource_path, request_id=context.aws_request_id)
+        origin_request_id = event.get('headers', {}).get('x-origin-request-id')
+        log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
         # get_jwt_field() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
         userid = get_jwt_field(get_cookie_vars(event.get('headers', {}) or {}), 'urs-user-id')
@@ -51,6 +52,10 @@ class TeaChalice(Chalice):
         resp = super().__call__(event, context)
 
         resp['headers'].update({'x-request-id': context.aws_request_id})
+        if origin_request_id:
+            # If we were passed in an x-origin-request-id header, pass it out too
+            resp['headers'].update({'x-origin-request-id': origin_request_id})
+            
         log_context(user_id=None, route=None, request_id=None)
 
         return resp
@@ -70,7 +75,15 @@ class EulaException(TeaException):
 
 def get_request_id() -> str:
     return app.lambda_context.aws_request_id
-
+    
+def get_origin_request_id() -> str:
+    return app.current_request.headers.get("x-origin-request-id")
+    
+def get_aux_request_headers():
+    req_headers = { "x-request-id": get_request_id() }
+    if get_origin_request_id():
+        req_headers.update( { "x-origin-request-id": get_origin_request_id() } )
+    return req_headers
 
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
@@ -96,8 +109,12 @@ def get_user_from_token(token):
 
     authval = "Basic {}".format(get_urs_creds()['UrsAuth'])
     headers = {'Authorization': authval}
-
+    
+    # Tack on auxillary headers 
+    headers.update(get_aux_request_headers())
     log.debug(f'headers: {headers}, params: {params}')
+
+    timer = time.time()
 
     req = request.Request(url, headers=headers, method='POST')
     try:
@@ -107,6 +124,7 @@ def get_user_from_token(token):
         log.debug(e)
 
     payload = response.read()
+    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(timer)))
 
     try:
         msg = json.loads(payload)
@@ -136,7 +154,7 @@ def get_user_from_token(token):
         if 'error' in msg:
             errtxt = msg["error"]
         else:
-            errtxt = f''
+            errtxt = ''
         if 'error_description' in msg:
             errtxt = errtxt + ' ' + msg['error_description']
 
@@ -158,7 +176,7 @@ def restore_bucket_vars():
     if b_map is None:
         log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket, bucket_map_file))
 
-        b_map = get_yaml_file(conf_bucket, bucket_map_file, s3_resource)
+        b_map = get_yaml_file(conf_bucket, bucket_map_file)
         log.debug('bucket map: {}'.format(b_map))
     else:
         log.info('reusing old bucket configs')
@@ -181,7 +199,8 @@ def send_cors_headers(headers):
     # send CORS headers if we're configured to use them
     if 'origin' in app.current_request.headers:
         cors_origin = os.getenv("CORS_ORIGIN")
-        if cors_origin and app.current_request.headers['origin'].endswith(cors_origin):
+        origin_header = app.current_request.headers['origin']
+        if cors_origin and ( origin_header.endswith(cors_origin) or origin_header.lower() == 'null' ):
             headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
             headers['Access-Control-Allow-Credentials'] = 'true'
         else:
@@ -229,9 +248,10 @@ def get_bucket_region(session, bucketname) -> str:
         return b_region_map[bucketname]
 
     try:
+        timer = time.time()
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
-
+        log.info(return_timing_object(service="s3", endpoint=f"client().get_bucket_location({bucketname})", duration=duration(timer)))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
@@ -244,7 +264,7 @@ def get_bucket_region(session, bucketname) -> str:
 
 
 def get_user_ip():
-    if app.current_request.headers['x-forwarded-for']:
+    if app.current_request.headers.get('x-forwarded-for'):
         x_forwarded_for = app.current_request.headers['x-forwarded-for']
         ip = x_forwarded_for.replace(' ', '').split(',')[0]
         log.debug(f"x-fowarded-for: {x_forwarded_for}")
@@ -295,10 +315,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
-        log.warning("bucket {0} is in region {1}, we are in region {2}! " +
-                    "This is double egress in Proxy mode!".format(bucket,
-                                                                  bucket_region,
-                                                                  os.getenv('AWS_DEFAULT_REGION')))
+        log_message = "bucket {0} is in region {1}, we are in region {2}! " + \
+                      "This is double egress in Proxy mode!"
+        log.warning(log_message.format(bucket, bucket_region, os.getenv('AWS_DEFAULT_REGION')))
     client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
@@ -309,17 +328,21 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     log.debug('ET for total: {}'.format(t4 - t0))
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
+    
+    # We'll cache the size later.
+    head_check = {}
 
     try:
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
         if not range_header:
             if not os.getenv("SUPPRESS_HEAD"):
-                client.head_object(Bucket=bucket, Key=filename)
+                head_check = client.head_object(Bucket=bucket, Key=filename)
             redirheaders = {}
         else:
             if not os.getenv("SUPPRESS_HEAD"):
-                client.head_object(Bucket=bucket, Key=filename, Range=range_header)
+                log.info(f"Range Header was {range_header}")
+                head_check = client.head_object(Bucket=bucket, Key=filename, Range=range_header)
             redirheaders = {'Range': range_header}
 
         expires_in = 3600 - offset
@@ -332,6 +355,13 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
+
+        download_stat = {"bucket": bucket, "object": filename, "range": range_header} 
+        download_stat.update({ "InRegion": "True" if is_in_region else "False"})
+        if head_check.get("ContentLength"):
+            download_stat.update({ "size": head_check["ContentLength"]})
+        
+        log.info({"download": download_stat})
 
         return make_redirect(presigned_url, redirheaders, 303)
 
@@ -404,8 +434,9 @@ def logout():
 @app.route('/login')
 def login():
     try:
+        aux_headers = get_aux_request_headers()
         status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
-                                                       os.getenv('COOKIE_DOMAIN', ''))
+                                                       os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
     except ClientError as e:
         log.error(e)
         status_code = 500
@@ -441,9 +472,7 @@ def locate():
                         status_code=400,
                         headers={'Content-Type': 'text/plain'})
     bucket_name = app.current_request.query_params.get('bucket_name', None)
-    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,
-                                                             bucket_map_file,
-                                                             s3_resource)['MAP'])
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if (len(matching_paths) > 0):
@@ -472,23 +501,31 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+def get_new_session_client(user_id):
+    # Default Config
+    params = { "config": bc_Config(**get_bcconfig(user_id)) }
+    session = get_role_session(user_id=user_id)
+    
+    timer = time.time()
+    new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
+    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
+    return new_bc_client
+    
+def bc_client_is_old(bc_client):
+    # refresh bc_client after 50 minutes
+    return (time.time() - bc_client["timestamp"]) >= (50 * 60)
 
 def get_bc_config_client(user_id):
-    params = {}
-    now = time.time()
-
+    
     if user_id not in bc_client_cache:
         # This a new user, generate a new bc_Config client
-        params['config'] = bc_Config(**get_bcconfig(user_id))
-        session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
-    elif now - bc_client_cache[user_id]["timestamp"] >= (50 * 60):
+        bc_client_cache[user_id] = get_new_session_client(user_id)
+        
+    elif bc_client_is_old(bc_client_cache[user_id]):
         # Replace the client if is more than 50 minutes old
         log.info(f"Replacing old bc_Config_client for user {user_id}")
-        params['config'] = bc_Config(**get_bcconfig(user_id))
-        session = get_role_session(user_id=user_id)
-        bc_client_cache[user_id] = {"client": session.client('s3', **params), "timestamp": now}
-
+        bc_client_cache[user_id] = get_new_session_client(user_id)
+        
     return bc_client_cache[user_id]["client"]
 
 
@@ -498,18 +535,21 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-    t = [time.time()]
+    t = [time.time()]  #t0
     client = get_data_dl_s3_client()
-    t.append(time.time())
+    t.append(time.time()) #t1
     # Check for range request
     range_header = get_range_header_val()
     try:
+        timer = time.time()
         if not range_header:
             download = client.get_object(Bucket=bucket, Key=filename)
         else:
+            # Should both `client.get_object()` be `client.head_object()` ?!?!?!
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
-        t.append(time.time())
+        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(timer)))
+        t.append(time.time()) #t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         # cumulus uses this log message for metrics purposes.
@@ -523,6 +563,7 @@ def try_download_head(bucket, filename):
         return make_html_response(template_vars, headers, 404, 'error.html')
     log.debug(download)
 
+    #WTF is happening here?
     response_headers = {'Content-Type': download['ContentType']}
     for header in download['ResponseMetadata']['HTTPHeaders']:
         name = header_map[header] if header in header_map else header
@@ -535,14 +576,16 @@ def try_download_head(bucket, filename):
     log_context(user_id=user_id)
 
     # Generate URL
-    t.append(time.time())
+    t.append(time.time()) #t3
     creds, offset = get_role_creds(user_id=user_id)
     url_lifespan = 3600 - offset
-    bucket_region = client.get_bucket_location(Bucket=bucket)['LocationConstraint']
-    bucket_region = 'us-east-1' if not bucket_region else bucket_region
-    t.append(time.time())
+    
+    session = get_role_session(creds=creds, user_id=user_id)
+    t.append(time.time()) #t4
+    bucket_region = get_bucket_region(session, bucket)
+    t.append(time.time()) #t5
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
-    t.append(time.time())
+    t.append(time.time()) #t6
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
@@ -551,7 +594,8 @@ def try_download_head(bucket, filename):
     log.debug('ET for get_data_dl_s3_client(): {}s'.format(t[1] - t[0]))
     log.debug('ET for client.get_object(): {}s'.format(t[2] - t[1]))
     log.debug('ET for get_role_creds(): {}s'.format(t[4] - t[3]))
-    log.debug('ET for get_presigned_url(): {}s'.format(t[5] - t[4]))
+    log.debug('ET for get_bucket_region(): {}s'.format(t[5] - t[4]))
+    log.debug('ET for get_presigned_url(): {}s'.format(t[6] - t[5]))
 
     return make_redirect(presigned_url, {}, 303)
 
@@ -565,7 +609,7 @@ def dynamic_url_head():
     t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+        path, bucket, filename, _ = process_request(app.current_request.uri_params['proxy'], b_map)
         t.append(time.time())
 
         process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
@@ -612,7 +656,8 @@ def handle_auth_bearer_header(token):
 
     if user_id:
         log_context(user_id=user_id)
-        user_profile = get_new_token_and_profile(user_id, True)
+        aux_headers = get_aux_request_headers()
+        user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
         if user_profile:
             return 'user_profile', user_profile
 
@@ -627,6 +672,8 @@ def dynamic_url():
     restore_bucket_vars()
     log.debug(f'b_map: {b_map}')
     t.append(time.time())
+    
+    log.info(app.current_request.headers)
 
     if 'proxy' in app.current_request.uri_params:
         path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
@@ -686,7 +733,8 @@ def dynamic_url():
     # omit this check?
     log.debug('private check: {}'.format(private_check))
     t.append(time.time())  # 5
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, user_profile, False)
+    aux_headers = get_aux_request_headers()
+    u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
     t.append(time.time())  # 6
 
     new_jwt_cookie_headers = {}

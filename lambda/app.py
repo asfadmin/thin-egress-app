@@ -154,7 +154,7 @@ def get_user_from_token(token):
         if 'error' in msg:
             errtxt = msg["error"]
         else:
-            errtxt = f''
+            errtxt = ''
         if 'error_description' in msg:
             errtxt = errtxt + ' ' + msg['error_description']
 
@@ -315,10 +315,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
 
     log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
-        log.warning("bucket {0} is in region {1}, we are in region {2}! " +
-                    "This is double egress in Proxy mode!".format(bucket,
-                                                                  bucket_region,
-                                                                  os.getenv('AWS_DEFAULT_REGION')))
+        log_message = "bucket {0} is in region {1}, we are in region {2}! " + \
+                      "This is double egress in Proxy mode!"
+        log.warning(log_message.format(bucket, bucket_region, os.getenv('AWS_DEFAULT_REGION')))
     client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
@@ -610,7 +609,7 @@ def dynamic_url_head():
     t.append(time.time())
 
     if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+        path, bucket, filename, _ = process_request(app.current_request.uri_params['proxy'], b_map)
         t.append(time.time())
 
         process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)

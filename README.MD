@@ -586,7 +586,8 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
 * **Domain Settings**:
    * `DomainName` - (OPTIONAL) domain name as a user will access it (ie CloudFront, CNAME, etc)
    * `CookieDomain` - (OPTIONAL) domain name value for minting cookies 
-   * `DomainCertArn` - (OPTIONAL) Arn to a AWS ACM SSL Cert for HTTPS access  
+   * `DomainCertArn` - (OPTIONAL) Arn to a AWS ACM SSL Cert for HTTPS access
+   * `UseCorsCookieDomain` - If `True`, and `CookieDomain` is set, this enables CORS Response Headers  
 * **Lambda Code**:
    * `LambdaCodeS3Bucket` - S3 bucket where Lambda code zip files are kept
    * `LambdaCodeS3Key` - Object name of Lambda code zip
@@ -676,7 +677,8 @@ aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
         SessionTTL=168 \
         StageName=API \
         URSAuthCredsSecretName="urs_creds_for_tea" \
-        UseReverseBucketMap="False" 
+        UseReverseBucketMap="False" \
+        UseCorsCookieDomain="False" \
         VPCSecurityGroupIDs=$SECURITYGROUP \
         VPCSubnetIDs=$SUBNETID
 

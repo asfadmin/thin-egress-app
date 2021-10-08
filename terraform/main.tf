@@ -83,7 +83,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     UseReverseBucketMap             = var.use_reverse_bucket_map ? "True" : "False"
     VPCSecurityGroupIDs             = local.vpc_security_group_ids_set ? join(",", var.vpc_security_group_ids) : aws_security_group.egress_lambda[0].id
     VPCSubnetIDs                    = join(",", var.vpc_subnet_ids)
-    UseCorsCookieDomain             = var.use_cors
+    UseCorsCookieDomain             = var.use_cors ? "True" : "False"
   }
   tags = var.tags
 }

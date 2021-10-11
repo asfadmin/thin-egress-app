@@ -335,15 +335,13 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     try:
         # Make sure this file exists, don't ACTUALLY download
         range_header = get_range_header_val()
-        if not range_header:
-            if not os.getenv("SUPPRESS_HEAD"):
-                head_check = client.head_object(Bucket=bucket, Key=filename)
-            redirheaders = {}
-        else:
-            if not os.getenv("SUPPRESS_HEAD"):
-                log.info(f"Range Header was {range_header}")
-                head_check = client.head_object(Bucket=bucket, Key=filename, Range=range_header)
-            redirheaders = {'Range': range_header}
+        
+        if not os.getenv("SUPPRESS_HEAD"):
+            timer = time.time()
+            head_check = client.head_object(Bucket=bucket, Key=filename, Range=(range_header or ""))
+            log.info(return_timing_object(service="s3", endpoint="client.head_object()", duration=duration(timer)))
+        
+        redirheaders = {'Range': range_header} if range_header else {}
 
         expires_in = 3600 - offset
         redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)

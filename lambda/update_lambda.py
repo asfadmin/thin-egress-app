@@ -13,7 +13,7 @@ def lambda_handler(event, context):
         current_region = session.region_name
         client = boto3.client('iam')
 
-        print(f"Current reigon in {current_region}")
+        print(f"Current region in {current_region}")
         cidr_list = get_region_cidrs(current_region)
 
         # Get the base policy and add IP list as a conidtion
@@ -105,8 +105,8 @@ def get_base_policy(prefix):
                 "s3:GetBucketLocation"
             ],
             "Resource": [
-                "arn:aws:s3:::asf-ngap2w-p-*/*",
-                "arn:aws:s3:::asf-ngap2w-p-*"
+                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
+                """ + f'"arn:aws:s3:::{prefix}' + """*"
             ],
             "Effect": "Allow",
             "Condition": {

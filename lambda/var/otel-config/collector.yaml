@@ -1,0 +1,22 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        # TODO
+      http:
+        # TODO
+
+exporters:
+  logging:
+    loglevel: debug
+  otlp/data-prepper:
+    endpoint: esdis-DataP-13JZJY443HXO2-b64472aa0848bf6d.elb.us-east-1.amazonaws.com:21890
+    tls:
+      insecure: true
+
+#enables output for traces to log
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp/data-prepper]

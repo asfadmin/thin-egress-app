@@ -2,21 +2,20 @@ receivers:
   otlp:
     protocols:
       grpc:
-        # TODO
+        # endpoint: localhost:55680
       http:
-        # TODO
+        # endpoint: localhost:55681
 
 exporters:
   logging:
     loglevel: debug
-  otlp/data-prepper:
-    endpoint: esdis-DataP-13JZJY443HXO2-b64472aa0848bf6d.elb.us-east-1.amazonaws.com:21890
-    tls:
-      insecure: true
+
+  otlphttp/otelcollector:
+    endpoint: "http://otel-test-2-kmentzer-1388241242.us-east-1.elb.amazonaws.com"
 
 #enables output for traces to log
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [otlp/data-prepper]
+      exporters: [otlphttp/otelcollector,logging]

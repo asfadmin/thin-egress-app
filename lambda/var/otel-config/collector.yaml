@@ -11,7 +11,8 @@ exporters:
     loglevel: debug
 
   otlphttp/otelcollector:
-    endpoint: "http://otel-test-2-kmentzer-1388241242.us-east-1.elb.amazonaws.com"
+    endpoint: "https://metrics-otel.ngap.sit.earthdata.nasa.gov"
+
 
 #enables output for traces to log
 service:

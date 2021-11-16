@@ -2,9 +2,7 @@ receivers:
   otlp:
     protocols:
       grpc:
-        # endpoint: localhost:55680
       http:
-        # endpoint: localhost:55681
 
 exporters:
   logging:

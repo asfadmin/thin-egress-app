@@ -559,7 +559,6 @@ def try_download_head(bucket, filename):
         cumulus_log_message('failure', 404, 'HEAD',
                             {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
-    log.debug(download)
 
     #WTF is happening here?
     response_headers = {'Content-Type': download['ContentType']}

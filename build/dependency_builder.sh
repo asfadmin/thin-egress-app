@@ -11,7 +11,7 @@ printenv
 
 RUN yum install -y amazon-linux-extras && \
     amazon-linux-extras enable python3.8 && \
-    yum install -y zip python38 python38-pip && \\
+    yum install -y zip python38 python38-pip
 
 RUN python3.8 -m pip install --upgrade pip && \
 

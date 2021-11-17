@@ -26,6 +26,8 @@ python3 -m pip install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
 echo "Installing ${WORKSPACE}/lambda/requirements.txt"
 python3 -m pip install -r ${WORKSPACE}/lambda/requirements.txt --target .
 python3 -m pip install cffi
+echo "Current version of Python" # TODO: Remove
+python3 --version
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

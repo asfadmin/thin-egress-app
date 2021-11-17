@@ -10,9 +10,12 @@ echo "inside dependency building container env:"
 printenv
 
 yum update -y
-RUN yum install -y amazon-linux-extras &&
-  amazon-linux-extras enable python3.8 &&
-  yum install -y zip python38 python38-pip
+RUN yum install -y amazon-linux-extras && \
+    amazon-linux-extras enable python3.8 && \
+    yum install -y zip python38 python38-pip && \
+    yum clean all
+
+RUN python3.8 -m pip install --upgrade pip
 
 mkdir -p /tmp/pkg/python
 
@@ -35,7 +38,7 @@ rm -rf ./*.dist-info
 # rm -rf pip # commented out because https://snyk.io/vuln/SNYK-PYTHON-PIP-609855
 rm -rf docutils
 rm -rf chalice/cli # cli in lambda? No way!
-rm -rf botocore    # included with lambda, just takes up space here
+rm -rf botocore # included with lambda, just takes up space here
 rm -rf setuptools
 rm -rf tests
 rm -rf easy_install.py

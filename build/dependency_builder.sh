@@ -12,7 +12,6 @@ printenv
 yum update -y
 yum install -y zip python3-devel python3-pip
 
-
 mkdir -p /tmp/pkg/python
 
 
@@ -26,6 +25,7 @@ echo "Installing ${WORKSPACE}/rain-api-core/requirements.txt"
 python3 -m pip install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
 echo "Installing ${WORKSPACE}/lambda/requirements.txt"
 python3 -m pip install -r ${WORKSPACE}/lambda/requirements.txt --target .
+python3 -m pip install cffi
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

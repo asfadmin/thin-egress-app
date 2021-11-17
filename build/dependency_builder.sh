@@ -14,6 +14,7 @@ amazon-linux-extras enable python3.8
 
 yum install -y zip python38 python38-pip
 python3.8 -m pip install --upgrade pip
+yum clean all
 
 mkdir -p /tmp/pkg/python
 
@@ -28,9 +29,6 @@ echo "Installing ${WORKSPACE}/rain-api-core/requirements.txt"
 python3.8 -m pip install -r "${WORKSPACE}"/rain-api-core/requirements.txt --target .
 echo "Installing ${WORKSPACE}/lambda/requirements.txt"
 python3.8 -m pip install -r "${WORKSPACE}"/lambda/requirements.txt --target .
-python3.8 -m pip install cffi
-echo "Current version of Python" # TODO: Remove
-python3.8 --version
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

@@ -13,7 +13,7 @@ yum install -y amazon-linux-extras && \
 amazon-linux-extras enable python3.8
 
 yum install -y zip python38 python38-pip
-python3.8 -m pip install --upgrade pip && \
+python3.8 -m pip install --upgrade pip
 
 mkdir -p /tmp/pkg/python
 

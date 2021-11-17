@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: tea-container
-    image: docker-registry.asf.alaska.edu:5000/i_and_a_builder_agent:latest
+    image: docker-registry.asf.alaska.edu:5000/i_and_a_nimbus_api_py38:20211013.1
     command:
          - "tail"
          - "-f"

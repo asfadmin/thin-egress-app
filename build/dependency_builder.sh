@@ -10,7 +10,7 @@ echo "inside dependency building container env:"
 printenv
 
 yum update -y
-yum install -y zip python3-devel python3-pip
+#yum install -y zip python3-devel python3-pip
 
 
 mkdir -p /tmp/pkg/python

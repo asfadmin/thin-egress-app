@@ -10,7 +10,9 @@ echo "inside dependency building container env:"
 printenv
 
 yum update -y
-yum install -y zip python3-devel python3-pip
+RUN yum install -y amazon-linux-extras && \
+    amazon-linux-extras enable python3.8 && \
+    yum install -y zip python38 python38-pip
 
 mkdir -p /tmp/pkg/python
 
@@ -18,16 +20,16 @@ mkdir -p /tmp/pkg/python
 cd /tmp/pkg/python || exit
 
 echo "Updating Pip..."
-python3 -m pip install -U pip
+python3.8 -m pip install -U pip
 echo "Installing setuptools..."
-python3 -m pip install --upgrade setuptools
+python3.8 -m pip install --upgrade setuptools
 echo "Installing ${WORKSPACE}/rain-api-core/requirements.txt" 
-python3 -m pip install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
+python3.8 -m pip install -r ${WORKSPACE}/rain-api-core/requirements.txt --target .
 echo "Installing ${WORKSPACE}/lambda/requirements.txt"
-python3 -m pip install -r ${WORKSPACE}/lambda/requirements.txt --target .
-python3 -m pip install cffi
+python3.8 -m pip install -r ${WORKSPACE}/lambda/requirements.txt --target .
+python3.8 -m pip install cffi
 echo "Current version of Python" # TODO: Remove
-python3 --version
+python3.8 --version
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

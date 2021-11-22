@@ -2,7 +2,7 @@ import json
 import boto3
 import urllib.request
 import os
-
+from netaddr import cidr_merge
 import cfnresponse
 
 
@@ -57,6 +57,8 @@ def get_region_cidrs(current_region):
     ip_ranges = json.loads(output)['prefixes']
     in_region_amazon_ips = [item['ip_prefix'] for item in ip_ranges if
                             item["service"] == "AMAZON" and item["region"] == current_region]
+    # It's important to filter down the CIDR range as much as possible. Too large can cause the role creation to fail.
+    in_region_amazon_ips = [str(ip) for ip in cidr_merge(in_region_amazon_ips)]
     # Add in Privagte IP Space
     in_region_amazon_ips.append('10.0.0.0/8')
     return (in_region_amazon_ips)

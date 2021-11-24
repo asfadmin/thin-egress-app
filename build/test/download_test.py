@@ -400,31 +400,31 @@ class jwt_blacklist_test(unittest.TestCase):
 
         return lambda_configuration
 
-    # def test_validate_invalid_jwt(self):
-    #
-    #     try:
-    #         endpoint = os.getenv("BLACKLIST_ENDPOINT",
-    #                              "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
-    #         log.info(f"Using the endpoint: {endpoint} to test a invalid JWT with the blacklist functionality")
-    #
-    #         lambda_configuration = self.set_up_temp_env_vars(endpoint)
-    #
-    #         r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
-    #         log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
-    #         self.assertTrue(r.is_redirect)
-    #
-    #         log.info(f"Result r.headers['Location']: {r.headers['Location']}")
-    #         self.assertTrue(r.headers['Location'] is not None)
-    #
-    #         log.info(f"Make sure 'Location' header is redirecting to URS")
-    #         self.assertTrue('oauth/authorize' in r.headers['Location'])
-    #
-    #     except Exception as e:
-    #         log.info(e)
-    #         self.assertTrue(False)
-    #
-    #     log.info("Reverting to original environment variables")
-    #     self.set_original_env_vars(lambda_configuration["Environment"])
+    def test_validate_invalid_jwt(self):
+
+        try:
+            endpoint = os.getenv("BLACKLIST_ENDPOINT",
+                                 "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/jwt_blacklist.json")
+            log.info(f"Using the endpoint: {endpoint} to test a invalid JWT with the blacklist functionality")
+
+            lambda_configuration = self.set_up_temp_env_vars(endpoint)
+
+            r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
+            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            self.assertTrue(r.is_redirect)
+
+            log.info(f"Result r.headers['Location']: {r.headers['Location']}")
+            self.assertTrue(r.headers['Location'] is not None)
+
+            log.info(f"Make sure 'Location' header is redirecting to URS")
+            self.assertTrue('oauth/authorize' in r.headers['Location'])
+
+        except Exception as e:
+            log.info(e)
+            self.assertTrue(False)
+
+        log.info("Reverting to original environment variables")
+        self.set_original_env_vars(lambda_configuration["Environment"])
 
     def test_validate_valid_jwt(self):
         try:

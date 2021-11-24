@@ -10,6 +10,7 @@ import json
 import base64
 from datetime import datetime
 from uuid import uuid1
+import time
 
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)
@@ -380,6 +381,7 @@ class jwt_blacklist_test(unittest.TestCase):
         original_env_vars = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
                                                                                  Environment=env)
         log.info(f"Attempt to set environment variables back to their original state: {original_env_vars}")
+        time.sleep(3)
 
     def set_up_temp_env_vars(self, endpoint):
         endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
@@ -392,7 +394,8 @@ class jwt_blacklist_test(unittest.TestCase):
 
         log.info(f"Temporarily updated function {self.aws_function_name}'s env variables")
         env_vars_update = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
-                                                                               Environment=new_env_vars)
+                                                                          Environment=new_env_vars)
+        time.sleep(3)
         log.info(f"Update status: {env_vars_update}")
 
         return lambda_configuration

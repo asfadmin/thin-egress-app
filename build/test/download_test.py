@@ -423,22 +423,22 @@ class jwt_blacklist_test(unittest.TestCase):
         log.info("Reverting to original environment variables")
         self.set_original_env_vars(lambda_configuration["Environment"])
 
-    def test_validate_valid_jwt(self):
-        try:
-            endpoint = os.getenv("VALID_JWT_BLACKLIST_ENDPOINT",
-                                 "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json")
-            log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
-
-            lambda_configuration = self.set_up_temp_env_vars(endpoint)
-
-            r = requests.get(self.url, cookies=self.cookie_jar)
-            self.assertTrue(r.status_code == 200)
-        except Exception as e:
-            log.info(e)
-            self.assertTrue(False)
-
-        log.info("Reverting to original environment variables")
-        self.set_original_env_vars(lambda_configuration["Environment"])
+    # def test_validate_valid_jwt(self):
+    #     try:
+    #         endpoint = os.getenv("VALID_JWT_BLACKLIST_ENDPOINT",
+    #                              "https://s3-us-west-2.amazonaws.com/asf.rain.code.usw2/valid_jwt_blacklist_test.json")
+    #         log.info(f"Using the endpoint: {endpoint} to test a valid JWT with the blacklist functionality")
+    #
+    #         lambda_configuration = self.set_up_temp_env_vars(endpoint)
+    #
+    #         r = requests.get(self.url, cookies=self.cookie_jar)
+    #         self.assertTrue(r.status_code == 200)
+    #     except Exception as e:
+    #         log.info(e)
+    #         self.assertTrue(False)
+    #
+    #     log.info("Reverting to original environment variables")
+    #     self.set_original_env_vars(lambda_configuration["Environment"])
 
 
 def main():

@@ -275,6 +275,11 @@ fi
 aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null
 if [ $? -gt 0 ]; then
    aws $AWSENV s3 cp s3://asf.public.code/$layer_zip s3://$code_bucket/$layer_zip
+   if [ $? -gt 0 ]; then #The command has failed for some reason (cross-region copying banned?) trying to compensate.
+   aws $AWSENV s3 cp s3://asf.public.code/$layer_zip $layer_zip
+   aws $AWSENV s3 cp $layer_zip s3://$code_bucket/$layer_zip
+   rm -f $layer_zip
+   fi 
 else
    echo ">> Skipping upload of existing $layer_zip to s3://$code_bucket/$layer_zip"
 fi

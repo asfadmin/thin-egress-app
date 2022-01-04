@@ -1,7 +1,7 @@
 locals {
   vpc_security_group_ids_set = length(var.vpc_security_group_ids) > 0
   cloudformation_template_filename = "${path.module}/thin-egress-app.yaml"
-  lambda_source_filename     = "${path.module}/lambda.zip"
+  lambda_source_filename     = "${path.module}/src.zip"
   dependency_layer_filename  ="${path.module}/dependencylayer.zip"
 }
 

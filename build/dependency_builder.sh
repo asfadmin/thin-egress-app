@@ -27,8 +27,8 @@ echo "Installing setuptools..."
 python3.8 -m pip install --upgrade setuptools
 echo "Installing ${WORKSPACE}/rain-api-core/requirements.txt"
 python3.8 -m pip install -r "${WORKSPACE}"/rain-api-core/requirements.txt --target .
-echo "Installing ${WORKSPACE}/lambda/requirements.txt"
-python3.8 -m pip install -r "${WORKSPACE}"/lambda/requirements.txt --target .
+echo "Installing ${WORKSPACE}/src/requirements.txt"
+python3.8 -m pip install -r "${WORKSPACE}"/src/requirements.txt --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

@@ -208,11 +208,11 @@ git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
 # copy requirements to a directory that is mounted into the docker container
-cp rain-api-core/requirements.txt lambda/requirements_rain-api-core.txt
-cp lambda/requirements.txt lambda/requirements_tea.txt
-cp build/dependency_builder.sh lambda/
+cp rain-api-core/requirements.txt src/requirements_rain-api-core.txt
+cp src/requirements.txt src/requirements_tea.txt
+cp build/dependency_builder.sh src/
 
-docker run --rm -v lambda/:/depbuild/in -v ./:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh
+docker run --rm -v src/:/depbuild/in -v ./:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh
 
 # Upload to S3
 aws s3 cp --profile=default ./${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/
@@ -235,7 +235,7 @@ cd thin-egress-app
 # are beyond the scope of this documentation.
 
 # Create the zip archive and put the required modules in
-zip -r9 ./${CODE_ARCHIVE_FILENAME} ./lambda
+zip -r9 ./${CODE_ARCHIVE_FILENAME} ./src
 
 # Add the egress python code
 zip -g ./${CODE_ARCHIVE_FILENAME} ./app.py

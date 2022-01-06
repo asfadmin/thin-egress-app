@@ -96,11 +96,6 @@ pipeline {
               sh 'pwd'
               sh 'env'
             }
-            // Update submodules.
-            sh "echo '>> Updating submodules....'"
-            sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
-            sh "git config user.name 'jenkins'"
-            sh "git submodule update --init --recursive"
 
             // show us the params:
             echo "params.APPTAG: ${params.APPTAG}"
@@ -150,10 +145,7 @@ pipeline {
                    sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./tea_bumper.py && \
                    zip -g ../${CODE_ARCHIVE_FILENAME} ./tea_bumper.py && \
                    zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
-                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
-                   cd .. && \
-                   cd rain-api-core  && \
-                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
+                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates """
 
             // Swap in BUILD#
             sh "echo '>> Build Stamping....'"

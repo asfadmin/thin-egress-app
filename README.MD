@@ -209,7 +209,6 @@ git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
 # copy requirements to a directory that is mounted into the docker container
-cp rain-api-core/requirements.txt lambda/requirements_rain-api-core.txt
 cp lambda/requirements.txt lambda/requirements_tea.txt
 cp build/dependency_builder.sh lambda/
 

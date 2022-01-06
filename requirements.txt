@@ -3,6 +3,7 @@ cfnresponse==1.1.1
 chalice==1.26.2
 cryptography==35.0.0
 flatdict==4.0.1
+git+https://github.com/asfadmin/rain-api-core.git@f07a0ca637033d96fdd080d78439d6413ba2b14b
 jinja2==3.0.2
 jwcrypto==1.0
 netaddr==0.8.0

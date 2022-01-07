@@ -14,6 +14,7 @@
 terraform.tfstate*
 *.tfvars
 /lambda/.chalice
+.coverage
 
 # Config
 bucket_map.yaml

@@ -220,8 +220,7 @@ def do_auth_and_return(ctxt):
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
-# TODO(reweeden): rename to something more appropriate
-def send_cors_headers(headers):
+def add_cors_headers(headers):
     assert app.current_request is not None
 
     # send CORS headers if we're configured to use them
@@ -239,7 +238,7 @@ def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
     headers['Location'] = to_url
-    send_cors_headers(headers)
+    add_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')

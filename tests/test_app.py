@@ -200,14 +200,14 @@ def test_do_auth_and_return(mock_get_urs_url, monkeypatch):
 def test_send_cors_header(current_request, monkeypatch):
     current_request.headers = {}
     headers = {"foo": "bar"}
-    app.send_cors_headers(headers)
+    app.add_cors_headers(headers)
     assert headers == {"foo": "bar"}
 
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
 
     current_request.headers = {"origin": "NULL"}
     headers = {"foo": "bar"}
-    app.send_cors_headers(headers)
+    app.add_cors_headers(headers)
     assert headers == {
         "foo": "bar",
         "Access-Control-Allow-Origin": "NULL",
@@ -216,7 +216,7 @@ def test_send_cors_header(current_request, monkeypatch):
 
     current_request.headers = {"origin": "foo.example.com"}
     headers = {"foo": "bar"}
-    app.send_cors_headers(headers)
+    app.add_cors_headers(headers)
     assert headers == {
         "foo": "bar",
         "Access-Control-Allow-Origin": "foo.example.com",
@@ -225,7 +225,7 @@ def test_send_cors_header(current_request, monkeypatch):
 
     current_request.headers = {"origin": "foo.bar.com"}
     headers = {"foo": "bar"}
-    app.send_cors_headers(headers)
+    app.add_cors_headers(headers)
     assert headers == {"foo": "bar"}
 
 

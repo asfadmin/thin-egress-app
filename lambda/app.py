@@ -5,9 +5,12 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
 
+import cachetools
 import flatdict
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
+from cachetools.func import ttl_cache
+from cachetools.keys import hashkey
 from chalice import Chalice, Response
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
 from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
@@ -32,12 +35,12 @@ from rain_api_core.view_util import (
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 
-# TODO(reweeden): Can we cache with functools.lru_cache instead?
 # Here's a lifetime-of lambda cache of these values:
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
 b_map = None
-b_region_map = {}
-bc_client_cache = {}
+# TODO(reweeden): Refactor when wrapped attributes are implemented
+# https://github.com/tkem/cachetools/issues/176
+get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 
@@ -267,13 +270,12 @@ def get_bcconfig(user_id: str) -> dict:
     return bcconfig
 
 
+@cachetools.cached(
+    get_bucket_region_cache,
+    # Cache by bucketname only
+    key=lambda _, bucketname: hashkey(bucketname)
+)
 def get_bucket_region(session, bucketname) -> str:
-    # Figure out bucket region
-    if bucketname in b_region_map:
-        # TODO(reweeden): Don't use global variable for caching. This makes testing a lot more fragile as we need to
-        # couple our test to the name of the cache variable. Really just use `functools.lru_cache` instead.
-        return b_region_map[bucketname]
-
     try:
         timer = time.time()
         bucket_region = session.client('s3').get_bucket_location(Bucket=bucketname)['LocationConstraint'] or 'us-east-1'
@@ -283,14 +285,12 @@ def get_bucket_region(session, bucketname) -> str:
             duration=duration(timer)
         ))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
+
+        return bucket_region
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
         log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
         raise
-
-    b_region_map[bucketname] = bucket_region
-
-    return bucket_region
 
 
 def get_user_ip():
@@ -538,26 +538,15 @@ def get_new_session_client(user_id):
     session = get_role_session(user_id=user_id)
 
     timer = time.time()
-    new_bc_client = {"client": session.client('s3', **params), "timestamp": timer}
+    new_bc_client = session.client('s3', **params)
     log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
     return new_bc_client
 
 
-def bc_client_is_old(bc_client):
-    # refresh bc_client after 50 minutes
-    return (time.time() - bc_client["timestamp"]) >= (50 * 60)
-
-
+# refresh bc_client after 50 minutes
+@ttl_cache(ttl=50 * 60)
 def get_bc_config_client(user_id):
-    if user_id not in bc_client_cache:
-        # This a new user, generate a new bc_Config client
-        bc_client_cache[user_id] = get_new_session_client(user_id)
-    elif bc_client_is_old(bc_client_cache[user_id]):
-        # Replace the client if is more than 50 minutes old
-        log.info(f"Replacing old bc_Config_client for user {user_id}")
-        bc_client_cache[user_id] = get_new_session_client(user_id)
-
-    return bc_client_cache[user_id]["client"]
+    return get_new_session_client(user_id)
 
 
 def get_data_dl_s3_client():

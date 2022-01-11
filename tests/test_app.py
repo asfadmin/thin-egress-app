@@ -14,6 +14,12 @@ from chalice.test import Client
 app = importlib.import_module("lambda.app")
 
 
+@pytest.fixture
+def _clear_caches():
+    app.get_bc_config_client.cache_clear()
+    app.get_bucket_region_cache.clear()
+
+
 @pytest.fixture(scope="module")
 def client():
     return Client(app.app)
@@ -295,8 +301,7 @@ def test_get_bucket_region():
         app.get_bucket_region(session, "bucketname2")
 
 
-@mock.patch("lambda.app.b_region_map", {})
-def test_get_bucket_region_cached():
+def test_get_bucket_region_cached(_clear_caches):
     session = mock.Mock()
     session.client().get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
     assert app.get_bucket_region(session, "bucketname") == "us-west-2"
@@ -373,13 +378,13 @@ def test_try_download_from_bucket(
 @mock.patch("lambda.app.check_in_region_request")
 @mock.patch("lambda.app.get_role_creds")
 @mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.b_region_map", {})
 def test_try_download_from_bucket_client_error(
     mock_get_role_session,
     mock_get_role_creds,
     mock_check_in_region_request,
     mock_make_html_response,
     current_request,
+    _clear_caches
 ):
     del mock_check_in_region_request, current_request
 
@@ -697,51 +702,21 @@ def test_get_range_header_val(current_request):
 
 
 @mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.time.time")
-def test_get_new_session_client(mock_time, mock_get_role_session):
-    mock_time.return_value = 1000
+def test_get_new_session_client(mock_get_role_session):
     client = mock_get_role_session().client()
 
-    assert app.get_new_session_client("user_name") == {
-        "client": client,
-        "timestamp": 1000
-    }
+    assert app.get_new_session_client("user_name") == client
     # Once in test setup and once during `get_new_session_client`
     assert mock_get_role_session.call_count == 2
     mock_get_role_session.assert_called_with(user_id="user_name")
 
 
-@mock.patch("lambda.app.time.time")
-def test_bc_client_is_old(mock_time):
-    mock_time.return_value = 50 * 60 + 1
-
-    assert app.bc_client_is_old({"timestamp": 0}) is True
-    assert app.bc_client_is_old({"timestamp": 1}) is True
-    assert app.bc_client_is_old({"timestamp": 2}) is False
-
-
 @mock.patch("lambda.app.get_new_session_client")
-@mock.patch("lambda.app.time.time")
-def test_get_bc_config_client_cached(mock_time, mock_get_new_session_client):
-    mock_time.return_value = 1000
-    mock_get_new_session_client.return_value = {"client": mock.Mock(), "timestamp": 1000}
-
+def test_get_bc_config_client_cached(mock_get_new_session_client):
     app.get_bc_config_client("user_name")
     mock_get_new_session_client.assert_called_once_with("user_name")
     app.get_bc_config_client("user_name")
     mock_get_new_session_client.assert_called_once_with("user_name")
-
-
-@mock.patch("lambda.app.get_new_session_client")
-@mock.patch("lambda.app.time.time")
-def test_get_bc_config_client_refreshed(mock_time, mock_get_new_session_client):
-    mock_time.return_value = 5000
-    mock_get_new_session_client.return_value = {"client": mock.Mock(), "timestamp": 1000}
-
-    app.get_bc_config_client("user_name")
-    mock_get_new_session_client.assert_called_once_with("user_name")
-    app.get_bc_config_client("user_name")
-    assert mock_get_new_session_client.call_count == 2
 
 
 @mock.patch("lambda.app.get_cookie_vars")

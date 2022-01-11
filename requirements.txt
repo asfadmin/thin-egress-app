@@ -1,4 +1,5 @@
 aws-requests-auth==0.4.3
+cachetools==5.0.0
 cfnresponse==1.1.1
 chalice==1.26.2
 cryptography==35.0.0

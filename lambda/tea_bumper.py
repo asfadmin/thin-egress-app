@@ -12,7 +12,6 @@ TEA_LAMBDA_NAME = os.getenv('TEA_LAMBDA_NAME')
 
 
 def lambda_handler(event, context):
-
     log.info('teabumper!')
 
     egress_env = client.get_function_configuration(
@@ -29,5 +28,6 @@ def lambda_handler(event, context):
     log.debug(response)
 
 
+# TODO(reweeden): This appears to be unused
 def version():
     return json.dumps({'version_id': '<BUILD_ID>'})

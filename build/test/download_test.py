@@ -1,16 +1,16 @@
-import argparse
-import sys
-import unittest
+import base64
+import json
+import logging
 import os
+import sys
+import time
+import unittest
+from datetime import datetime
+from uuid import uuid1
+
 import boto3
 import requests
 from requests.auth import HTTPBasicAuth
-import logging
-import json
-import base64
-from datetime import datetime
-from uuid import uuid1
-import time
 
 logging.getLogger('boto3').setLevel(logging.ERROR)
 logging.getLogger('botocore').setLevel(logging.ERROR)

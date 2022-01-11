@@ -3,21 +3,37 @@ import os
 import time
 from urllib import request
 from urllib.error import HTTPError
-from urllib.parse import urlparse, quote_plus, urlencode
+from urllib.parse import quote_plus, urlencode, urlparse
 
 import flatdict
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 from chalice import Chalice, Response
-
-from rain_api_core.aws_util import get_yaml_file, get_s3_resource, get_role_session, get_role_creds, \
-    check_in_region_request
-from rain_api_core.egress_util import get_presigned_url, process_request, check_private_bucket, check_public_bucket
-from rain_api_core.general_util import get_log, log_context, return_timing_object, duration
-from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs_creds, user_profile_2_jwt_payload, \
-    get_new_token_and_profile
-from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, get_jwt_keys, \
-    JWT_COOKIE_NAME, JWT_ALGO
+from rain_api_core.aws_util import (
+    check_in_region_request,
+    get_role_creds,
+    get_role_session,
+    get_s3_resource,
+    get_yaml_file
+)
+from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
+from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
+from rain_api_core.urs_util import (
+    do_login,
+    get_new_token_and_profile,
+    get_urs_creds,
+    get_urs_url,
+    user_in_group,
+    user_profile_2_jwt_payload
+)
+from rain_api_core.view_util import (
+    JWT_ALGO,
+    JWT_COOKIE_NAME,
+    get_cookie_vars,
+    get_html_body,
+    get_jwt_keys,
+    make_set_cookie_headers_jwt
+)
 
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")

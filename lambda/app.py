@@ -721,11 +721,15 @@ def dynamic_url():
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
         authorization = app.current_request.headers.get('Authorization')
-        if authorization is not None and authorization.split()[0].lower() == 'bearer':
+        if not authorization:
+            return do_auth_and_return(app.current_request.context)
+
+        method, token, *_ = authorization.split()
+        method = method.lower()
+
+        if method == "bearer":
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(authorization))
-            # TODO(reweeden): refactor duplicate call to `split`
-            token = authorization.split()[1]
             action, data = handle_auth_bearer_header(token)
 
             if action == 'return':

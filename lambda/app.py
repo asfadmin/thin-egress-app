@@ -91,14 +91,17 @@ class EulaException(TeaException):
 def get_request_id() -> str:
     return app.lambda_context.aws_request_id
 
+
 def get_origin_request_id() -> str:
     return app.current_request.headers.get("x-origin-request-id")
 
+
 def get_aux_request_headers():
-    req_headers = { "x-request-id": get_request_id() }
+    req_headers = {"x-request-id": get_request_id()}
     if get_origin_request_id():
-        req_headers.update( { "x-origin-request-id": get_origin_request_id() } )
+        req_headers.update({"x-origin-request-id": get_origin_request_id()})
     return req_headers
+
 
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
@@ -143,7 +146,7 @@ def get_user_from_token(token):
 
     try:
         msg = json.loads(payload)
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         log.error(f'could not get json message from payload: {payload}')
         msg = {}
 
@@ -160,7 +163,9 @@ def get_user_from_token(token):
             return None
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
-            # sample json in this case: `{"status_code":403,"error_description":"EULA Acceptance Failure","resolution_url":"http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
+            # sample json in this case:
+            # `{"status_code": 403, "error_description": "EULA Acceptance Failure",
+            #   "resolution_url": "http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
             log.warning('user needs to sign the EULA')
             raise EulaException(msg)
         # Probably an expired token if here
@@ -215,7 +220,7 @@ def send_cors_headers(headers):
     if 'origin' in app.current_request.headers:
         cors_origin = os.getenv("CORS_ORIGIN")
         origin_header = app.current_request.headers['origin']
-        if cors_origin and ( origin_header.endswith(cors_origin) or origin_header.lower() == 'null' ):
+        if cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == 'null'):
             headers['Access-Control-Allow-Origin'] = app.current_request.headers['origin']
             headers['Access-Control-Allow-Credentials'] = 'true'
         else:
@@ -266,7 +271,11 @@ def get_bucket_region(session, bucketname) -> str:
         timer = time.time()
         bucket_region = session.client('s3', **params).get_bucket_location(Bucket=bucketname)['LocationConstraint']
         bucket_region = 'us-east-1' if not bucket_region else bucket_region
-        log.info(return_timing_object(service="s3", endpoint=f"client().get_bucket_location({bucketname})", duration=duration(timer)))
+        log.info(return_timing_object(
+            service="s3",
+            endpoint=f"client().get_bucket_location({bucketname})",
+            duration=duration(timer)
+        ))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
@@ -370,9 +379,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         log.debug("Presigned URL host was {0}".format(s3_host))
 
         download_stat = {"bucket": bucket, "object": filename, "range": range_header}
-        download_stat.update({ "InRegion": "True" if is_in_region else "False"})
+        download_stat.update({"InRegion": "True" if is_in_region else "False"})
         if head_check.get("ContentLength"):
-            download_stat.update({ "size": head_check["ContentLength"]})
+            download_stat.update({"size": head_check["ContentLength"]})
 
         log.info({"download": download_stat})
 
@@ -485,7 +494,7 @@ def locate():
                         status_code=400,
                         headers={'Content-Type': 'text/plain'})
     bucket_name = app.current_request.query_params.get('bucket_name', None)
-    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket,bucket_map_file)['MAP'])
+    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if (len(matching_paths) > 0):
@@ -514,9 +523,10 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
+
 def get_new_session_client(user_id):
     # Default Config
-    params = { "config": bc_Config(**get_bcconfig(user_id)) }
+    params = {"config": bc_Config(**get_bcconfig(user_id))}
     session = get_role_session(user_id=user_id)
 
     timer = time.time()
@@ -524,9 +534,11 @@ def get_new_session_client(user_id):
     log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
     return new_bc_client
 
+
 def bc_client_is_old(bc_client):
     # refresh bc_client after 50 minutes
     return (time.time() - bc_client["timestamp"]) >= (50 * 60)
+
 
 def get_bc_config_client(user_id):
 
@@ -548,9 +560,9 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-    t = [time.time()]  #t0
+    t = [time.time()]  # t0
     client = get_data_dl_s3_client()
-    t.append(time.time()) #t1
+    t.append(time.time())  # t1
     # Check for range request
     range_header = get_range_header_val()
     try:
@@ -562,7 +574,7 @@ def try_download_head(bucket, filename):
             log.info("Downloading range {0}".format(range_header))
             download = client.get_object(Bucket=bucket, Key=filename, Range=range_header)
         log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(timer)))
-        t.append(time.time()) #t2
+        t.append(time.time())  # t2
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         # cumulus uses this log message for metrics purposes.
@@ -575,7 +587,7 @@ def try_download_head(bucket, filename):
                             {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
 
-    #WTF is happening here?
+    # WTF is happening here?
     response_headers = {'Content-Type': download['ContentType']}
     for header in download['ResponseMetadata']['HTTPHeaders']:
         name = header_map[header] if header in header_map else header
@@ -588,16 +600,16 @@ def try_download_head(bucket, filename):
     log_context(user_id=user_id)
 
     # Generate URL
-    t.append(time.time()) #t3
+    t.append(time.time())  # t3
     creds, offset = get_role_creds(user_id=user_id)
     url_lifespan = 3600 - offset
 
     session = get_role_session(creds=creds, user_id=user_id)
-    t.append(time.time()) #t4
+    t.append(time.time())  # t4
     bucket_region = get_bucket_region(session, bucket)
-    t.append(time.time()) #t5
+    t.append(time.time())  # t5
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
-    t.append(time.time()) #t6
+    t.append(time.time())  # t6
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
@@ -657,11 +669,15 @@ def handle_auth_bearer_header(token):
 
         log.warning('user has not accepted EULA')
         if check_for_browser(app.current_request.headers):
-            template_vars = {'title': e.payload['error_description'],
-                             'status_code': 403,
-                             'contentstring': f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: <a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.',
-                             'requestid': get_request_id(),
-                             }
+            template_vars = {
+                'title': e.payload['error_description'],
+                'status_code': 403,
+                'contentstring': (
+                    f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: '
+                    '<a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                ),
+                'requestid': get_request_id(),
+            }
 
             return 'return', make_html_response(template_vars, {}, 403, 'error.html')
         return 'return', Response(body=e.payload, status_code=403, headers={})
@@ -715,8 +731,10 @@ def dynamic_url():
     if pub_bucket:
         log.debug("Accessing public bucket {0}".format(path))
     elif not user_profile:
-        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
-            0].lower() == 'bearer':
+        if (
+            'Authorization' in app.current_request.headers and
+            app.current_request.headers['Authorization'].split()[0].lower() == 'bearer'
+        ):
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
             token = app.current_request.headers['Authorization'].split()[1]

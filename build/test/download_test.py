@@ -54,7 +54,6 @@ APIROOT = f"https://{APIHOST}/API"
 # Important Objects and strings we'll need for our tests
 METADATA_FILE = 'SA/METADATA_GRD_HS/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
 METADATA_FILE_CH = 'SA/METADATA_GRD_HS_CH/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml'
-METADATA_CHECK = '<gco:CharacterString>S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml</gco:CharacterString>'
 BROWSE_FILE = 'SA/BROWSE/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.jpg'
 OBJ_PREFIX_FILE = 'SA/METADATA_GRD_HS_CH/browse/ALAV2A104483200-OORIRFU_000.png'
 MAP_PATHS = sorted(["SA/OCN", "SA/OCN_CH", "SB/OCN", "SB/OCN_CH"])
@@ -142,7 +141,7 @@ class unauthed_download_test(unittest.TestCase):
         log.info(f"Result r.headers['Location']: {r.headers['Location']}")
         self.assertTrue(r.headers['Location'] is not None)
 
-        log.info(f"Make sure 'Location' header is redirecting to URS")
+        log.info("Make sure 'Location' header is redirecting to URS")
         self.assertTrue('oauth/authorize' in r.headers['Location'])
 
 
@@ -157,7 +156,8 @@ class auth_download_test(unittest.TestCase):
         url_earthdata = request.url
 
         secret_password = urs_password[0] + "*" * (len(urs_password) - 2) + urs_password[-1]
-        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) to generate an access cookie")
+        log.info(f"Following URS Redirect to {url_earthdata} with Basic auth ({urs_username}/{secret_password}) "
+                 "to generate an access cookie")
         login2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, urs_password))
 
         log.info(f"Login attempt results in status_code: {login2.status_code}")
@@ -193,19 +193,19 @@ class authed_download_test(unittest.TestCase):
         log.info(f"Result r.headers['Location']: {r.headers['Location']}")
         self.assertTrue(r.headers['Location'] is not None)
 
-        log.info(f"Make sure 'Location' header is not redirecting to URS")
+        log.info("Make sure 'Location' header is not redirecting to URS")
         self.assertTrue('oauth/authorize' not in r.headers['Location'])
 
     def test_origin_request_header(self):
         url = f"{APIROOT}/{METADATA_FILE}"
         origin_request_value = "{0}".format(uuid1())
-        headers = {"x-origin-request-id": origin_request_value }
+        headers = {"x-origin-request-id": origin_request_value}
         global cookiejar
 
         log.info(f"Hitting {url} with x-origin-request-id={origin_request_value} Header")
         r = requests.get(url, cookies=cookiejar, headers=headers, allow_redirects=False)
 
-        log.info(f"Validating x-origin-request-id is passed back out successfully")
+        log.info("Validating x-origin-request-id is passed back out successfully")
         log.info(f"Response Headers: {r.headers}")
         self.assertTrue(r.headers.get('x-origin-request-id') == origin_request_value)
 
@@ -326,7 +326,7 @@ class cors_test(unittest.TestCase):
 
         origin_host = "https://something.asf.alaska.edu"
 
-        if os.getenv('USE_CORS','') == 'False':
+        if os.getenv('USE_CORS', '') == 'False':
             log.info("CORS is not enabled")
             self.assertTrue(True)
 
@@ -394,7 +394,7 @@ class jwt_blacklist_test(unittest.TestCase):
 
         log.info(f"Temporarily updated function {self.aws_function_name}'s env variables")
         env_vars_update = self.aws_lambda_client.update_function_configuration(FunctionName=self.aws_function_name,
-                                                                          Environment=new_env_vars)
+                                                                               Environment=new_env_vars)
         time.sleep(3)
         log.info(f"Update status: {env_vars_update}")
 
@@ -410,13 +410,14 @@ class jwt_blacklist_test(unittest.TestCase):
             lambda_configuration = self.set_up_temp_env_vars(endpoint)
 
             r = requests.get(self.url, cookies=self.cookie_jar, allow_redirects=False)
-            log.info(f"Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
+            log.info("Blacklisted JWTs should result in a redirect to EDL. r.is_redirect: "
+                     f"{r.is_redirect} (Expect True)")
             self.assertTrue(r.is_redirect)
 
             log.info(f"Result r.headers['Location']: {r.headers['Location']}")
             self.assertTrue(r.headers['Location'] is not None)
 
-            log.info(f"Make sure 'Location' header is redirecting to URS")
+            log.info("Make sure 'Location' header is redirecting to URS")
             self.assertTrue('oauth/authorize' in r.headers['Location'])
 
         except Exception as e:

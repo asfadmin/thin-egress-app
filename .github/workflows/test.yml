@@ -25,4 +25,7 @@ jobs:
 
     - run: pytest --cov=lambda --cov-report=term-missing --cov-report=xml --cov-branch tests
 
-    # TODO(reweeden): Report coverage
+    - name: Report coverage
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true

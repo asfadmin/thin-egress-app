@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import datetime
 
@@ -12,6 +11,8 @@ TEA_LAMBDA_NAME = os.getenv('TEA_LAMBDA_NAME')
 
 
 def lambda_handler(event, context):
+    del event
+
     log.info('teabumper!')
 
     egress_env = client.get_function_configuration(

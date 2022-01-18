@@ -26,8 +26,3 @@ def lambda_handler(event, context):
         Environment=egress_env
     )
     log.debug(response)
-
-
-# TODO(reweeden): This appears to be unused
-def version():
-    return json.dumps({'version_id': '<BUILD_ID>'})

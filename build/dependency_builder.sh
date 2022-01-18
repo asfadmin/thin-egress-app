@@ -7,25 +7,25 @@
 echo "RUNNING dependency_builder.sh"
 
 echo "inside dependency building container env:"
-printenv
-
-yum install -y amazon-linux-extras && \
-amazon-linux-extras enable python3.8
-
-yum install -y zip git python38 python38-pip
-yum clean all
+# printenv
+#
+# yum install -y amazon-linux-extras && \
+# amazon-linux-extras enable python3.8
+#
+# yum install -y zip git python38 python38-pip
+# yum clean all
 
 mkdir -p /tmp/pkg/python
 
 
 cd /tmp/pkg/python || exit
 
-echo "Updating Pip..."
-python3.8 -m pip install -U pip
+# echo "Updating Pip..."
+# python3.8 -m pip install -U pip
 echo "Installing setuptools..."
-python3.8 -m pip install --upgrade setuptools
+# python3.8 -m pip install --upgrade setuptools
 echo "Installing ${WORKSPACE}/requirements.txt"
-python3.8 -m pip install -r "${WORKSPACE}"/requirements.txt --target .
+python3.8 -m pip install --upgrade -r "${WORKSPACE}/requirements.txt" --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info

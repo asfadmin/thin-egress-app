@@ -102,7 +102,7 @@ def test_check_for_browser():
 
 
 def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
-    del current_request, mock_get_urs_creds
+    del current_request
 
     payload = '{"uid": "user_name"}'
     mock_response = mock.Mock()
@@ -111,10 +111,11 @@ def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
     mock_request.urlopen.return_value = mock_response
 
     assert app.get_user_from_token("token") == "user_name"
+    mock_get_urs_creds.assert_called_once()
 
 
 def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, current_request):
-    del current_request, mock_get_urs_creds
+    del current_request
 
     payload = """{
         "status_code": 403,
@@ -126,10 +127,11 @@ def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, curren
 
     with pytest.raises(app.EulaException):
         app.get_user_from_token("token")
+    mock_get_urs_creds.assert_called_once()
 
 
 def test_get_user_from_token_other_error(mock_request, mock_get_urs_creds, current_request):
-    del current_request, mock_get_urs_creds
+    del current_request
 
     payload = """{
         "status_code": 401,
@@ -140,15 +142,17 @@ def test_get_user_from_token_other_error(mock_request, mock_get_urs_creds, curre
     mock_request.urlopen.side_effect = HTTPError("", 401, "Bad Request", {}, io.StringIO(payload))
 
     assert app.get_user_from_token("token") is None
+    mock_get_urs_creds.assert_called_once()
 
 
 @pytest.mark.parametrize("code", (200, 403, 500))
 def test_get_user_from_token_json_error(mock_request, mock_get_urs_creds, current_request, code):
-    del current_request, mock_get_urs_creds
+    del current_request
 
     mock_request.urlopen.side_effect = HTTPError("", code, "Message", {}, io.StringIO("not valid json"))
 
     assert app.get_user_from_token("token") is None
+    mock_get_urs_creds.assert_called_once()
 
 
 def test_cumulus_log_message(current_request):
@@ -358,6 +362,7 @@ def test_try_download_from_bucket(
         "Access-Control-Allow-Origin": "example.com",
         "Access-Control-Allow-Credentials": "true"
     }
+    mock_check_in_region_request.assert_called_once()
 
     # Hit some of the other code paths
     monkeypatch.setenv("SUPPRESS_HEAD", "1")
@@ -387,7 +392,7 @@ def test_try_download_from_bucket_client_error(
     current_request,
     _clear_caches
 ):
-    del mock_check_in_region_request, current_request
+    del current_request
 
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
     mock_get_role_session().client.side_effect = ClientError({}, "bar")
@@ -403,6 +408,7 @@ def test_try_download_from_bucket_client_error(
         400,
         "error.html"
     )
+    mock_check_in_region_request.assert_called_once()
 
 
 @mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
@@ -418,7 +424,7 @@ def test_try_download_from_bucket_not_found(
     current_request,
     monkeypatch
 ):
-    del mock_get_role_session, mock_check_in_region_request, current_request
+    del current_request
 
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
@@ -438,6 +444,9 @@ def test_try_download_from_bucket_not_found(
         404,
         "error.html"
     )
+    mock_get_role_creds.assert_called_once()
+    mock_get_role_session.assert_called_once()
+    mock_check_in_region_request.assert_called_once()
 
 
 @mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
@@ -452,7 +461,7 @@ def test_try_download_from_bucket_invalid_range(
     current_request,
     monkeypatch
 ):
-    del mock_get_role_session, mock_check_in_region_request, current_request
+    del current_request
 
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
@@ -465,6 +474,9 @@ def test_try_download_from_bucket_invalid_range(
     assert response.body == "Invalid Range"
     assert response.status_code == 416
     assert response.headers == {}
+    mock_get_role_creds.assert_called_once()
+    mock_get_role_session.assert_called_once()
+    mock_check_in_region_request.assert_called_once()
 
 
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -746,8 +758,6 @@ def test_try_download_head(
     current_request,
     monkeypatch
 ):
-    del mock_get_data_dl_s3_client
-
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
     current_request.headers = {"origin": "example.com"}
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
@@ -763,16 +773,13 @@ def test_try_download_head(
         "Access-Control-Allow-Origin": "example.com",
         "Access-Control-Allow-Credentials": "true"
     }
+    mock_get_data_dl_s3_client.assert_called_once()
+    mock_get_role_creds.assert_called_once()
+    mock_get_role_session.assert_called_once()
 
 
 @mock.patch(f"{MODULE}.get_data_dl_s3_client", autospec=True)
-@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
-@mock.patch(f"{MODULE}.get_role_session", autospec=True)
-@mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
 def test_try_download_head_error(
-    mock_get_presigned_url,
-    mock_get_role_session,
-    mock_get_role_creds,
     mock_get_data_dl_s3_client,
     current_request,
     monkeypatch,
@@ -780,9 +787,6 @@ def test_try_download_head_error(
 ):
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
     current_request.headers = {"origin": "example.com"}
-    mock_get_role_creds.return_value = (mock.Mock(), 1000)
-    presigned_url = "somebucket.s3.us-west-2.amazonaws.com"
-    mock_get_presigned_url.return_value = presigned_url
     mock_get_data_dl_s3_client().get_object.side_effect = ClientError({}, "foo")
 
     app.try_download_head("bucket", "filename")

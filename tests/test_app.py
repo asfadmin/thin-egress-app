@@ -10,8 +10,9 @@ import yaml
 from botocore.exceptions import ClientError
 from chalice.test import Client
 
+MODULE = "lambda.app"
 # Can't import normally because 'lambda' is a reserved word
-app = importlib.import_module("lambda.app")
+app = importlib.import_module(MODULE)
 
 
 @pytest.fixture
@@ -27,20 +28,20 @@ def client():
 
 @pytest.fixture
 def lambda_context():
-    with mock.patch("lambda.app.app.lambda_context") as ctx:
+    with mock.patch(f"{MODULE}.app.lambda_context") as ctx:
         yield ctx
 
 
 @pytest.fixture
 def current_request(lambda_context):
     lambda_context.aws_request_id = "request_1234"
-    with mock.patch("lambda.app.app.current_request") as req:
+    with mock.patch(f"{MODULE}.app.current_request") as req:
         yield req
 
 
 @pytest.fixture
 def mock_get_urs_creds():
-    with mock.patch("lambda.app.get_urs_creds") as m:
+    with mock.patch(f"{MODULE}.get_urs_creds", autospec=True) as m:
         m.return_value = {
             "UrsId": "stringofseeminglyrandomcharacters",
             "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
@@ -50,7 +51,7 @@ def mock_get_urs_creds():
 
 @pytest.fixture
 def mock_make_html_response():
-    with mock.patch("lambda.app.make_html_response") as m:
+    with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
         m.side_effect = lambda _1, headers, status_code, _4: chalice.Response(
             body="Mock response",
             headers=headers,
@@ -61,7 +62,7 @@ def mock_make_html_response():
 
 @pytest.fixture
 def mock_request():
-    with mock.patch("lambda.app.request") as m:
+    with mock.patch(f"{MODULE}.request", autospec=True) as m:
         yield m
 
 
@@ -162,7 +163,7 @@ def test_cumulus_log_message(current_request):
     )
 
 
-@mock.patch("lambda.app.get_yaml_file")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 def test_restore_bucket_vars(mock_get_yaml_file, resources):
     with resources.open("bucket_map_example.yaml") as f:
         buckets = yaml.full_load(f)
@@ -175,9 +176,9 @@ def test_restore_bucket_vars(mock_get_yaml_file, resources):
     assert app.b_map == buckets
 
 
-@mock.patch("lambda.app.get_urs_url")
+@mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 def test_do_auth_and_return(mock_get_urs_url, monkeypatch):
-    mock_get_urs_url.side_effect = lambda ctx, redirect: redirect
+    mock_get_urs_url.side_effect = lambda _ctx, redirect: redirect
 
     response = app.do_auth_and_return({"path": "/some/path"})
     assert response.body == ""
@@ -243,7 +244,7 @@ def test_make_redirect(current_request):
     assert response.status_code == 301
 
 
-@mock.patch("lambda.app.get_html_body")
+@mock.patch(f"{MODULE}.get_html_body", autospec=True)
 def test_make_html_response(mock_get_html_body, monkeypatch):
     mock_get_html_body.return_value = "<html></html>"
 
@@ -325,10 +326,10 @@ def test_get_user_ip(current_request):
     assert app.get_user_ip() == "10.0.0.1"
 
 
-@mock.patch("lambda.app.check_in_region_request")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.get_presigned_url")
+@mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
+@mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
 def test_try_download_from_bucket(
     mock_get_presigned_url,
     mock_get_role_session,
@@ -375,9 +376,9 @@ def test_try_download_from_bucket(
     }
 
 
-@mock.patch("lambda.app.check_in_region_request")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
+@mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
 def test_try_download_from_bucket_client_error(
     mock_get_role_session,
     mock_get_role_creds,
@@ -404,10 +405,10 @@ def test_try_download_from_bucket_client_error(
     )
 
 
-@mock.patch("lambda.app.check_in_region_request")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.get_bc_config_client")
+@mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
+@mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
 def test_try_download_from_bucket_not_found(
     mock_get_bc_config_client,
     mock_get_role_session,
@@ -421,7 +422,7 @@ def test_try_download_from_bucket_not_found(
 
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
-    mock_get_bc_config_client().head_object.side_effect = ClientError(
+    mock_get_bc_config_client(None).head_object.side_effect = ClientError(
         {"ResponseMetadata": {"HTTPStatusCode": 404}},
         "bar"
     )
@@ -439,10 +440,10 @@ def test_try_download_from_bucket_not_found(
     )
 
 
-@mock.patch("lambda.app.check_in_region_request")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.get_bc_config_client")
+@mock.patch(f"{MODULE}.check_in_region_request", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
+@mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
 def test_try_download_from_bucket_invalid_range(
     mock_get_bc_config_client,
     mock_get_role_session,
@@ -455,7 +456,7 @@ def test_try_download_from_bucket_invalid_range(
 
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
-    mock_get_bc_config_client().head_object.side_effect = ClientError(
+    mock_get_bc_config_client(None).head_object.side_effect = ClientError(
         {"ResponseMetadata": {"HTTPStatusCode": 416}},
         "bar"
     )
@@ -466,14 +467,14 @@ def test_try_download_from_bucket_invalid_range(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_get_jwt_field():
     assert app.get_jwt_field({"asf-cookie": {"foo": "bar"}}, "foo") == "bar"
     assert app.get_jwt_field({"asf-cookie": {}}, "foo") is None
     assert app.get_jwt_field({}, "foo") is None
 
 
-@mock.patch("lambda.app.get_urs_url")
+@mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 def test_root(mock_get_urs_url, mock_make_html_response, client):
     urs_url = "urs.example.com"
     mock_get_urs_url.return_value = urs_url
@@ -491,9 +492,9 @@ def test_root(mock_get_urs_url, mock_make_html_response, client):
     )
 
 
-@mock.patch("lambda.app.get_urs_url")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_urs_url", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_root_with_login(
     mock_get_cookie_vars,
     mock_get_urs_url,
@@ -552,10 +553,10 @@ def test_root_with_login(
     )
 
 
-@mock.patch("lambda.app.get_urs_url")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.make_set_cookie_headers_jwt")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_urs_url", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.make_set_cookie_headers_jwt", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_logout(
     mock_make_set_cookie_headers_jwt,
     mock_get_cookie_vars,
@@ -581,7 +582,7 @@ def test_logout(
     )
 
 
-@mock.patch("lambda.app.do_login")
+@mock.patch(f"{MODULE}.do_login", autospec=True)
 def test_login(mock_do_login, client):
     mock_do_login.return_value = (301, {"foo": "bar"}, {"baz": "qux"})
 
@@ -595,7 +596,7 @@ def test_login(mock_do_login, client):
     }
 
 
-@mock.patch("lambda.app.do_login")
+@mock.patch(f"{MODULE}.do_login", autospec=True)
 def test_login_error(mock_do_login, mock_make_html_response, client):
     mock_do_login.side_effect = ClientError({}, "foo")
 
@@ -627,7 +628,7 @@ def test_version(monkeypatch, client):
     assert response.status_code == 200
 
 
-@mock.patch("lambda.app.get_yaml_file")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 def test_locate(mock_get_yaml_file, resources, client):
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -701,7 +702,7 @@ def test_get_range_header_val(current_request):
     assert app.get_range_header_val() is None
 
 
-@mock.patch("lambda.app.get_role_session")
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
 def test_get_new_session_client(mock_get_role_session):
     client = mock_get_role_session().client()
 
@@ -711,7 +712,7 @@ def test_get_new_session_client(mock_get_role_session):
     mock_get_role_session.assert_called_with(user_id="user_name")
 
 
-@mock.patch("lambda.app.get_new_session_client")
+@mock.patch(f"{MODULE}.get_new_session_client", autospec=True)
 def test_get_bc_config_client_cached(mock_get_new_session_client):
     app.get_bc_config_client("user_name")
     mock_get_new_session_client.assert_called_once_with("user_name")
@@ -719,9 +720,9 @@ def test_get_bc_config_client_cached(mock_get_new_session_client):
     mock_get_new_session_client.assert_called_once_with("user_name")
 
 
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.get_bc_config_client")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_cookie_vars):
     mock_get_cookie_vars.return_value = {
         "asf-cookie": {
@@ -733,10 +734,10 @@ def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_cookie_vars):
     mock_get_bc_config_client.assert_called_once_with("user_name")
 
 
-@mock.patch("lambda.app.get_data_dl_s3_client")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.get_presigned_url")
+@mock.patch(f"{MODULE}.get_data_dl_s3_client", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
+@mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
 def test_try_download_head(
     mock_get_presigned_url,
     mock_get_role_session,
@@ -764,10 +765,10 @@ def test_try_download_head(
     }
 
 
-@mock.patch("lambda.app.get_data_dl_s3_client")
-@mock.patch("lambda.app.get_role_creds")
-@mock.patch("lambda.app.get_role_session")
-@mock.patch("lambda.app.get_presigned_url")
+@mock.patch(f"{MODULE}.get_data_dl_s3_client", autospec=True)
+@mock.patch(f"{MODULE}.get_role_creds", autospec=True)
+@mock.patch(f"{MODULE}.get_role_session", autospec=True)
+@mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
 def test_try_download_head_error(
     mock_get_presigned_url,
     mock_get_role_session,
@@ -798,8 +799,8 @@ def test_try_download_head_error(
     )
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.try_download_head")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_head", autospec=True)
 def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources, current_request):
     mock_try_download_head.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
     with resources.open("bucket_map_example.yaml") as f:
@@ -816,7 +817,7 @@ def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources,
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -841,7 +842,7 @@ def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
     mock_get_yaml_file.return_value = {}
     current_request.uri_params = {}
@@ -853,8 +854,8 @@ def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
     assert response.status_code == 400
 
 
-@mock.patch("lambda.app.get_user_from_token")
-@mock.patch("lambda.app.get_new_token_and_profile")
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
 def test_handle_auth_bearer_header(mock_get_new_token_and_profile, mock_get_user_from_token, current_request):
     current_request.headers = {"x-origin-request-id": "origin_request_id"}
     mock_user_profile = mock.Mock()
@@ -872,7 +873,7 @@ def test_handle_auth_bearer_header(mock_get_new_token_and_profile, mock_get_user
     )
 
 
-@mock.patch("lambda.app.get_user_from_token")
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
 def test_handle_auth_bearer_header_eula_error(mock_get_user_from_token, current_request):
     current_request.headers = {"x-origin-request-id": "origin_request_id"}
     mock_get_user_from_token.side_effect = app.EulaException({})
@@ -883,7 +884,7 @@ def test_handle_auth_bearer_header_eula_error(mock_get_user_from_token, current_
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_user_from_token")
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
 def test_handle_auth_bearer_header_eula_error_browser(
     mock_get_user_from_token,
     mock_make_html_response,
@@ -916,9 +917,9 @@ def test_handle_auth_bearer_header_eula_error_browser(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_user_from_token")
-@mock.patch("lambda.app.get_new_token_and_profile")
-@mock.patch("lambda.app.do_auth_and_return")
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
 def test_handle_auth_bearer_header_no_profile(
     mock_do_auth_and_return,
     mock_get_new_token_and_profile,
@@ -943,8 +944,8 @@ def test_handle_auth_bearer_header_no_profile(
     mock_do_auth_and_return.assert_called_once_with(current_request.context)
 
 
-@mock.patch("lambda.app.get_user_from_token")
-@mock.patch("lambda.app.do_auth_and_return")
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
 def test_handle_auth_bearer_header_no_user_id(
     mock_do_auth_and_return,
     mock_get_user_from_token,
@@ -959,10 +960,10 @@ def test_handle_auth_bearer_header_no_user_id(
     mock_do_auth_and_return.assert_called_once_with(current_request.context)
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.try_download_from_bucket")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url(
     mock_get_cookie_vars,
     mock_try_download_from_bucket,
@@ -995,10 +996,10 @@ def test_dynamic_url(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.try_download_from_bucket")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_public(
     mock_get_cookie_vars,
     mock_try_download_from_bucket,
@@ -1022,12 +1023,12 @@ def test_dynamic_url_public(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.try_download_from_bucket")
-@mock.patch("lambda.app.user_in_group")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.make_set_cookie_headers_jwt")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.user_in_group", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.make_set_cookie_headers_jwt", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_private(
     mock_make_set_cookie_headers_jwt,
     mock_get_cookie_vars,
@@ -1068,9 +1069,9 @@ def test_dynamic_url_private(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_directory(
     mock_get_cookie_vars,
     mock_get_yaml_file,
@@ -1106,12 +1107,12 @@ def test_dynamic_url_directory(
     assert response.headers == {}
 
 
-@mock.patch("lambda.app.get_yaml_file")
-@mock.patch("lambda.app.try_download_from_bucket")
-@mock.patch("lambda.app.get_cookie_vars")
-@mock.patch("lambda.app.handle_auth_bearer_header")
-@mock.patch("lambda.app.make_set_cookie_headers_jwt")
-@mock.patch("lambda.app.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.handle_auth_bearer_header", autospec=True)
+@mock.patch(f"{MODULE}.make_set_cookie_headers_jwt", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_bearer_auth(
     mock_make_set_cookie_headers_jwt,
     mock_handle_auth_bearer_header,
@@ -1167,8 +1168,8 @@ def test_profile(client):
     assert response.status_code == 200
 
 
-@mock.patch("lambda.app.get_jwt_keys")
-@mock.patch("lambda.app.JWT_ALGO", "THE_ALGO")
+@mock.patch(f"{MODULE}.get_jwt_keys", autospec=True)
+@mock.patch(f"{MODULE}.JWT_ALGO", "THE_ALGO")
 def test_pubkey(get_keys_mock, client):
     get_keys_mock.return_value = {"rsa_pub_key": b"THE KEY"}
 

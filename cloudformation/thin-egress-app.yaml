@@ -532,7 +532,7 @@ Resources:
           vpcid: !Sub "${PrivateVPC}"
       Timeout: !Ref LambdaTimeout
       Handler: update_lambda.lambda_handler
-      Runtime: 'python3.7'
+      Runtime: 'python3.8'
       Layers:
         - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128

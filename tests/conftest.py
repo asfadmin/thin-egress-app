@@ -1,5 +1,6 @@
 import importlib
 import logging
+import os
 import pathlib
 import sys
 from typing import IO, Any
@@ -20,6 +21,21 @@ logging.getLogger().setLevel(0)
 real_boto3 = importlib.import_module("boto3")
 mock_boto3 = mock.create_autospec(real_boto3)
 sys.modules["boto3"] = mock_boto3
+
+
+@pytest.fixture(scope="session", autouse=True)
+def aws_config():
+    """Set up aws cli/boto configuration
+
+    This makes sure we don't accidentally touch real resources.
+    """
+    # NOTE: This will persist beyond the pytest session,
+    # however, the process should terminate immediately afterwards.
+    os.environ["AWS_ACCESS_KEY_ID"] = "TEST_ACCESS_KEY_ID"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "TEST_SECRET_ACCESS_KEY"
+    os.environ["AWS_SECURITY_TOKEN"] = "TEST_SECURITY_TOKEN"
+    os.environ["AWS_SESSION_TOKEN"] = "TEST_SESSION_TOKEN"
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
 
 class Resources():

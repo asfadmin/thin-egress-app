@@ -458,6 +458,10 @@ Resources:
                   - xray:PutTraceSegments
                   - xray:PutTelemetryRecords
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:GetLayerVersion
+                Resource: '*'
 
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role

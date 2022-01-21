@@ -5,8 +5,8 @@ from unittest import mock
 
 import pytest
 
-MODULE_PATH = "lambda.update_lambda"
-update_lambda = importlib.import_module(MODULE_PATH)
+MODULE = "lambda.update_lambda"
+update_lambda = importlib.import_module(MODULE)
 
 
 @pytest.fixture
@@ -14,8 +14,8 @@ def context():
     return mock.Mock(aws_request_id="request_1234")
 
 
-@mock.patch(f"{MODULE_PATH}.get_region_cidrs")
-@mock.patch(f"{MODULE_PATH}.cfnresponse")
+@mock.patch(f"{MODULE}.get_region_cidrs")
+@mock.patch(f"{MODULE}.cfnresponse")
 def test_lambda_handler(mock_cfnresponse, mock_get_region_cidrs, boto3, context, monkeypatch):
     monkeypatch.setenv("iam_role_name", "role_1234")
     client = boto3.client("iam")
@@ -33,8 +33,8 @@ def test_lambda_handler(mock_cfnresponse, mock_get_region_cidrs, boto3, context,
     mock_cfnresponse.send.assert_called_once_with(event, context, mock_cfnresponse.SUCCESS, {"Data": mock.ANY})
 
 
-@mock.patch(f"{MODULE_PATH}.get_region_cidrs")
-@mock.patch(f"{MODULE_PATH}.cfnresponse")
+@mock.patch(f"{MODULE}.get_region_cidrs")
+@mock.patch(f"{MODULE}.cfnresponse")
 def test_lambda_handler_no_response(mock_cfnresponse, mock_get_region_cidrs, boto3, context, monkeypatch):
     monkeypatch.setenv("iam_role_name", "role_1234")
     client = boto3.client("iam")
@@ -52,8 +52,8 @@ def test_lambda_handler_no_response(mock_cfnresponse, mock_get_region_cidrs, bot
     mock_cfnresponse.send.assert_not_called()
 
 
-@mock.patch(f"{MODULE_PATH}.get_region_cidrs")
-@mock.patch(f"{MODULE_PATH}.cfnresponse")
+@mock.patch(f"{MODULE}.get_region_cidrs")
+@mock.patch(f"{MODULE}.cfnresponse")
 def test_lambda_handler_no_policy_names(mock_cfnresponse, mock_get_region_cidrs, boto3, context):
     client = boto3.client("iam")
     client.list_role_policies.return_value = {}
@@ -67,8 +67,8 @@ def test_lambda_handler_no_policy_names(mock_cfnresponse, mock_get_region_cidrs,
     mock_cfnresponse.send.assert_not_called()
 
 
-@mock.patch(f"{MODULE_PATH}.get_region_cidrs")
-@mock.patch(f"{MODULE_PATH}.cfnresponse")
+@mock.patch(f"{MODULE}.get_region_cidrs")
+@mock.patch(f"{MODULE}.cfnresponse")
 def test_lambda_handler_error(mock_cfnresponse, mock_get_region_cidrs, context):
     mock_get_region_cidrs.side_effect = Exception("mock exception")
     event = {"ResponseURL": "https://example.com"}
@@ -78,8 +78,8 @@ def test_lambda_handler_error(mock_cfnresponse, mock_get_region_cidrs, context):
     mock_cfnresponse.send.assert_called_once_with(event, context, mock_cfnresponse.FAILED, {"Data": mock.ANY})
 
 
-@mock.patch(f"{MODULE_PATH}.get_region_cidrs")
-@mock.patch(f"{MODULE_PATH}.cfnresponse")
+@mock.patch(f"{MODULE}.get_region_cidrs")
+@mock.patch(f"{MODULE}.cfnresponse")
 def test_lambda_handler_error_no_response(mock_cfnresponse, mock_get_region_cidrs, context):
     mock_get_region_cidrs.side_effect = Exception("mock exception")
     event = {}
@@ -89,7 +89,7 @@ def test_lambda_handler_error_no_response(mock_cfnresponse, mock_get_region_cidr
     mock_cfnresponse.send.assert_not_called()
 
 
-@mock.patch(f"{MODULE_PATH}.urllib.request")
+@mock.patch(f"{MODULE}.urllib.request")
 def test_get_region_cidrs(mock_request):
     data = json.dumps({
         "prefixes": [

@@ -3,8 +3,8 @@ from unittest import mock
 
 import pytest
 
-MODULE_PATH = "lambda.tea_bumper"
-tea_bumper = importlib.import_module(MODULE_PATH)
+MODULE = "lambda.tea_bumper"
+tea_bumper = importlib.import_module(MODULE)
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def context():
     return mock.Mock(aws_request_id="request_1234")
 
 
-@mock.patch(f"{MODULE_PATH}.datetime")
+@mock.patch(f"{MODULE}.datetime")
 def test_lambda_handler(mock_datetime, boto3, context):
     mock_datetime.utcnow.return_value = 0
 

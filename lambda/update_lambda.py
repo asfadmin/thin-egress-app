@@ -1,9 +1,10 @@
 import json
-import boto3
-import urllib.request
 import os
-from netaddr import cidr_merge
+import urllib.request
+
+import boto3
 import cfnresponse
+from netaddr import cidr_merge
 
 
 def lambda_handler(event, context):

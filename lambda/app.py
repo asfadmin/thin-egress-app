@@ -19,6 +19,9 @@ from rain_api_core.urs_util import get_urs_url, do_login, user_in_group, get_urs
 from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_cookie_headers_jwt, get_jwt_keys, \
     JWT_COOKIE_NAME, JWT_ALGO
 
+# TODO this comes from a Lambda layer - might prevent local builds from working correctly if not included
+from opentelemetry import trace
+
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
 
@@ -662,65 +665,69 @@ def handle_auth_bearer_header(token):
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-    t = [time.time()]
-    custom_headers = {}
-    log.debug('attempting to GET a thing')
-    restore_bucket_vars()
-    log.debug(f'b_map: {b_map}')
-    t.append(time.time())
+    # TODO is this the best place to set the root context? Should we use the HEAD request instead?
+    # TODO we will need to explicitly send the trace headers to EDL
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("tea_get", context={}):
+        t = [time.time()]
+        custom_headers = {}
+        log.debug('attempting to GET a thing')
+        restore_bucket_vars()
+        log.debug(f'b_map: {b_map}')
+        t.append(time.time())
 
-    log.info(app.current_request.headers)
+        log.info(app.current_request.headers)
 
-    if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
-        if not bucket:
-            template_vars = {'contentstring': 'File not found', 'title': 'File not found',
-                             'requestid': get_request_id(), }
-            headers = {}
-            return make_html_response(template_vars, headers, 404, 'error.html')
-    else:
-        path, bucket, filename = (None, None, None)
-
-    cookievars = get_cookie_vars(app.current_request.headers)
-    user_profile = None
-    if cookievars:
-        log.debug('cookievars: {}'.format(cookievars))
-        if JWT_COOKIE_NAME in cookievars:
-            # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[JWT_COOKIE_NAME]
+        if 'proxy' in app.current_request.uri_params:
+            path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+            log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
+            if not bucket:
+                template_vars = {'contentstring': 'File not found', 'title': 'File not found',
+                                'requestid': get_request_id(), }
+                headers = {}
+                return make_html_response(template_vars, headers, 404, 'error.html')
         else:
-            log.warning('jwt cookie not found')
-            # Not kicking user out just yet. We might be dealing with a public bucket
-    t.append(time.time())  # 2
-    # Check for public bucket
-    pub_bucket = check_public_bucket(bucket, b_map, filename)
-    t.append(time.time())  # 3
-    if pub_bucket:
-        log.debug("Accessing public bucket {0}".format(path))
-    elif not user_profile:
-        if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
-            0].lower() == 'bearer':
-            # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
-            log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
-            token = app.current_request.headers['Authorization'].split()[1]
-            action, data = handle_auth_bearer_header(token)
+            path, bucket, filename = (None, None, None)
 
-            if action == 'return':
-                # Not a successful event.
-                return data
+        cookievars = get_cookie_vars(app.current_request.headers)
+        user_profile = None
+        if cookievars:
+            log.debug('cookievars: {}'.format(cookievars))
+            if JWT_COOKIE_NAME in cookievars:
+                # this means our cookie is a jwt and we don't need to go digging in the session db
+                user_profile = cookievars[JWT_COOKIE_NAME]
+            else:
+                log.warning('jwt cookie not found')
+                # Not kicking user out just yet. We might be dealing with a public bucket
+        t.append(time.time())  # 2
+        # Check for public bucket
+        pub_bucket = check_public_bucket(bucket, b_map, filename)
+        t.append(time.time())  # 3
+        if pub_bucket:
+            log.debug("Accessing public bucket {0}".format(path))
+        elif not user_profile:
+            if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
+                0].lower() == 'bearer':
+                # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
+                log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
+                token = app.current_request.headers['Authorization'].split()[1]
+                action, data = handle_auth_bearer_header(token)
 
-            user_profile = data
-            user_id = user_profile['uid']
-            log_context(user_id=user_id)
-            log.debug(f'User {user_id} has user profile: {user_profile}')
-            jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
-            log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
-            custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
-            cookievars[JWT_COOKIE_NAME] = jwt_payload
+                if action == 'return':
+                    # Not a successful event.
+                    return data
 
-        else:
-            return do_auth_and_return(app.current_request.context)
+                user_profile = data
+                user_id = user_profile['uid']
+                log_context(user_id=user_id)
+                log.debug(f'User {user_id} has user profile: {user_profile}')
+                jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
+                log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
+                custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+                cookievars[JWT_COOKIE_NAME] = jwt_payload
+
+            else:
+                return do_auth_and_return(app.current_request.context)
 
     t.append(time.time())  # 4
     # Check that the bucket is either NOT private, or user belongs to that group

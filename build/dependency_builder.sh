@@ -29,14 +29,11 @@ python3.8 -m pip install -r "${WORKSPACE}"/requirements.txt --target .
 
 # get rid of unneeded things to make code zip smaller
 rm -rf ./*.dist-info
-# rm -rf pip # commented out because https://snyk.io/vuln/SNYK-PYTHON-PIP-609855
 rm -rf docutils
-rm -rf chalice/cli # cli in lambda? No way!
+rm -rf click chalice/cli # cli in lambda? No way!
 rm -rf botocore # included with lambda, just takes up space here
-rm -rf setuptools
+rm -rf pip setuptools wheel easy_install.py
 rm -rf tests
-rm -rf easy_install.py
-rm -f typing.py # MUST be removed, its presence causes error every time
 
 cd ..
 # now in pkg/

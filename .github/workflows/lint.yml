@@ -11,7 +11,7 @@ jobs:
         with:
           python-version: 3.8
 
-      - run: pip install -r lambda/requirements.txt
+      - run: pip install -r requirements.txt
 
       - uses: TrueBrain/actions-flake8@v2
         with:

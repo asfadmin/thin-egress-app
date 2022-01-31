@@ -292,6 +292,7 @@ Parameters:
     Default: "always_on"
     Description: 'The sampler to use for Open Telemetry tracing'
 
+  # TODO replace with NGAP-managed layers
   OtLambdaLayer:
     Type: String
     Default: "arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
@@ -572,8 +573,6 @@ Resources:
         S3Key: !Ref LambdaCodeS3Key
       Role: !GetAtt EgressLambdaIamRole.Arn
       FunctionName: !Sub "${AWS::StackName}-EgressLambda"
-      TracingConfig:
-        Mode: Active
       VpcConfig:
         !If
         - UsePrivateVPC

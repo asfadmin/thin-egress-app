@@ -21,6 +21,7 @@ from rain_api_core.view_util import get_html_body, get_cookie_vars, make_set_coo
 
 # TODO this comes from a Lambda layer - might prevent local builds from working correctly if not included
 from opentelemetry import trace
+from opentelemetry.propagate import inject
 
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
@@ -85,6 +86,8 @@ def get_aux_request_headers():
     req_headers = { "x-request-id": get_request_id() }
     if get_origin_request_id():
         req_headers.update( { "x-origin-request-id": get_origin_request_id() } )
+    # Insert Open Telemetry headers
+    inject(req_headers)
     return req_headers
 
 def check_for_browser(hdrs):
@@ -665,8 +668,7 @@ def handle_auth_bearer_header(token):
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-    # TODO is this the best place to set the root context? Should we use the HEAD request instead?
-    # TODO we will need to explicitly send the trace headers to EDL
+    # Set the root span for Open Telemetry
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("tea_get", context={}):
         t = [time.time()]

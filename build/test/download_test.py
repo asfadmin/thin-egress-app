@@ -133,7 +133,7 @@ class unauthed_download_test(unittest.TestCase):
         cookies = {'urs_user_id': "badusername", 'urs_access_token': "blah"}
 
         log.info(f"Attempting to use bad cookies ({cookies}) to access {url}")
-        r = requests.get(url, allow_redirects=False)
+        r = requests.get(url, cookies=cookies, allow_redirects=False)
 
         log.info(f"Bad cookies should result in a redirect to EDL. r.is_redirect: {r.is_redirect} (Expect True)")
         self.assertTrue(r.is_redirect)
@@ -166,7 +166,7 @@ class auth_download_test(unittest.TestCase):
         # Copy .asf.alaska.edu cookies to match API Address
         for z in cookiejar:
             if "asf.alaska.edu" in z.domain:
-                logging.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
+                log.info(f"Copying cookie {z.name} from {z.domain} => {APIHOST}")
                 cookiejar.set_cookie(requests.cookies.create_cookie(domain=APIHOST, name=z.name, value=z.value))
 
         log.info(f"Generated cookies: {cookiejar}")

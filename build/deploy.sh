@@ -11,10 +11,12 @@
 #              --region-name="aws-region-value" \
 #              --maturity=<SBX|DEV|SIT|INT|UAT|TEST|PROD>  \
 #              --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>'
+#              --local_build
 #
 #        -a|--aws-profile     AWS Profile (from ~/.aws/credentials)
 #        -b|--bastion         SSM Bastion name ("NGAP SSH Bastion"?)
 #        -c|--client-id       EDL App Client ID
+#        -d|--domain          Custom domain to use on Redirect (not API)
 #        -e|--edl-user-creds  EDL USER credentials (For Validating DL's)
 #        -k|--key-file        ssh key for connecting to SSM Bastion
 #        -m|--maturity        Account/EDL Matuirty (SBX|SIT|UAT|PROD)
@@ -22,7 +24,7 @@
 #        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
 #        -s|--stack-name      The name of the stack to be deployed.
 #        -u|--uid             EDL App UID
-#
+#        -l|--local-build     Build & Deploy files from local sources.
 #  DESTROY:
 #  ./deploy.sh  --destroy-stack=<STACK-NAME> \
 #              --aws-profile=<AWS-PROFILE-NAME> \
@@ -33,6 +35,7 @@
 #        -r|--region-name     AWS Region to deploy to (Default: us-west-w)
 
 # Pass Options
+unset LOCALBUILD
 for i in "$@"
 do
 case $i in
@@ -80,8 +83,16 @@ case $i in
     EDLUSER="${i#*=}"
     ;;
 
+    -l|--local-build)
+    LOCALBUILD='true'
+    echo "Parameters have been chosen to build from local source."
+    ;;
+
+    -d=*|--domain=*)
+    DOMAIN="${i#*=}"
+    ;;
     *)
-    echo "Invalid Argument '${i}'" && exit 1
+    echo "Invalid Arguments: '${i}'" && exit 1
             # unknown option
     ;;
 esac
@@ -248,43 +259,109 @@ for i in $config_bucket $code_bucket $restricted_bucket $public_bucket; do
    fi
 done
 
-
-# Find the stuff we need to download
-code_zip=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
-                                          --prefix "thin-egress-app/tea-code-build" \
+if [ -z "$LOCALBUILD" ]; then 
+   # Find the stuff we need to download
+   echo "Fetching precompiled binaries from ASF's public repo"
+   code_zip=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
+                                             --prefix "thin-egress-app/tea-code-build" \
+                                             --query "reverse(sort_by(Contents,&LastModified))" \
+                                             --output=text | head -1 | xargs -n1 | grep zip)
+   layer_zip=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
+                                             --prefix "thin-egress-app/tea-dependencylayer-build" \
+                                             --query "reverse(sort_by(Contents,&LastModified))" \
+                                             --output=text | head -1 | xargs -n1 | grep zip)
+   cf_yaml=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
+                                          --prefix "thin-egress-app/tea-cloudformation-build" \
                                           --query "reverse(sort_by(Contents,&LastModified))" \
-                                          --output=text | head -1 | xargs -n1 | grep zip)
-layer_zip=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
-                                           --prefix "thin-egress-app/tea-dependencylayer-build" \
-                                           --query "reverse(sort_by(Contents,&LastModified))" \
-                                           --output=text | head -1 | xargs -n1 | grep zip)
-cf_yaml=$(aws $AWSENV s3api list-objects --bucket asf.public.code \
-                                         --prefix "thin-egress-app/tea-cloudformation-build" \
-                                         --query "reverse(sort_by(Contents,&LastModified))" \
-                                         --output=text | head -1 | xargs -n1 | grep yaml)
-cf_yaml_name=$(echo $cf_yaml | cut -d "/" -f 2)
+                                          --output=text | head -1 | xargs -n1 | grep yaml)
+   cf_yaml_name=$(echo $cf_yaml | cut -d "/" -f 2)
+   echo "code zip is: $code_zip"
+   echo "layer_zip is: $layer_zip"
+   echo "cf yaml is: $cf_yaml"
+   echo "cf_yaml_name is: $cf_yaml_name"
+
+else 
+   echo "Building from local source..."
+   # Begin code deployment packaging. 
+   if [ -d "../lambda" ]; then
+      # We are in the right directory
+      if [ -a "tea-deployment.zip" ]; then
+         echo "Cleaning up previous deployment zip..."
+         rm -f tea-deployment.zip
+         rm -f tea-requirements.zip
+      fi
+      cd ../lambda
+      zip ../build/tea-deployment.zip ./app.py
+      zip -g ../build/tea-deployment.zip ./tea_bumper.py
+      zip -g ../build/tea-deployment.zip ./update_lambda.py
+      zip -r ../build/tea-deployment.zip ./templates
+      cd ../build
+      if [ ! -d "../rain-api-core" ]; then 
+         echo "Downloading rain-api-core submodule"
+         cd ..
+         git submodule init
+         git submodule update
+         #Check to see if the previous command succeeds
+         if [ $? -gt 0 ]; then
+            echo "Error updating rain-api-core, check git submodule config"
+            exit 1
+         fi
+         cd build
+      fi
+      cd ../rain-api-core
+      zip -g -r ../build/tea-deployment.zip ./rain_api_core 
+      cd ../build
+   fi
+   # End code deployment packaging
+   # Begin code dependency packaging
+   export WORKSPACE=/thin-egress-app
+   export DEPENDENCYLAYERFILENAME=build/tea-requirements.zip
+   docker build -f i_and_a_builder_agent.Dockerfile -t tea-container .
+   docker run -it -e WORKSPACE -e DEPENDENCYLAYERFILENAME -v $PWD/..:/thin-egress-app tea-container /thin-egress-app/build/dependency_builder.sh
+   code_zip=thin-egress-app/tea-deployment.zip
+   layer_zip=thin-egress-app/tea-requirements.zip
+fi 
+
 
 # Copy/Downloads the build files
 echo ">> Ensuring we have the latest build artifacts..."
-aws $AWSENV s3 ls s3://$code_bucket/$code_zip 2>/dev/null
-if [ $? -gt 0 ]; then
-   aws $AWSENV s3 cp s3://asf.public.code/$code_zip s3://$code_bucket/$code_zip
+
+if [ -z "$LOCALBUILD" ]; then
+   echo "Building from ASF precompiled files..."
+   aws $AWSENV s3 ls s3://$code_bucket/$code_zip 2>/dev/null
+   if [ $? -gt 0 ]; then
+      aws $AWSENV s3 cp s3://asf.public.code/$code_zip s3://$code_bucket/$code_zip
+   else
+      echo ">> Skipping upload of existing $code_zip to s3://$code_bucket/$code_zip"
+   fi
+   aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null
+   if [ $? -gt 0 ]; then
+      aws $AWSENV s3 cp s3://asf.public.code/$layer_zip s3://$code_bucket/$layer_zip
+      if [ $? -gt 0 ]; then
+         # The download has failed. Copy locally and push up. 
+         aws $AWSENV s3 cp s3://asf.public.code/$layer_zip $layer_zip
+         aws $AWSENV s3 cp $layer_zip s3://$code_bucket/$layer_zip
+      fi
+   else
+      echo ">> Skipping upload of existing $layer_zip to s3://$code_bucket/$layer_zip"
+   fi
+   if [ ! -f "/tmp/$cf_yaml_name" ]; then
+      aws $AWSENV s3 cp s3://asf.public.code/$cf_yaml /tmp/$cf_yaml_name
+   fi
 else
-   echo ">> Skipping upload of existing $code_zip to s3://$code_bucket/$code_zip"
-fi
-aws $AWSENV s3 ls s3://$code_bucket/$layer_zip 2>/dev/null
-if [ $? -gt 0 ]; then
-   aws $AWSENV s3 cp s3://asf.public.code/$layer_zip s3://$code_bucket/$layer_zip
-   if [ $? -gt 0 ]; then #The command has failed for some reason (cross-region copying banned?) trying to compensate.
-   aws $AWSENV s3 cp s3://asf.public.code/$layer_zip $layer_zip
-   aws $AWSENV s3 cp $layer_zip s3://$code_bucket/$layer_zip
-   rm -f $layer_zip
-   fi 
-else
-   echo ">> Skipping upload of existing $layer_zip to s3://$code_bucket/$layer_zip"
-fi
-if [ ! -f "/tmp/$cf_yaml_name" ]; then
-   aws $AWSENV s3 cp s3://asf.public.code/$cf_yaml /tmp/$cf_yaml_name
+   echo "Copying local source build to AWS..."
+   if [ -a tea-deployment.zip ] && [ -a tea-requirements.zip ]; then 
+      aws $AWSENV s3 cp tea-deployment.zip s3://$code_bucket/$code_zip
+      aws $AWSENV s3 cp tea-requirements.zip s3://$code_bucket/$layer_zip
+      cf_yaml_name=thin-egress-app.yaml
+      if [ ! -f "/tmp/$cf_yaml_name" ]; then
+         cp ../cloudformation/thin-egress-app.yaml /tmp/$cf_yaml_name
+      fi
+   else 
+      echo "Problem building tea codebase. Check the log output and try again."
+      exit 1
+   fi
+   
 fi
 
 # Dump a bucket map
@@ -337,6 +414,7 @@ aws cloudformation deploy $AWSENV \
         BucketMapFile="bucket_map.yaml" \
         BucketnamePrefix="${STACKNAME}-" \
         ConfigBucket=$config_bucket \
+        DomainName="$DOMAIN" \
         EnableApiGatewayLogToCloudWatch="False" \
         JwtAlgo="RS256" \
         JwtKeySecretName=$jwt_secret_name \

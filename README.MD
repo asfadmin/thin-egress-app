@@ -165,6 +165,21 @@ you have all the information you need to do the right thing.
 
 ![build-process](https://github.com/asfadmin/thin-egress-app/blob/devel/tea-build.png)
 
+If you want to get started building TEA locally for development, follow these steps:
+
+Make sure the git submodule (.submodules) for rain-api-core is configured properly. You may need to switch to https://github.com/asfadmin/rain-api-core.git to successfully clone it if you haven't configured SSH keys for github.
+
+```
+cd thin-egress-app
+
+git submodule init
+
+git submodule update
+```
+This will put the `rain-api-core` inside `thin-egress-app`. 
+
+You can now start building the dependencies for deploying thin-egress-app. 
+
 ### Code Quality
 
 TEA leverages several open source platforms along with mandatory peer code review to help
@@ -891,5 +906,21 @@ curl -s 'https://raw.githubusercontent.com/asfadmin/thin-egress-app/devel/build/
 ```
 
 All parameters are optional, but not supplying params affects behavior.
+
+If you are looking to deploy your local development code to TEA, please use the following:
+You can find more information on the --domain and --local-build/-l flags in the script itself.
+
+```bash
+build/deploy.sh \
+            --stack-name=tea-stack \
+            --aws-profile=tea-stack-creds \
+            --uid=<edl_app_name> \
+            --client-id=<edl_app_client_id>\
+            --pass='<edl_app_password>' \
+            --maturity=<SIT|UAT|PROD> \
+            --region-name=<region> \
+            --domain=<If deploying EDC, custom cloudfront domain goes here> \
+            -l 
+```
 
 [⬆ Return to Table of Contents](#table-of-contents)

@@ -3,7 +3,7 @@ FROM ubuntu
 RUN apt-get update && \
     apt-get -y install curl python3 python3-pip git vim tree zip make && \
     pip3 install -U pip && \
-    pip3 install awscli boto3 requests
+    pip3 install awscli boto3 requests pytest
 
 RUN apt-get clean && apt-get install -y apt-transport-https gnupg2 && \
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \

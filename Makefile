@@ -1,79 +1,133 @@
 # TODO(reweeden): docs
+
 SOURCES = \
 	lambda/app.py \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
+# TODO(reweeden): Fix this so changing templates causes a rebuild
 RESOURCES = \
 	lambda/templates
 
-DIST = $(SOURCES:lambda=dist/code)
-DIST_RESOURCES = $(RESOURCES:lambda=dist/code)
+# Output directory
+DIR = dist
+EMPTY = $(DIR)/empty
+# Output artifacts
+DIST = $(SOURCES:lambda=$(DIR)/code)
+DIST_RESOURCES = $(RESOURCES:lambda=$(DIR)/code)
 
-CODE_BUCKET =
-CODE_DIR = tea-dev
-
-AWS_PROFILE = default
-AWS_DEFAULT_REGION = us-west-2
-
-JWTALGO = RS256
-JWTKEYSECRETNAME = bbarton_rsa_keys_4_jwt
-LAMBDA_TIMEOUT = 6
-LAMBDA_MEMORY = 128
-URS_URL = https://uat.urs.earthdata.nasa.gov
-URS_CREDS_SECRET_NAME = URS_creds_ASF_DATA_ACCESS_EGRESS_CONTROL_UAT
-BUCKETNAME_PREFIX = rain-uw2-t-
-
+DATE := $(shell date --utc "+%b %d %Y, %T %Z")
+DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
 BUILD_ID := $(shell git rev-parse --short HEAD)
 
-.PHONY: build clean default deploy deploy-dependencies deploy-code deploy-cloudformation layer-builder test
+#####################
+# Deployment Config #
+#####################
+
+# A tag to discriminate between artifacts of the same name. The tag should be
+# different for each build.
+S3_ARTIFACT_TAG = $(DATE_SHORT)
 
 default:
 	@echo "WIP"
 	@echo "BUILD_ID: ${BUILD_ID}"
 
-build: dist/code-$(BUILD_ID).zip dist/dependencies-$(BUILD_ID).zip dist/thin-egress-app-$(BUILD_ID).yaml
+# Include custom configuration
+CONFIG:
+	@echo "It looks like you are building TEA for the first time.\nPlease review the configuration in '$@' and run Make again.\n"
+	@cp --no-clobber CONFIG.example CONFIG
+	@exit 1
 
+include CONFIG
+
+##############################
+# Local building/development #
+##############################
+
+# Build everything
+.PHONY: build
+build: \
+	$(DIR)/thin-egress-app-code.zip \
+	$(DIR)/thin-egress-app-dependencies.zip \
+	$(DIR)/thin-egress-app.yaml
+
+# Build individual components
+.PHONY: dependencies
+dependencies: $(DIR)/thin-egress-app-dependencies.zip
+	@echo "Built dependency layer for version ${BUILD_ID}"
+
+.PHONY: code
+code: $(DIR)/thin-egress-app-code.zip
+	@echo "Built code for version ${BUILD_ID}"
+
+.PHONY: yaml
+yaml: $(DIR)/thin-egress-app.yaml
+	@echo "Built CloudFormation template for version ${BUILD_ID}"
+
+.PHONY: clean
 clean:
-	rm -r dist
+	rm -r $(DIR)
 
-dist/thin-egress-app-$(BUILD_ID).yaml: cloudformation/thin-egress-app.yaml
-	mkdir -p dist
-	cp cloudformation/thin-egress-app.yaml dist/thin-egress-app-$(BUILD_ID).yaml
-	sed -i -e "s/asf.public.code/${CODE_BUCKET}/" dist/thin-egress-app-$(BUILD_ID).yaml
-	sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/code-${BUILD_ID}.zip/" dist/thin-egress-app-$(BUILD_ID).yaml
-	sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/dependencies-${BUILD_ID}.zip/" dist/thin-egress-app-$(BUILD_ID).yaml
-	sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" dist/thin-egress-app-$(BUILD_ID).yaml
-	sed -i -e "s/^Description:.*/Description: \"TEA snapshot, version: ${BUILD_ID}\"/" dist/thin-egress-app-$(BUILD_ID).yaml
+$(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)
+	WORKSPACE=`pwd` DEPENDENCYLAYERFILENAME=$(DIR)/thin-egress-app-dependencies.zip build/dependency_builder.sh
 
-dist/code-$(BUILD_ID).zip: $(DIST) $(DIST_RESOURCES)
-	mkdir -p dist/code
-	cp -r $(DIST) dist/code
-	cp -r $(DIST_RESOURCES) dist/code
-	find dist/code -type f -exec sed -i "s/<BUILD_ID>/${BUILD_ID}/g" {} \;
-	cd dist/code && zip -r ../code-$(BUILD_ID).zip .
+$(DIR)/thin-egress-app-code.zip: $(DIST) $(DIST_RESOURCES) | $(DIR)/code
+	cp -r $(DIST) $(DIR)/code
+	cp -r $(DIST_RESOURCES) $(DIR)/code
+	find $(DIR)/code -type f -exec sed -i "s/<BUILD_ID>/${BUILD_ID}/g" {} \;
+	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
-dist/dependencies-$(BUILD_ID).zip: requirements.txt
-	mkdir -p dist
-	WORKSPACE=`pwd` DEPENDENCYLAYERFILENAME=dist/dependencies-$(BUILD_ID).zip build/dependency_builder.sh
+$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
+	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
+	sed -i -e "s/asf.public.code/${CODE_BUCKET}/" $(DIR)/thin-egress-app.yaml
+	# sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/code-${BUILD_ID}.zip/" $(DIR)/thin-egress-app.yaml
+	# sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/dependencies-${BUILD_ID}.zip/" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s/^Description:.*/Description: \"TEA snapshot, version: ${BUILD_ID} built ${DATE}\"/" $(DIR)/thin-egress-app.yaml
 
-deploy-dependencies: dist/dependencies-$(BUILD_ID).zip
-	aws s3 cp --profile=$(AWS_PROFILE) dist/dependencies-$(BUILD_ID).zip s3://$(CODE_BUCKET)/$(CODE_DIR)/dependencies-$(BUILD_ID).zip
 
-deploy-code: dist/code-$(BUILD_ID).zip
-	aws s3 cp --profile=$(AWS_PROFILE) dist/code-$(BUILD_ID).zip s3://$(CODE_BUCKET)/$(CODE_DIR)/code-$(BUILD_ID).zip
+##############
+# Deployment #
+##############
+# TODO(reweeden): Terraform?
+# TODO(reweeden): Bucket map
 
-deploy-cloudformation: dist/thin-egress-app-$(BUILD_ID).yaml
-	aws cloudformation deploy --region=$(AWS_DEFAULT_REGION) \
-						 --stack-name thin-egress-app-$(BUILD_ID) \
-						 --template-file dist/thin-egress-app-$(BUILD_ID).yaml \
+# Empty targets so we don't re-deploy stuff that is unchanged. Technically they
+# might not be empty, but their purpose is the same.
+# https://www.gnu.org/software/make/manual/html_node/Empty-Targets.html
+
+$(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip | $(EMPTY)
+	@echo "Deploying dependencies"
+	$(AWS) s3 cp --profile=$(AWS_PROFILE) \
+		$(DIR)/thin-egress-app-dependencies.zip \
+		s3://$(CODE_BUCKET)/$(CODE_PREFIX)dependencies-$(S3_ARTIFACT_TAG).zip
+
+	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-dependencies
+
+$(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip | $(EMPTY)
+	@echo "Deploying code"
+	$(AWS) s3 cp --profile=$(AWS_PROFILE) \
+		$(DIR)/thin-egress-app-code.zip \
+		s3://$(CODE_BUCKET)/$(CODE_PREFIX)code-$(S3_ARTIFACT_TAG).zip
+
+	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-code
+
+.PHONY: $(EMPTY)/.deploy-stack
+$(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code | $(EMPTY)
+	@echo "Deploying stack '$(STACK_NAME)'"
+	$(AWS) cloudformation deploy --profile=$(AWS_PROFILE) \
+						 --stack-name $(STACK_NAME) \
+						 --template-file $(DIR)/thin-egress-app.yaml \
 						 --capabilities CAPABILITY_NAMED_IAM \
 						 --parameter-overrides \
+						 	 LambdaCodeS3Key="$(CODE_PREFIX)code-`cat $(EMPTY)/.deploy-code`.zip" \
+							 LambdaCodeDependencyArchive="$(CODE_PREFIX)dependencies-`cat $(EMPTY)/.deploy-dependencies`.zip" \
+							 BucketMapFile=$(CONFIG_PREFIX)bucket_map_customheaders.yaml \
 							 URSAuthCredsSecretName=$(URS_CREDS_SECRET_NAME) \
 							 AuthBaseUrl=$(URS_URL) \
-							 ConfigBucket=$(BUCKETNAME_PREFIX)config \
+							 ConfigBucket=$(CONFIG_BUCKET) \
+							 LambdaCodeS3Bucket=$(CODE_BUCKET) \
 							 PermissionsBoundaryName= \
-							 BucketMapFile=bucket_map_customheaders.yaml \
 							 PublicBucketsFile="" \
 							 PrivateBucketsFile="" \
 							 BucketnamePrefix=$(BUCKETNAME_PREFIX) \
@@ -94,14 +148,48 @@ deploy-cloudformation: dist/thin-egress-app-$(BUILD_ID).yaml
 							 LambdaTimeout=$(LAMBDA_TIMEOUT) \
 							 LambdaMemory=$(LAMBDA_MEMORY) \
 							 JwtAlgo=$(JWTALGO) \
-							 JwtKeySecretName=$(JWTKEYSECRETNAME) \
+							 JwtKeySecretName=$(JWT_KEY_SECRET_NAME) \
 							 UseReverseBucketMap="False" \
 							 UseCorsCookieDomain="False"
 
-deploy: deploy-dependencies deploy-code deploy-cloudformation
+	@touch $(EMPTY)/.deploy-stack
 
-layer-builder:
-	docker build -t layer-builder -f build/dependency_layer_builder.Dockerfile build
+# Deploy everything
+.PHONY: deploy
+deploy: deploy-code deploy-dependencies deploy-stack
 
+# Deploy individual components
+.PHONY: deploy-code
+deploy-code: $(EMPTY)/.deploy-code
+
+.PHONY: deploy-dependencies
+deploy-dependencies: $(EMPTY)/.deploy-dependencies
+
+.PHONY: deploy-stack
+deploy-stack: $(EMPTY)/.deploy-stack
+
+# Remove the empty target files so that aws commands will be run again
+.PHONY: cleandeploy
+cleandeploy:
+	rm -r $(EMPTY)
+
+###############
+# Development #
+###############
+
+.PHONY: test
 test:
 	pytest --cov=lambda --cov-report=term-missing --cov-branch tests
+
+###########
+# Helpers #
+###########
+
+$(EMPTY):
+	mkdir -p $(EMPTY)
+
+$(DIR):
+	mkdir -p $(DIR)
+
+$(DIR)/code:
+	mkdir -p $(DIR)/code

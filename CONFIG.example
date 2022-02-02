@@ -1,0 +1,50 @@
+##############
+# TEA config #
+##############
+
+# The name of the CloudFormation stack to deploy to.
+# For development, this should be a constant value. If code is changed the
+# stack will be updated with the new zip files.
+STACK_NAME = thin-egress-app-dev
+
+# S3 bucket that will contain the build artifacts
+CODE_BUCKET = REQUIRED!
+# Object prefix for artifacts in the code bucket
+CODE_PREFIX = $(STACK_NAME)/
+
+# S3 bucket that will contain the configuration files such as the bucket map
+CONFIG_BUCKET = REQUIRED!
+# Object prefix for artifacts in the config bucket
+CONFIG_PREFIX = $(STACK_NAME)/
+
+# String that will be prepended to bucket names after looking them up in the bucket map
+BUCKETNAME_PREFIX =
+
+# These secrets are required but not managed by the Makefile.
+# For full deployments use `build/deploy.sh`
+JWT_KEY_SECRET_NAME = REQUIRED!
+URS_CREDS_SECRET_NAME = REQUIRED!
+
+# EarthData Login base URL
+URS_URL = https://uat.urs.earthdata.nasa.gov
+
+##################
+# AWS cli config #
+##################
+
+# AWS cli binary name
+AWS = aws
+
+# AWS profile to use
+AWS_PROFILE = default
+
+########
+# Misc #
+########
+
+# Supported JWT algorithm
+JWTALGO = RS256
+
+# AWS Lambda
+LAMBDA_TIMEOUT = 6
+LAMBDA_MEMORY = 128

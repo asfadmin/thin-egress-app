@@ -127,25 +127,16 @@ pipeline {
       }
     }
 
-    // Download and package dependencies
-    // TODO(reweeden): Combine with next stage
-    stage('Package Dependency Layer') {
-      steps {
-        container('layer-builder') {
-            // Clear out Makefile config
-            sh 'echo "" > CONFIG'
-            sh "make dependencies"
-            sh "cp ${WORKSPACE}/dist/thin-egress-app-dependencies.zip ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME}"
-
-            sh 'echo "finished depbuilder, now looking in some dirs" && cd "$WORKSPACE" && ls -lah'
-        }
-      }
-   }
     // Package code
     stage('Package Code') {
       steps {
         container('tea-container') {
-            sh "echo '>> Building Zipfile....'"
+            sh "echo '>> Building dependency layer....'"
+            sh "make dependencies"
+            sh "cp ${WORKSPACE}/dist/thin-egress-app-dependencies.zip ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME}"
+            sh 'echo "finished depbuilder, now looking in some dirs" && cd "$WORKSPACE" && ls -lah'
+
+            sh "echo '>> Building lambda code....'"
             sh "make code BUILD_ID=${BUILDTAG}"
             sh "cp ${WORKSPACE}/dist/thin-egress-app-code.zip ${WORKSPACE}/${CODE_ARCHIVE_FILENAME}"
 

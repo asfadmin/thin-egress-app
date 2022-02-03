@@ -436,6 +436,7 @@ def logout():
 
 @app.route('/login')
 def login():
+    # Set the root span for Open Telemetry
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("tea_login", context={}):
         try:

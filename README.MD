@@ -212,6 +212,8 @@ make code
 make dependencies
 # Creates the CloudFormation template: dist/thin-egress-app.yaml
 make yaml
+# Creates the Terraform zip file needed by cumulus
+make terraform
 
 # Creates all three
 make build

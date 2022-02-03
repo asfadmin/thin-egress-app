@@ -227,10 +227,11 @@ make deploy
 changes made to the source code and rebuild/update the stack as needed*
 
 #### Configuration
-After you run any `make` command, you will notice a file called `CONFIG`. This contains any Make
-configuration variables that you may wish to tweak for your development purposes. If you need to
-override any additional variables from the Makefile you can put them in this file. Alternatively,
-if you just need to make a one off change, `make` lets you set variables on the command line:
+After you run any `make` command, you will notice a file called `Makefile.config`. This contains
+any Make configuration variables that you may wish to tweak for your development purposes. If you
+need to override any additional variables from the Makefile you can put them in this file.
+Alternatively, if you just need to make a one off change, `make` lets you set variables on the
+command line:
 
 ```bash
 make deploy STACK_NAME=thin-egress-app-temp AWS_PROFILE=development

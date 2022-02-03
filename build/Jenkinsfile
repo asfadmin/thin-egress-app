@@ -122,7 +122,7 @@ pipeline {
             echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
 
             // Clear out Makefile config
-            sh 'echo "" > CONFIG'
+            sh 'echo "" > Makefile.config'
         }
       }
     }
@@ -132,8 +132,6 @@ pipeline {
     stage('Package Dependency Layer') {
       steps {
         container('layer-builder') {
-            // Clear out Makefile config
-            sh 'echo "" > CONFIG'
             sh "make dependencies"
             sh "cp ${WORKSPACE}/dist/thin-egress-app-dependencies.zip ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME}"
 

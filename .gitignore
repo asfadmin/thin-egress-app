@@ -18,7 +18,7 @@ terraform.tfstate*
 
 # Config
 bucket_map.yaml
-CONFIG
+Makefile.config
 
 # Other
 /pkg

@@ -436,23 +436,26 @@ def logout():
 
 @app.route('/login')
 def login():
-    try:
-        aux_headers = get_aux_request_headers()
-        status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
-                                                       os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
-    except ClientError as e:
-        log.error(e)
-        status_code = 500
-        headers = {'x-request-id': app.lambda_context.aws_request_id}
-        template_vars = {
-            'contentstring': 'Client Error occurred. ',
-            'title': 'Client Error',
-        }
-    if status_code == 301:
-        return Response(body='', status_code=status_code, headers=headers)
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("tea_login", context={}):
+        try:
+            aux_headers = get_aux_request_headers()
+            print(aux_headers)
+            status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
+                                                           os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
+        except ClientError as e:
+            log.error(e)
+            status_code = 500
+            headers = {'x-request-id': app.lambda_context.aws_request_id}
+            template_vars = {
+                'contentstring': 'Client Error occurred. ',
+                'title': 'Client Error',
+            }
+        if status_code == 301:
+            return Response(body='', status_code=status_code, headers=headers)
 
-    template_vars['requestid'] = get_request_id()
-    return make_html_response(template_vars, headers, status_code, 'error.html')
+        template_vars['requestid'] = get_request_id()
+        return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
 @app.route('/version')
@@ -731,54 +734,54 @@ def dynamic_url():
             else:
                 return do_auth_and_return(app.current_request.context)
 
-    t.append(time.time())  # 4
-    # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, b_map, filename)  # NOTE: Is an optimization attempt worth it
-    # if we're asking for a public file and we
-    # omit this check?
-    log.debug('private check: {}'.format(private_check))
-    t.append(time.time())  # 5
-    aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
-    t.append(time.time())  # 6
+        t.append(time.time())  # 4
+        # Check that the bucket is either NOT private, or user belongs to that group
+        private_check = check_private_bucket(bucket, b_map, filename)  # NOTE: Is an optimization attempt worth it
+        # if we're asking for a public file and we
+        # omit this check?
+        log.debug('private check: {}'.format(private_check))
+        t.append(time.time())  # 5
+        aux_headers = get_aux_request_headers()
+        u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
+        t.append(time.time())  # 6
 
-    new_jwt_cookie_headers = {}
-    if new_user_profile:
-        log.debug(f"We got new profile from user_in_group() {new_user_profile}")
-        user_profile = new_user_profile
-        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
-                                                        get_jwt_field(cookievars, 'urs-access-token'),
-                                                        user_profile)
-        new_jwt_cookie_headers.update(
-            make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+        new_jwt_cookie_headers = {}
+        if new_user_profile:
+            log.debug(f"We got new profile from user_in_group() {new_user_profile}")
+            user_profile = new_user_profile
+            jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
+                                                            get_jwt_field(cookievars, 'urs-access-token'),
+                                                            user_profile)
+            new_jwt_cookie_headers.update(
+                make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
-    log.debug('user_in_group: {}'.format(u_in_g))
+        log.debug('user_in_group: {}'.format(u_in_g))
 
-    if private_check and not u_in_g:
-        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
-                         'requestid': get_request_id(), }
-        return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
+        if private_check and not u_in_g:
+            template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
+                             'requestid': get_request_id(), }
+            return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
-    if not filename:  # Maybe this belongs up above, right after setting the filename var?
-        log.warning("Request was made to directory listing instead of object: {0}".format(path))
+        if not filename:  # Maybe this belongs up above, right after setting the filename var?
+            log.warning("Request was made to directory listing instead of object: {0}".format(path))
 
-        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
-                         'requestid': get_request_id(), }
+            template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
+                             'requestid': get_request_id(), }
 
-        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
+            return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 
-    custom_headers.update(new_jwt_cookie_headers)
-    log.debug(f'custom headers before try download from bucket: {custom_headers}')
-    t.append(time.time())  # 7
+        custom_headers.update(new_jwt_cookie_headers)
+        log.debug(f'custom headers before try download from bucket: {custom_headers}')
+        t.append(time.time())  # 7
 
-    log.debug('timing for dynamic_url()')
-    log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
-    log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
-    log.debug('ET for possible auth header handling: {}s'.format(t[4] - t[3]))
-    log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
-    log.debug('ET for total: {}s'.format(t[7] - t[0]))
+        log.debug('timing for dynamic_url()')
+        log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
+        log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
+        log.debug('ET for possible auth header handling: {}s'.format(t[4] - t[3]))
+        log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
+        log.debug('ET for total: {}s'.format(t[7] - t[0]))
 
-    return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
+        return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
 @app.route('/profile')

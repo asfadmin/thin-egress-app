@@ -195,65 +195,78 @@ builds and code cannot be released without all tests completing successfully.
 
 ### Roll-Your-Own
 
-If you prefer to roll your own zip for the lambda code:
+If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
+from source in a bash environment. You will need to have a few tools installed for this to work:
+
+- `zip` for creating zip files
+- `pip` for building the dependency layer
+- `awscli` (optional) for deploying to AWS
+
+All build artifacts are created into the `dist` directory.
+```bash
+# Clean up from previous builds
+make clean
+# Creates the lambda code zip: dist/thin-egress-app-code.zip
+make code
+# Creates the dependnecy layer zip: dist/thin-egress-app-dependencies.zip
+make dependencies
+# Creates the CloudFormation template: dist/thin-egress-app.yaml
+make yaml
+
+# Creates all three
+make build
+```
+
+You can deploy these artifacts to a development stack with
+```bash
+make deploy
+```
+*Note: You can run this command as many times as you like, make will automatically detect
+changes made to the source code and rebuild/update the stack as needed*
+
+#### Configuration
+After you run any `make` command, you will notice a file called `CONFIG`. This contains any Make
+configuration variables that you may wish to tweak for your development purposes. If you need to
+override any additional variables from the Makefile you can put them in this file. Alternatively,
+if you just need to make a one off change, `make` lets you set variables on the command line:
+
+```bash
+make deploy STACK_NAME=thin-egress-app-temp AWS_PROFILE=development
+```
+
+You will need to change any variables that have the value `REQUIRED!` before you can run
+`make deploy`.
 
 #### Dependency Layer
-We've found that if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+
 ```bash
-
-# Make up a filename for code archive:
-DEPENDENCYLAYERFILENAME=tea_depencency_layer.zip
-
 # get the repo
 git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
-# copy requirements to a directory that is mounted into the docker container
-cp lambda/requirements.txt lambda/requirements_tea.txt
-cp build/dependency_builder.sh lambda/
-
-docker run --rm -v lambda/:/depbuild/in -v ./:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh
+# Build the zip file
+make dependencies
 
 # Upload to S3
-aws s3 cp --profile=default ./${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/
+aws s3 cp --profile=default dist/thin-egress-app-dependencies.zip s3://${CODE_BUCKET}/
 ```
+
+*Note: If you are expecting the `cryptography` dependency to be built from source, you may need to
+run these commands in an `amazonlinux:2` docker container. However, as `cryptography` distributes
+`manylinux` wheels, this should not be necessary*
 
 #### Packaging up the egress code:
 
 ```bash
-
-# Make up a filename for code archive:
-CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
-
-# get the repo
+# Get the repo
 git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
-# Create a scratch directory in which to confine the required module
-
-# To make the archive smaller, you can cull unnecessary packages and files from the directory. The particulars
-# are beyond the scope of this documentation.
-
-# Create the zip archive and put the required modules in
-zip -r9 ./${CODE_ARCHIVE_FILENAME} ./lambda
-
-# Add the egress python code
-zip -g ./${CODE_ARCHIVE_FILENAME} ./app.py
-
-# Add the update lambda
-zip -g ./${CODE_ARCHIVE_FILENAME} ./update_lambda.py
-
-# Add the html templates
-zip -g -r2 ./${CODE_ARCHIVE_FILENAME} ./templates
-
-# Add the common code:
-cd rain_api_core
-zip -g -r9 ./${CODE_ARCHIVE_FILENAME} ./rain_api_core
-cd ..
+# Build the zip file
+make code
 
 # Upload to S3
-aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
-
+aws s3 cp --profile=default dist/thin-egress-app-code.zip s3://${CODE_BUCKET}/
 ```
 
 [⬆ Return to Table of Contents](#table-of-contents)

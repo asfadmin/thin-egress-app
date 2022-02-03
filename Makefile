@@ -94,10 +94,13 @@ $(DIR)/bucket-map.yaml: config/bucket-map-template.yaml
 
 $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
 	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
-	sed -i -e "s/asf.public.code/${CODE_BUCKET}/" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s/^Description:.*/Description: \"TEA snapshot, version: ${BUILD_ID} built ${DATE}\"/" $(DIR)/thin-egress-app.yaml
-
+ifdef CF_DEFAULT_CODE_BUCKET
+	sed -i -e "s;asf.public.code;${CF_DEFAULT_CODE_BUCKET};" $(DIR)/thin-egress-app.yaml
+endif
+	sed -i -e "s;<DEPENDENCY_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s;^Description:.*;Description: \"${CF_DESCRIPTION}\";" $(DIR)/thin-egress-app.yaml
 
 ##############
 # Deployment #

@@ -15,6 +15,7 @@ EMPTY = $(DIR)/empty
 # Output artifacts
 DIST = $(SOURCES:lambda=$(DIR)/code)
 DIST_RESOURCES = $(RESOURCES:lambda=$(DIR)/code)
+BUCKET_MAP_OBJECT_KEY = $(CONFIG_PREFIX)bucket-map.yaml
 
 DATE := $(shell date --utc "+%b %d %Y, %T %Z")
 DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
@@ -77,11 +78,12 @@ $(DIR)/thin-egress-app-code.zip: $(DIST) $(DIST_RESOURCES) | $(DIR)/code
 	find $(DIR)/code -type f -exec sed -i "s/<BUILD_ID>/${BUILD_ID}/g" {} \;
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
+$(DIR)/bucket-map.yaml: config/bucket-map-template.yaml
+	cp $< $@
+
 $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
 	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
 	sed -i -e "s/asf.public.code/${CODE_BUCKET}/" $(DIR)/thin-egress-app.yaml
-	# sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/code-${BUILD_ID}.zip/" $(DIR)/thin-egress-app.yaml
-	# sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/dependencies-${BUILD_ID}.zip/" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s/^Description:.*/Description: \"TEA snapshot, version: ${BUILD_ID} built ${DATE}\"/" $(DIR)/thin-egress-app.yaml
 
@@ -90,7 +92,6 @@ $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
 # Deployment #
 ##############
 # TODO(reweeden): Terraform?
-# TODO(reweeden): Bucket map
 
 # Empty targets so we don't re-deploy stuff that is unchanged. Technically they
 # might not be empty, but their purpose is the same.
@@ -98,8 +99,7 @@ $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
 
 $(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip | $(EMPTY)
 	@echo "Deploying dependencies"
-	$(AWS) s3 cp --profile=$(AWS_PROFILE) \
-		$(DIR)/thin-egress-app-dependencies.zip \
+	$(AWS) s3 cp --profile=$(AWS_PROFILE) $< \
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)dependencies-$(S3_ARTIFACT_TAG).zip
 
 	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-dependencies
@@ -112,8 +112,21 @@ $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip | $(EMPTY)
 
 	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-code
 
+$(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml | $(EMPTY)
+	@echo "Deploying bucket map"
+	$(AWS) s3 cp --profile=$(AWS_PROFILE) $< \
+		s3://$(CONFIG_BUCKET)/$(BUCKET_MAP_OBJECT_KEY)
+
+	@touch $(EMPTY)/.deploy-bucket-map
+
+# Optionally upload a bucket map if the user hasn't specified one
+BUCKET_MAP_REQUIREMENT =
+ifneq ($(BUCKET_MAP_OBJECT_KEY), $(CONFIG_PREFIX)/bucket-map.yaml)
+BUCKET_MAP_REQUIREMENT = $(EMPTY)/.deploy-bucket-map
+endif
+
 .PHONY: $(EMPTY)/.deploy-stack
-$(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code | $(EMPTY)
+$(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code $(BUCKET_MAP_REQUIREMENT) | $(EMPTY)
 	@echo "Deploying stack '$(STACK_NAME)'"
 	$(AWS) cloudformation deploy --profile=$(AWS_PROFILE) \
 						 --stack-name $(STACK_NAME) \
@@ -122,7 +135,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 						 --parameter-overrides \
 						 	 LambdaCodeS3Key="$(CODE_PREFIX)code-`cat $(EMPTY)/.deploy-code`.zip" \
 							 LambdaCodeDependencyArchive="$(CODE_PREFIX)dependencies-`cat $(EMPTY)/.deploy-dependencies`.zip" \
-							 BucketMapFile=$(CONFIG_PREFIX)bucket_map_customheaders.yaml \
+							 BucketMapFile=$(BUCKET_MAP_OBJECT_KEY) \
 							 URSAuthCredsSecretName=$(URS_CREDS_SECRET_NAME) \
 							 AuthBaseUrl=$(URS_URL) \
 							 ConfigBucket=$(CONFIG_BUCKET) \
@@ -164,6 +177,9 @@ deploy-code: $(EMPTY)/.deploy-code
 
 .PHONY: deploy-dependencies
 deploy-dependencies: $(EMPTY)/.deploy-dependencies
+
+.PHONY: deploy-bucket-map
+deploy-bucket-map: $(EMPTY)/.deploy-bucket-map
 
 .PHONY: deploy-stack
 deploy-stack: $(EMPTY)/.deploy-stack

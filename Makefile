@@ -1,21 +1,24 @@
 # TODO(reweeden): docs
 
-SOURCES = \
+SOURCES := \
 	lambda/app.py \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
-# TODO(reweeden): Fix this so changing templates causes a rebuild
-RESOURCES = \
-	lambda/templates
+RESOURCES := \
+	lambda/templates/base.html \
+	lambda/templates/error.html \
+	lambda/templates/profile.html \
+	lambda/templates/root.html
 
 # Output directory
-DIR = dist
-EMPTY = $(DIR)/empty
-# Output artifacts
-DIST = $(SOURCES:lambda=$(DIR)/code)
-DIST_RESOURCES = $(RESOURCES:lambda=$(DIR)/code)
-BUCKET_MAP_OBJECT_KEY = $(CONFIG_PREFIX)bucket-map.yaml
+DIR := dist
+EMPTY := $(DIR)/empty
+# Temporary artifacts
+DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
+DIST_RESOURCES := $(RESOURCES:lambda/%=$(DIR)/code/%)
+
+BUCKET_MAP_OBJECT_KEY := $(CONFIG_PREFIX)bucket-map.yaml
 
 DATE := $(shell date --utc "+%b %d %Y, %T %Z")
 DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
@@ -29,9 +32,6 @@ BUILD_ID := $(shell git rev-parse --short HEAD)
 # different for each build.
 S3_ARTIFACT_TAG = $(DATE_SHORT)
 
-default:
-	@echo "WIP"
-	@echo "BUILD_ID: ${BUILD_ID}"
 
 # Include custom configuration
 CONFIG:
@@ -40,6 +40,9 @@ CONFIG:
 	@exit 1
 
 include CONFIG
+
+
+.DEFAULT_GOAL := build
 
 ##############################
 # Local building/development #
@@ -72,10 +75,18 @@ clean:
 $(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)
 	WORKSPACE=`pwd` DEPENDENCYLAYERFILENAME=$(DIR)/thin-egress-app-dependencies.zip build/dependency_builder.sh
 
-$(DIR)/thin-egress-app-code.zip: $(DIST) $(DIST_RESOURCES) | $(DIR)/code
-	cp -r $(DIST) $(DIR)/code
-	cp -r $(DIST_RESOURCES) $(DIR)/code
-	find $(DIR)/code -type f -exec sed -i "s/<BUILD_ID>/${BUILD_ID}/g" {} \;
+.SECONDARY: $(DIST_RESOURCES)
+$(DIST_RESOURCES): $(DIR)/code/%: lambda/%
+	@mkdir -p $(@D)
+	cp $< $@
+
+.SECONDARY: $(DIST_SOURCES)
+$(DIST_SOURCES): $(DIR)/code/%: lambda/%
+	@mkdir -p $(@D)
+	cp $< $@
+	sed -i "s/<BUILD_ID>/${BUILD_ID}/g" $@
+
+$(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES) | $(DIR)/code
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
 $(DIR)/bucket-map.yaml: config/bucket-map-template.yaml

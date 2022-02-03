@@ -124,6 +124,9 @@ pipeline {
 
             // Clear out Makefile config
             sh 'echo "" > Makefile.config'
+
+            // TODO(reweeden): Remove!!!
+            sh "apt-get install make"
         }
       }
     }

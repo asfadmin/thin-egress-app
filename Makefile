@@ -11,12 +11,16 @@ RESOURCES := \
 	lambda/templates/profile.html \
 	lambda/templates/root.html
 
+TERRAFORM := \
+	$(wildcard terraform/*)
+
 # Output directory
 DIR := dist
 EMPTY := $(DIR)/empty
 # Temporary artifacts
 DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
 DIST_RESOURCES := $(RESOURCES:lambda/%=$(DIR)/code/%)
+DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
 BUCKET_MAP_OBJECT_KEY := $(CONFIG_PREFIX)bucket-map.yaml
 
@@ -53,7 +57,8 @@ include CONFIG
 build: \
 	$(DIR)/thin-egress-app-code.zip \
 	$(DIR)/thin-egress-app-dependencies.zip \
-	$(DIR)/thin-egress-app.yaml
+	$(DIR)/thin-egress-app.yaml \
+	$(DIR)/thin-egress-app-terraform.zip
 
 # Build individual components
 .PHONY: dependencies
@@ -67,6 +72,10 @@ code: $(DIR)/thin-egress-app-code.zip
 .PHONY: yaml
 yaml: $(DIR)/thin-egress-app.yaml
 	@echo "Built CloudFormation template for version ${BUILD_ID}"
+
+.PHONY: terraform
+terraform: $(DIR)/thin-egress-app-terraform.zip
+	@echo "Build Terraform zip file for version ${BUILD_ID}"
 
 .PHONY: clean
 clean:
@@ -101,6 +110,25 @@ endif
 	sed -i -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;^Description:.*;Description: \"${CF_DESCRIPTION}\";" $(DIR)/thin-egress-app.yaml
+
+.SECONDARY: $(DIST_TERRAFORM)
+$(DIST_TERRAFORM): $(DIR)/%: %
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(DIR)/thin-egress-app-terraform.zip: \
+	$(DIR)/thin-egress-app-code.zip \
+	$(DIR)/thin-egress-app-dependencies.zip \
+	$(DIR)/thin-egress-app.yaml \
+	$(DIST_TERRAFORM) | $(DIR)/terraform
+	cp $(DIR)/thin-egress-app-code.zip $(DIR)/terraform/lambda.zip
+	cp $(DIR)/thin-egress-app-dependencies.zip $(DIR)/terraform/dependencylayer.zip
+	cp $(DIR)/thin-egress-app.yaml $(DIR)/terraform/thin-egress-app.yaml
+	cd $(DIR)/terraform && zip ../thin-egress-app-terraform.zip \
+		*.tf \
+		thin-egress-app.yaml \
+		lambda.zip \
+		dependencylayer.zip
 
 ##############
 # Deployment #
@@ -223,3 +251,6 @@ $(DIR):
 
 $(DIR)/code:
 	mkdir -p $(DIR)/code
+
+$(DIR)/terraform:
+	mkdir -p $(DIR)/terraform

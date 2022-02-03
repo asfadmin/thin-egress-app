@@ -16,6 +16,8 @@ CODE_PREFIX = $(STACK_NAME)/
 CONFIG_BUCKET = REQUIRED!
 # Object prefix for artifacts in the config bucket
 CONFIG_PREFIX = $(STACK_NAME)/
+# Uncomment the following line to use an existing bucket map rather than uploading one
+# BUCKET_MAP_OBJECT_KEY =
 
 # String that will be prepended to bucket names after looking them up in the bucket map
 BUCKETNAME_PREFIX =

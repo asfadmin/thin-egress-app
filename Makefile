@@ -28,6 +28,12 @@ DATE := $(shell date --utc "+%b %d %Y, %T %Z")
 DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
 BUILD_ID := $(shell git rev-parse --short HEAD)
 
+DOCKER := docker
+# On Linux we need to do a bit of userid finagling so that the output files
+# end up being owned by us and not by root. On Mac this works out of the box.
+DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
+DOCKER_COMMAND := $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task lambci/lambda:build-python3.8
+
 #####################
 # Deployment Config #
 #####################
@@ -81,8 +87,8 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -r $(DIR)
 
-$(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)
-	WORKSPACE=`pwd` DEPENDENCYLAYERFILENAME=$(DIR)/thin-egress-app-dependencies.zip build/dependency_builder.sh
+$(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)/python
+	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_RESOURCES)
 $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
@@ -251,6 +257,9 @@ $(DIR):
 
 $(DIR)/code:
 	mkdir -p $(DIR)/code
+
+$(DIR)/python:
+	mkdir -p $(DIR)/python
 
 $(DIR)/terraform:
 	mkdir -p $(DIR)/terraform

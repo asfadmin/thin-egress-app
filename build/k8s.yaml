@@ -13,19 +13,8 @@ spec:
          - "-f"
          - "/dev/null"
   - name: layer-builder
-    image: amazonlinux:2
+    image: lambci/lambda:build-python3.8
     command:
-      - "tail"
-      - "-f"
-      - "/dev/null"
-    volumeMounts:
-      - mountPath: "/depbuild/in"
-        name: depbuild-in
-      - mountPath: "/depbuild/out"
-        name: depbuild-out
-        readOnly: false
-  volumes:
-    - name: depbuild-in
-      emptyDir: {/dependency_builder.sh}
-    - name: depbuild-out
-      emptyDir: {/dependency_builder.sh}
+         - "tail"
+         - "-f"
+         - "/dev/null"

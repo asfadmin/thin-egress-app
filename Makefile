@@ -85,7 +85,7 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 
 .PHONY: clean
 clean:
-	rm -r $(DIR)
+	rm -rf $(DIR)
 
 $(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
@@ -115,7 +115,7 @@ endif
 	sed -i -e "s;<DEPENDENCY_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s;^Description:.*;Description: \"${CF_DESCRIPTION}\";" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s%^Description:.*%Description: \"${CF_DESCRIPTION}\"%" $(DIR)/thin-egress-app.yaml
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %

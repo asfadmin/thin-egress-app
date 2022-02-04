@@ -1,18 +1,10 @@
-# TODO(reweeden): docs
-
 SOURCES := \
 	lambda/app.py \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
-RESOURCES := \
-	lambda/templates/base.html \
-	lambda/templates/error.html \
-	lambda/templates/profile.html \
-	lambda/templates/root.html
-
-TERRAFORM := \
-	$(wildcard terraform/*)
+RESOURCES := $(wildcard lambda/templates/*)
+TERRAFORM := $(wildcard terraform/*)
 
 # Output directory
 DIR := dist
@@ -26,7 +18,7 @@ BUCKET_MAP_OBJECT_KEY := $(CONFIG_PREFIX)bucket-map.yaml
 
 DATE := $(shell date --utc "+%b %d %Y, %T %Z")
 DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
-BUILD_ID := $(shell git rev-parse --short HEAD)
+BUILD_ID := $(shell git rev-parse --short HEAD 2>/dev/null || echo "SNAPSHOT")
 
 DOCKER := docker
 # On Linux we need to do a bit of userid finagling so that the output files
@@ -38,7 +30,7 @@ DOCKER_COMMAND := $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task lam
 # Deployment Config #
 #####################
 
-# A tag to discriminate between artifacts of the same name. The tag should be
+# A tag to distinguish between artifacts of the same name. The tag should be
 # different for each build.
 S3_ARTIFACT_TAG = $(DATE_SHORT)
 
@@ -46,7 +38,7 @@ S3_ARTIFACT_TAG = $(DATE_SHORT)
 # Include custom configuration
 Makefile.config:
 	@echo "It looks like you are building TEA for the first time.\nPlease review the configuration in '$@' and run Make again.\n"
-	@cp --no-clobber Makefile.config.example Makefile.config
+	@cp --no-clobber Makefile.config.example $@
 	@exit 1
 
 include Makefile.config
@@ -85,7 +77,7 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 
 .PHONY: clean
 clean:
-	rm -r $(DIR)
+	rm -rf $(DIR)
 
 $(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
@@ -115,7 +107,7 @@ endif
 	sed -i -e "s;<DEPENDENCY_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
 	sed -i -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s;^Description:.*;Description: \"${CF_DESCRIPTION}\";" $(DIR)/thin-egress-app.yaml
+	sed -i -e "s%^Description:.*%Description: \"${CF_DESCRIPTION}\"%" $(DIR)/thin-egress-app.yaml
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %
@@ -139,7 +131,6 @@ $(DIR)/thin-egress-app-terraform.zip: \
 ##############
 # Deployment #
 ##############
-# TODO(reweeden): Terraform?
 
 # Empty targets so we don't re-deploy stuff that is unchanged. Technically they
 # might not be empty, but their purpose is the same.

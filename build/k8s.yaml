@@ -12,3 +12,9 @@ spec:
          - "tail"
          - "-f"
          - "/dev/null"
+  - name: layer-builder
+    image: lambci/lambda:build-python3.8
+    command:
+         - "tail"
+         - "-f"
+         - "/dev/null"

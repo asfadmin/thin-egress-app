@@ -58,6 +58,8 @@ AWS_PROFILE = default
 ########
 # Misc #
 ########
+# Uncomment the following line to build the dependencies on the host (without docker)
+# DOCKER_COMMAND :=
 
 # Supported JWT algorithm
 JWTALGO = RS256

@@ -199,8 +199,13 @@ If you prefer to roll your own zip for the lambda code you can use our Makefile 
 from source in a bash environment. You will need to have a few tools installed for this to work:
 
 - `zip` for creating zip files
-- `pip` for building the dependency layer
+- `docker` for building the dependency layer
 - `awscli` (optional) for deploying to AWS
+
+If you're building the dependency layer locally (generally not recommended especially not on MacOS)
+you will also need:
+- `python3.8` with `pip`
+- `git` for installing rain-api-core
 
 All build artifacts are created into the `dist` directory.
 ```bash

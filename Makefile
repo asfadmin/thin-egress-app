@@ -80,6 +80,7 @@ clean:
 	rm -rf $(DIR)
 
 $(DIR)/thin-egress-app-dependencies.zip: requirements.txt
+	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 

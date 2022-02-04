@@ -59,6 +59,7 @@ for a quick and easy TEA bootstrapping script.
     * [Using awscli](#using-awscli)
   * [From Terraform](#from-terraform)
   * [From Cumulus](#from-cumulus)
+  * [For development](#for-development)
 * [Post deployment procedures](#post-deployment-procedures) - What do to AFTER Deploying
   * [Update EDL](#update-edl)
   * [Validating a Deployment](#validating-a-deployment)
@@ -193,6 +194,23 @@ unittest framework (admittedly somewhat unconventionally) to run comprehensive i
 tests on freshly deployed stacks for every build. All test failures prevent successful
 builds and code cannot be released without all tests completing successfully.
 
+There is also a comprehensive unit test suite written using pytest. You can run it in a virtual
+environment like this:
+
+```bash
+# Create virtual environment
+python3 -m venv .venv
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install requirements to the virtual environment.
+# Make sure you see '(.venv)' in your shell prompt before running this!
+pip install -r requirements.txt -r requirements-dev.txt
+
+# Run the tests
+make test
+```
+
 ### Roll-Your-Own
 
 If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
@@ -211,6 +229,7 @@ All build artifacts are created into the `dist` directory.
 ```bash
 # Clean up from previous builds
 make clean
+
 # Creates the lambda code zip: dist/thin-egress-app-code.zip
 make code
 # Creates the dependnecy layer zip: dist/thin-egress-app-dependencies.zip
@@ -220,7 +239,7 @@ make yaml
 # Creates the Terraform zip file needed by cumulus
 make terraform
 
-# Creates all three
+# Creates all of the above
 make build
 ```
 
@@ -715,6 +734,20 @@ a write up for this, I'd love to include it.
 Please see the
 [Cumulus documentation](https://nasa.github.io/cumulus/docs/deployment/thin_egress_app)
 for current TEA deployment and configuration procedures.
+
+### For development
+You can deploy the CloudFormation template for development using our Makefile. You'll still need to
+set up your secrets and S3 buckets manually, but once that's done pushing your changes is as easy as
+running `make deploy`.
+
+```bash
+# First time setup. Add your bucket and secret names to this file.
+make Makefile.config
+
+# Build and deploy to the configured AWS profile.
+# Run this whenever you're ready to test your code changes.
+make deploy
+```
 
 [⬆ Return to Table of Contents](#table-of-contents)
 

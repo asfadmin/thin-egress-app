@@ -441,9 +441,9 @@ def login():
     with tracer.start_as_current_span("tea_login", context={}):
         try:
             aux_headers = get_aux_request_headers()
-            print(aux_headers)
-            status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
-                                                           os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
+            with tracer.start_as_current_span("tea_login__do_login"):
+                status_code, template_vars, headers = do_login(app.current_request.query_params, app.current_request.context,
+                                                            os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers)
         except ClientError as e:
             log.error(e)
             status_code = 500
@@ -453,10 +453,12 @@ def login():
                 'title': 'Client Error',
             }
         if status_code == 301:
-            return Response(body='', status_code=status_code, headers=headers)
+            with tracer.start_as_current_span("tea_login__return_response"):
+                return Response(body='', status_code=status_code, headers=headers)
 
-        template_vars['requestid'] = get_request_id()
-        return make_html_response(template_vars, headers, status_code, 'error.html')
+        with tracer.start_as_current_span("tea_login__make_html_response"):
+            template_vars['requestid'] = get_request_id()
+            return make_html_response(template_vars, headers, status_code, 'error.html')
 
 
 @app.route('/version')
@@ -685,13 +687,14 @@ def dynamic_url():
         log.info(app.current_request.headers)
 
         if 'proxy' in app.current_request.uri_params:
-            path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-            log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
-            if not bucket:
-                template_vars = {'contentstring': 'File not found', 'title': 'File not found',
-                                'requestid': get_request_id(), }
-                headers = {}
-                return make_html_response(template_vars, headers, 404, 'error.html')
+            with tracer.start_as_current_span("tea_get__process_request"):
+                path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
+                log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
+                if not bucket:
+                    template_vars = {'contentstring': 'File not found', 'title': 'File not found',
+                                    'requestid': get_request_id(), }
+                    headers = {}
+                    return make_html_response(template_vars, headers, 404, 'error.html')
         else:
             path, bucket, filename = (None, None, None)
 
@@ -712,28 +715,31 @@ def dynamic_url():
         if pub_bucket:
             log.debug("Accessing public bucket {0}".format(path))
         elif not user_profile:
-            if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
-                0].lower() == 'bearer':
-                # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
-                log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
-                token = app.current_request.headers['Authorization'].split()[1]
-                action, data = handle_auth_bearer_header(token)
+            with tracer.start_as_current_span("tea_get__no_user_profile"):
+                if 'Authorization' in app.current_request.headers and app.current_request.headers['Authorization'].split()[
+                    0].lower() == 'bearer':
+                    # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
+                    log.debug('we got an Authorization header. {}'.format(app.current_request.headers['Authorization']))
+                    token = app.current_request.headers['Authorization'].split()[1]
+                    with tracer.start_as_current_span("tea_get__handle_auth_bearer_header"):
+                        action, data = handle_auth_bearer_header(token)
 
-                if action == 'return':
-                    # Not a successful event.
-                    return data
+                    if action == 'return':
+                        # Not a successful event.
+                        return data
 
-                user_profile = data
-                user_id = user_profile['uid']
-                log_context(user_id=user_id)
-                log.debug(f'User {user_id} has user profile: {user_profile}')
-                jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
-                log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
-                custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
-                cookievars[JWT_COOKIE_NAME] = jwt_payload
+                    user_profile = data
+                    user_id = user_profile['uid']
+                    log_context(user_id=user_id)
+                    log.debug(f'User {user_id} has user profile: {user_profile}')
+                    jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
+                    log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
+                    custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+                    cookievars[JWT_COOKIE_NAME] = jwt_payload
 
-            else:
-                return do_auth_and_return(app.current_request.context)
+                else:
+                    with tracer.start_as_current_span("tea_get__do_auth_and_return"):
+                        return do_auth_and_return(app.current_request.context)
 
         t.append(time.time())  # 4
         # Check that the bucket is either NOT private, or user belongs to that group
@@ -742,19 +748,21 @@ def dynamic_url():
         # omit this check?
         log.debug('private check: {}'.format(private_check))
         t.append(time.time())  # 5
-        aux_headers = get_aux_request_headers()
-        u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
+        with tracer.start_as_current_span("tea_get__user_in_group"):
+            aux_headers = get_aux_request_headers()
+            u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
         t.append(time.time())  # 6
 
         new_jwt_cookie_headers = {}
         if new_user_profile:
-            log.debug(f"We got new profile from user_in_group() {new_user_profile}")
-            user_profile = new_user_profile
-            jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
-                                                            get_jwt_field(cookievars, 'urs-access-token'),
-                                                            user_profile)
-            new_jwt_cookie_headers.update(
-                make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+            with tracer.start_as_current_span("tea_get__new_user_profile"):
+                log.debug(f"We got new profile from user_in_group() {new_user_profile}")
+                user_profile = new_user_profile
+                jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
+                                                                get_jwt_field(cookievars, 'urs-access-token'),
+                                                                user_profile)
+                new_jwt_cookie_headers.update(
+                    make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
         log.debug('user_in_group: {}'.format(u_in_g))
 
@@ -782,7 +790,8 @@ def dynamic_url():
         log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
         log.debug('ET for total: {}s'.format(t[7] - t[0]))
 
-        return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
+        with tracer.start_as_current_span("tea_get__try_download_from_bucket"):
+            return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 
 @app.route('/profile')

@@ -79,7 +79,8 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -rf $(DIR)
 
-$(DIR)/thin-egress-app-dependencies.zip: requirements.txt | $(DIR)/python
+$(DIR)/thin-egress-app-dependencies.zip: requirements.txt
+	@mkdir -p $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_RESOURCES)
@@ -93,13 +94,15 @@ $(DIST_SOURCES): $(DIR)/code/%: lambda/%
 	cp $< $@
 	sed -i "s/<BUILD_ID>/${BUILD_ID}/g" $@
 
-$(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES) | $(DIR)/code
+$(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
+	@mkdir -p $(DIR)/code
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
 $(DIR)/bucket-map.yaml: config/bucket-map-template.yaml
 	cp $< $@
 
-$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml | $(DIR)
+$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
+	@mkdir -p $(DIR)
 	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
 ifdef CF_DEFAULT_CODE_BUCKET
 	sed -i -e "s;asf.public.code;${CF_DEFAULT_CODE_BUCKET};" $(DIR)/thin-egress-app.yaml
@@ -118,7 +121,8 @@ $(DIR)/thin-egress-app-terraform.zip: \
 	$(DIR)/thin-egress-app-code.zip \
 	$(DIR)/thin-egress-app-dependencies.zip \
 	$(DIR)/thin-egress-app.yaml \
-	$(DIST_TERRAFORM) | $(DIR)/terraform
+	$(DIST_TERRAFORM)
+	@mkdir -p $(DIR)/terraform
 	cp $(DIR)/thin-egress-app-code.zip $(DIR)/terraform/lambda.zip
 	cp $(DIR)/thin-egress-app-dependencies.zip $(DIR)/terraform/dependencylayer.zip
 	cp $(DIR)/thin-egress-app.yaml $(DIR)/terraform/thin-egress-app.yaml
@@ -136,26 +140,29 @@ $(DIR)/thin-egress-app-terraform.zip: \
 # might not be empty, but their purpose is the same.
 # https://www.gnu.org/software/make/manual/html_node/Empty-Targets.html
 
-$(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip | $(EMPTY)
+$(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip
 	@echo "Deploying dependencies"
 	$(AWS) s3 cp --profile=$(AWS_PROFILE) $< \
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)dependencies-$(S3_ARTIFACT_TAG).zip
 
+	@mkdir -p $(EMPTY)
 	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-dependencies
 
-$(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip | $(EMPTY)
+$(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 	@echo "Deploying code"
 	$(AWS) s3 cp --profile=$(AWS_PROFILE) \
 		$(DIR)/thin-egress-app-code.zip \
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)code-$(S3_ARTIFACT_TAG).zip
 
+	@mkdir -p $(EMPTY)
 	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-code
 
-$(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml | $(EMPTY)
+$(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 	@echo "Deploying bucket map"
 	$(AWS) s3 cp --profile=$(AWS_PROFILE) $< \
 		s3://$(CONFIG_BUCKET)/$(BUCKET_MAP_OBJECT_KEY)
 
+	@mkdir -p $(EMPTY)
 	@touch $(EMPTY)/.deploy-bucket-map
 
 # Optionally upload a bucket map if the user hasn't specified one
@@ -165,7 +172,7 @@ BUCKET_MAP_REQUIREMENT = $(EMPTY)/.deploy-bucket-map
 endif
 
 .PHONY: $(EMPTY)/.deploy-stack
-$(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code $(BUCKET_MAP_REQUIREMENT) | $(EMPTY)
+$(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code $(BUCKET_MAP_REQUIREMENT)
 	@echo "Deploying stack '$(STACK_NAME)'"
 	$(AWS) cloudformation deploy --profile=$(AWS_PROFILE) \
 						 --stack-name $(STACK_NAME) \
@@ -204,6 +211,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 							 UseReverseBucketMap="False" \
 							 UseCorsCookieDomain="False"
 
+	@mkdir -p $(EMPTY)
 	@touch $(EMPTY)/.deploy-stack
 
 # Deploy everything
@@ -235,22 +243,3 @@ cleandeploy:
 .PHONY: test
 test:
 	pytest --cov=lambda --cov-report=term-missing --cov-branch tests
-
-###########
-# Helpers #
-###########
-
-$(EMPTY):
-	mkdir -p $(EMPTY)
-
-$(DIR):
-	mkdir -p $(DIR)
-
-$(DIR)/code:
-	mkdir -p $(DIR)/code
-
-$(DIR)/python:
-	mkdir -p $(DIR)/python
-
-$(DIR)/terraform:
-	mkdir -p $(DIR)/terraform

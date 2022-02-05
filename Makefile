@@ -16,8 +16,8 @@ DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
 BUCKET_MAP_OBJECT_KEY := $(CONFIG_PREFIX)bucket-map.yaml
 
-DATE := $(shell date --utc "+%b %d %Y, %T %Z")
-DATE_SHORT := $(shell date --utc "+%Y%m%dT%H%M%S")
+DATE := $(shell date -u "+%b %d %Y, %T %Z")
+DATE_SHORT := $(shell date -u "+%Y%m%dT%H%M%S")
 BUILD_ID := $(shell git rev-parse --short HEAD 2>/dev/null || echo "SNAPSHOT")
 
 DOCKER := docker

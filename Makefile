@@ -37,7 +37,9 @@ S3_ARTIFACT_TAG = $(DATE_SHORT)
 
 # Include custom configuration
 Makefile.config:
-	@echo "It looks like you are building TEA for the first time.\nPlease review the configuration in '$@' and run Make again.\n"
+	@echo "It looks like you are building TEA for the first time."
+	@echo "Please review the configuration in '$@' and run Make again."
+	@echo
 	@cp --no-clobber Makefile.config.example $@
 	@exit 1
 

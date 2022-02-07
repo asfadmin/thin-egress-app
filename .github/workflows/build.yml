@@ -1,0 +1,320 @@
+name: build
+
+on:
+  push:
+    branches:
+      - rew/pr-3080-gh-actions-release
+  release:
+    types:
+      - released
+
+jobs:
+  # Generate some names from the version info in the tag name
+  variables:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.step1.outputs.number }}
+      code-zip: ${{ steps.step1.outputs.code-zip }}
+      dependency-zip: ${{ steps.step1.outputs.dependency-zip }}
+      cloudformation-yaml: ${{ steps.step1.outputs.cloudformation-yaml }}
+      terraform-zip: ${{ steps.step1.outputs.terraform-zip }}
+
+    steps:
+      - id: step1
+        run: |
+          VERSION=${GITHUB_REF_NAME#*.}
+          echo "::set-output name=number::$VERSION"
+          echo "::set-output name=code-zip::tea-code-build.$VERSION.zip"
+          echo "::set-output name=dependency-zip::tea-dependencylayer-build.$VERSION.zip"
+          echo "::set-output name=cloudformation-yaml::tea-cloudformation-build.$VERSION.yaml"
+          echo "::set-output name=terraform-zip::tea-terraform-build.$VERSION.zip"
+
+  # Build everything
+  build-all:
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: variables
+    env:
+      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
+      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set Makefile.config
+        run: |
+          TIMESTAMP=$(TZ=America/Anchorage date)
+
+          cat > Makefile.config << EOF
+          BUILD_ID := ${{ needs.variables.outputs.version }}
+
+          CF_DEFAULT_CODE_BUCKET := $CODE_BUCKET
+          CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.code-zip }}
+          CF_DEFAULT_CODE_ARCHIVE_KEY = ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.dependency-zip }}
+          CF_BUILD_VERSION := \$(BUILD_ID)
+          CF_DESCRIPTION := TEA version ${{ needs.variables.outputs.version }} (${GITHUB_SHA:0:7}) built by GitHub Actions on $TIMESTAMP.
+          EOF
+
+      - name: Build artifacts
+        run: make build
+
+      - name: Save dependency layer zip
+        uses: actions/upload-artifact@v2
+        with:
+          name: dependency-layer
+          path: dist/thin-egress-app-dependencies.zip
+
+      - name: Save Lambda code
+        uses: actions/upload-artifact@v2
+        with:
+          name: code
+          path: dist/thin-egress-app-code.zip
+
+      - name: Save CloudFormation yaml
+        uses: actions/upload-artifact@v2
+        with:
+          name: cloudformation
+          path: dist/thin-egress-app.yaml
+
+      - name: Save Terraform zip
+        uses: actions/upload-artifact@v2
+        with:
+          name: terraform
+          path: dist/thin-egress-app-terraform.zip
+
+  # Deploy to the test environment and run end to end tests
+  test-end-to-end:
+    # if: secrets.RUN_TESTS == 'true'
+
+    runs-on: ubuntu-latest
+    environment: test
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      # Configuration defaults
+      STACK_NAME: ${{ secrets.STACK_NAME || 'tea-gh-actions-test' }}
+      CONFIG_BUCKET: ${{ secrets.CONFIG_BUCKET || secrets.CODE_BUCKET }}
+      URS_AUTH_CREDS_SECRET_NAME: ${{ secrets.URS_AUTH_CREDS_SECRET_NAME }}
+      URS_URL: ${{ secrets.URS_URL || 'https://uat.urs.earthdata.nasa.gov' }}
+    needs:
+      - variables
+      - build-all
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+
+      - name: Upload to AWS
+        env:
+          S3_PATH_PREFIX: s3://${{ secrets.CODE_BUCKET }}/${{ secrets.CODE_PREFIX }}
+        run: |
+          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.variables.outputs.dependency-zip }}
+          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.variables.outputs.code-zip }}
+          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ needs.variables.outputs.cloudformation-yaml }}
+
+      - name: Update JWT secret
+        if: env.JWT_KEY_SECRET_NAME == ''
+        run: |
+          JWT_KEY_SECRET_NAME="$STACK_NAME-jwt-key"
+          echo "JWT_KEY_SECRET_NAME=$JWT_KEY_SECRET_NAME" >> $GITHUB_ENV
+
+          # Check if the secret exists
+          secret_arn=$(aws secretsmanager describe-secret \
+              --secret-id "$JWT_KEY_SECRET_NAME" \
+              --query "ARN" --output=text 2>&1 \
+              | grep -v ResourceNotFoundException)
+
+          if [ -z "$secret_arn" ]; then
+              echo "Creating JWT secret '$JWT_KEY_SECRET_NAME'"
+
+              ssh-keygen -t rsa -b 4096 -m PEM -N '' -f "$JWT_KEY_SECRET_NAME"
+              rsa_priv_key=$(openssl base64 -in "$JWT_KEY_SECRET_NAME" -A)
+              rsa_pub_key=$(openssl base64 -in "$JWT_KEY_SECRET_NAME.pub" -A)
+              cat << EOF > keys.txt
+          {
+              "rsa_priv_key": "$rsa_priv_key",
+              "rsa_pub_key": "$rsa_pub_key"
+          }
+          EOF
+
+              aws $AWSENV secretsmanager create-secret \
+                  --name "$JWT_KEY_SECRET_NAME" \
+                  --description "JWT keys for TEA $STACK_NAME created by GitHub Actions" \
+                  --secret-string file://keys.txt
+
+              shred keys.txt
+          else
+             echo "JWT secret '$JWT_KEY_SECRET_NAME' already exists"
+          fi
+
+      - name: Update URS secret
+        if: env.URS_AUTH_CREDS_SECRET_NAME == ''
+        run: |
+          URS_AUTH_CREDS_SECRET_NAME="$STACK_NAME-jwt-key"
+          echo "URS_AUTH_CREDS_SECRET_NAME=$URS_AUTH_CREDS_SECRET_NAME" >> $GITHUB_ENV
+
+          # Check if the secret exists
+          secret_arn=$(aws secretsmanager describe-secret \
+              --secret-id "$URS_AUTH_CREDS_SECRET_NAME" \
+              --query "ARN" --output=text 2>&1 \
+              | grep -v ResourceNotFoundException)
+
+          urs_auth=$(echo -n "$EDL_APP_UID:$EDL_APP_PASSWORD" | base64)
+          cat << EOF > secret.txt
+          {
+             "UrsAuth": "$urs_auth",
+             "UrsId": "$URS_CLIENT_ID"
+          }
+          EOF
+
+          if [ -z "$secret_arn" ]; then
+              echo ">> Creating URS secret '$URS_AUTH_CREDS_SECRET_NAME'"
+
+              aws $AWSENV secretsmanager create-secret \
+                  --name "$URS_AUTH_CREDS_SECRET_NAME" \
+                  --description "URS creds for TEA $STACK_NAME created by GitHub Actions" \
+                  --secret-string file://secret.txt
+
+          else
+             echo ">> Updating URS secret '$URS_AUTH_CREDS_SECRET_NAME'"
+
+             aws $AWSENV secretsmanager put-secret-value \
+                --secret-id "$URS_AUTH_CREDS_SECRET_NAME" \
+                --secret-string file://secret.txt
+          fi
+
+          shred secret.txt
+
+      - name: Update CloudFormation stack description
+        run: |
+          cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml
+
+          sed -i -E "s;^(Description:.*)\";\1 Job: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\";" ./cloudformation/thin-egress-app-deployed.yaml
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+              --stack-name "$STACK_NAME" \
+              --template-file "./cloudformation/thin-egress-app-deployed.yaml" \
+              --capabilities "CAPABILITY_NAMED_IAM" \
+              --parameter-overrides \
+                  AuthBaseUrl="$URS_URL" \
+                  BucketMapFile="${{ secrets.BUCKET_MAP_FILE }}" \
+                  BucketnamePrefix="${{ secrets.BUCKETNAME_PREFIX }}" \
+                  ConfigBucket="$CONFIG_BUCKET" \
+                  CookieDomain="${{ secrets.COOKIE_DOMAIN }}" \
+                  DomainCertArn="${{ secrets.DOMAIN_CERT_ARN }}" \
+                  DomainName="${{ secrets.DOMAIN_NAME }}" \
+                  EnableApiGatewayLogToCloudWatch="False" \
+                  JwtAlgo="RS256" \
+                  JwtKeySecretName="$JWT_KEY_SECRET_NAME" \
+                  LambdaCodeDependencyArchive="${{ secrets.CODE_PREFIX }}${{ needs.variables.outputs.dependency-zip }}" \
+                  LambdaCodeS3Bucket="${{ secrets.CODE_BUCKET }}" \
+                  LambdaCodeS3Key="${{ secrets.CODE_PREFIX }}${{ needs.variables.outputs.code-zip }}" \
+                  LambdaMemory="128" \
+                  Loglevel="DEBUG" \
+                  Logtype="json" \
+                  Maturity="TEST"\
+                  StageName="API" \
+                  URSAuthCredsSecretName="$URS_AUTH_CREDS_SECRET_NAME" \
+                  UseCorsCookieDomain="True" \
+                  UseReverseBucketMap="False" \
+                  DownloadRoleArn= \
+                  DownloadRoleInRegionArn= \
+                  HtmlTemplateDir= \
+                  PermissionsBoundaryName= \
+                  PrivateBucketsFile= \
+                  PrivateVPC= \
+                  PublicBucketsFile= \
+                  VPCSecurityGroupIDs= \
+                  VPCSubnetIDs=
+
+      - name: Run end to end tests
+        env:
+          URS_USERNAME: ${{ secrets.URS_USERNAME }}
+          URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests_e2e \
+              --stack-name=$STACK_NAME \
+              --test-results=asf.public.code/thin-egress-app/testresults.json \
+              --log-cli-level=DEBUG
+
+  publish:
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - variables
+      - test-end-to-end
+
+    steps:
+      - uses: actions/download-artifact@v2
+
+      - name: Upload to public code bucket
+        env:
+          S3_PATH_PREFIX: s3://${{ secrets.CODE_BUCKET }}/${{ secrets.CODE_PREFIX }}
+        run: |
+          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.variables.outputs.dependency-zip }}
+          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.variables.outputs.code-zip }}
+          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ needs.variables.outputs.cloudformation-yaml }}
+          aws s3 cp ./terraform/terraform.zip ${S3_PATH_PREFIX}${{ needs.variables.outputs.terraform-zip }}
+
+          echo '{"schemaVersion": 1, "label": "Last Release", "message": "'$GITHUB_REF_NAME'", "color": "success"}'  > lastrelease.json
+          aws s3 cp lastrelease.json s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+              --metadata-directive REPLACE \
+              --cache-control no-cache \
+              --expires '2016-06-14T00:00:00Z' \
+              --content-type 'application/json' \
+              --acl public-read
+
+  report-success:
+    if: success()
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - variables
+      - publish
+
+    steps:
+      - uses: actions/download-artifact@v2
+
+      - name: Upload success labels
+        run: |
+          mkdir -p buildreport
+          echo '{"schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success"}' > buildreport/buildstatus.json
+          echo '{"schemaVersion": 1, "label": "Last Successful Build", "message": "'$BUILDTAG'", "color": "success"}'  > buildreport/lastgoodbuild.json
+          echo '{"schemaVersion": 1, "label": "Last Build", "message": "'$BUILDTAG'", "color": "success"}' > buildreport/lastbuild.json
+          aws s3 cp s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+              --metadata-directive REPLACE \
+              --cache-control no-cache \
+              --expires '2016-06-14T00:00:00Z' \
+              --content-type 'application/json' \
+              --recursive buildreport/ \
+              --acl public-read
+
+  report-failures:
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - variables
+      - publish
+
+    steps:
+      - uses: actions/download-artifact@v2
+
+      - name: Upload failure labels
+        run: |
+          mkdir -p buildreport
+          echo '{"schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical"}' > buildreport/buildstatus.json
+          echo '{"schemaVersion": 1, "label": "Last Build", "message": "'$BUILDTAG'", "color": "critical"}' > buildreport/lastbuild.json
+          aws s3 cp s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+              --metadata-directive REPLACE \
+              --cache-control no-cache \
+              --expires '2016-06-14T00:00:00Z' \
+              --content-type 'application/json' \
+              --recursive buildreport/ \
+              --acl public-read

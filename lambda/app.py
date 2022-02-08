@@ -121,14 +121,18 @@ def get_user_from_token(token):
 
     timer = time.time()
 
+    tracer = trace.get_tracer(__name__)
+
     req = request.Request(url, headers=headers, method='POST')
     try:
-        response = request.urlopen(req)
+        with tracer.start_as_current_span("tea_get_user_from_token__edl_request"):
+            response = request.urlopen(req)
     except HTTPError as e:
         response = e
         log.debug(e)
 
-    payload = response.read()
+    with tracer.start_as_current_span("tea_get_user_from_token__edl_response"):
+        payload = response.read()
     log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(timer)))
 
     try:
@@ -647,8 +651,11 @@ def handle_auth_bearer_header(token):
     :param token:
     :return: action, data
     """
+    tracer = trace.get_tracer(__name__)
+
     try:
-        user_id = get_user_from_token(token)
+        with tracer.start_as_current_span("tea_handle_auth_bearer_header__get_user_from_token"):
+            user_id = get_user_from_token(token)
     except EulaException as e:
 
         log.warning('user has not accepted EULA')
@@ -663,13 +670,15 @@ def handle_auth_bearer_header(token):
         return 'return', Response(body=e.payload, status_code=403, headers={})
 
     if user_id:
-        log_context(user_id=user_id)
-        aux_headers = get_aux_request_headers()
-        user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
-        if user_profile:
-            return 'user_profile', user_profile
+        with tracer.start_as_current_span("tea_handle_auth_bearer_header__get_new_token_and_profile"):
+            log_context(user_id=user_id)
+            aux_headers = get_aux_request_headers()
+            user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
+            if user_profile:
+                return 'user_profile', user_profile
 
-    return 'return', do_auth_and_return(app.current_request.context)
+    with tracer.start_as_current_span("tea_handle_auth_bearer_header__do_auth_and_return"):
+        return 'return', do_auth_and_return(app.current_request.context)
 
 
 @app.route('/{proxy+}', methods=['GET'])

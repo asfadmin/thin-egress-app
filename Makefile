@@ -97,7 +97,7 @@ $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
 $(DIST_SOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
-	sed -i "s/<BUILD_ID>/${BUILD_ID}/g" $@
+	sed -i "s;<BUILD_ID>;${BUILD_ID};g" $@
 
 $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code

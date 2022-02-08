@@ -150,8 +150,8 @@ pipeline {
             sh "echo '>> Building CloudFormation yaml....'"
             sh """ make yaml \
                       CF_DEFAULT_CODE_BUCKET=${CODE_BUCKET} \
-                      CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
-                      CF_DEFAULT_CODE_ARCHIVE_KEY=${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} \
+                      CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY=${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} \
+                      CF_DEFAULT_CODE_ARCHIVE_KEY=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
                       CF_BUILD_VERSION=${BUILD_ID} \
                       CF_DESCRIPTION="TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}" """
             sh "cp ${WORKSPACE}/dist/thin-egress-app.yaml ${WORKSPACE}/cloudformation/thin-egress-app.yaml"

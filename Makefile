@@ -46,7 +46,9 @@ Makefile.config:
 include Makefile.config
 
 
-.DEFAULT_GOAL := build
+.DEFAULT_GOAL := all
+.PHONY: all
+all: build ;
 
 ##############################
 # Local building/development #

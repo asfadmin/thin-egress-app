@@ -9,7 +9,7 @@ exporters:
     loglevel: debug
 
   otlphttp/otelcollector:
-    endpoint: "https://metrics-otel.ngap.sit.earthdata.nasa.gov"
+    endpoint: "https://metrics-otel.ngap.uat.earthdata.nasa.gov"
 
 
 #enables output for traces to log

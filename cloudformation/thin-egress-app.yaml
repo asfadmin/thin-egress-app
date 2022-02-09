@@ -277,11 +277,6 @@ Parameters:
     Default: "debug"
     Description: 'Logging level for Open Telemetry'
 
-  OtResourceAttributes:
-    Type: String
-    Default: "traceGroup=TEA"
-    Description: 'Optional Open Telemetry attributes'
-
   OtServiceName:
     Type: String
     Default: "tea"
@@ -617,7 +612,6 @@ Resources:
           AWS_LAMBDA_EXEC_WRAPPER: !Ref OtLambdaExecWrapper
           OPENTELEMETRY_COLLECTOR_CONFIG_FILE: !Ref OtCollectorConfigFile
           OTEL_LOG_LEVEL: !Ref OtLogLevel
-          OTEL_RESOURCE_ATTRIBUTES: !Ref OtResourceAttributes
           OTEL_SERVICE_NAME: !Ref OtServiceName
           OTEL_TRACES_SAMPLER: !Ref OtTracesSampler
       Timeout: !Ref LambdaTimeout

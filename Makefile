@@ -97,7 +97,7 @@ $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
 $(DIST_SOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
-	sed -i "s;<BUILD_ID>;${BUILD_ID};g" $@
+	sed -i"" "s;<BUILD_ID>;${BUILD_ID};g" $@
 
 $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code
@@ -110,12 +110,12 @@ $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
 	@mkdir -p $(DIR)
 	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
 ifdef CF_DEFAULT_CODE_BUCKET
-	sed -i -e "s;asf.public.code;${CF_DEFAULT_CODE_BUCKET};" $(DIR)/thin-egress-app.yaml
+	sed -i"" -e "s;asf.public.code;${CF_DEFAULT_CODE_BUCKET};" $(DIR)/thin-egress-app.yaml
 endif
-	sed -i -e "s;<DEPENDENCY_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
-	sed -i -e "s%^Description:.*%Description: \"${CF_DESCRIPTION}\"%" $(DIR)/thin-egress-app.yaml
+	sed -i"" -e "s;<DEPENDENCY_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
+	sed -i"" -e "s;<CODE_ARCHIVE_PATH_FILENAME>;${CF_DEFAULT_CODE_ARCHIVE_KEY};" $(DIR)/thin-egress-app.yaml
+	sed -i"" -e "s;<BUILD_ID>;${CF_BUILD_VERSION};g" $(DIR)/thin-egress-app.yaml
+	sed -i"" -e "s%^Description:.*%Description: \"${CF_DESCRIPTION}\"%" $(DIR)/thin-egress-app.yaml
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %

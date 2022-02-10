@@ -1,6 +1,5 @@
 import argparse
 import re
-from typing import TextIO
 
 
 def main(pattern, replacement, path_in, path_out):
@@ -14,12 +13,7 @@ def main(pattern, replacement, path_in, path_out):
         f.write(new_contents)
 
 
-def substitute(
-    pattern: re.Pattern,
-    replacement: str,
-    buf_in: TextIO,
-    buf_out: TextIO
-):
+def substitute(pattern, replacement, buf_in, buf_out):
     for line in buf_in:
         buf_out.write(re.sub(pattern, replacement, line))
 

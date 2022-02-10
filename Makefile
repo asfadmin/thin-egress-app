@@ -14,7 +14,7 @@ DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
 DIST_RESOURCES := $(RESOURCES:lambda/%=$(DIR)/code/%)
 DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
-BUCKET_MAP_OBJECT_KEY := $(CONFIG_PREFIX)bucket-map.yaml
+BUCKET_MAP_OBJECT_KEY := DEFAULT
 
 DATE := $(shell date -u "+%b %d %Y, %T %Z")
 DATE_SHORT := $(shell date -u "+%Y%m%dT%H%M%S")
@@ -165,56 +165,57 @@ $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 $(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 	@echo "Deploying bucket map"
 	$(AWS) s3 cp --profile=$(AWS_PROFILE) $< \
-		s3://$(CONFIG_BUCKET)/$(BUCKET_MAP_OBJECT_KEY)
+		s3://$(CONFIG_BUCKET)/$(CONFIG_PREFIX)bucket-map-$(S3_ARTIFACT_TAG).yaml
 
 	@mkdir -p $(EMPTY)
-	@touch $(EMPTY)/.deploy-bucket-map
+	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-bucket-map
 
 # Optionally upload a bucket map if the user hasn't specified one
-BUCKET_MAP_REQUIREMENT =
-ifneq ($(BUCKET_MAP_OBJECT_KEY), $(CONFIG_PREFIX)/bucket-map.yaml)
-BUCKET_MAP_REQUIREMENT = $(EMPTY)/.deploy-bucket-map
+BUCKET_MAP_REQUIREMENT :=
+ifeq ($(BUCKET_MAP_OBJECT_KEY), DEFAULT)
+BUCKET_MAP_REQUIREMENT := $(EMPTY)/.deploy-bucket-map
+BUCKET_MAP_OBJECT_KEY = $(CONFIG_PREFIX)bucket-map-`cat $(EMPTY)/.deploy-bucket-map`.yaml
 endif
 
-.PHONY: $(EMPTY)/.deploy-stack
 $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencies $(EMPTY)/.deploy-code $(BUCKET_MAP_REQUIREMENT)
 	@echo "Deploying stack '$(STACK_NAME)'"
-	$(AWS) cloudformation deploy --profile=$(AWS_PROFILE) \
-						 --stack-name $(STACK_NAME) \
-						 --template-file $(DIR)/thin-egress-app.yaml \
-						 --capabilities CAPABILITY_NAMED_IAM \
-						 --parameter-overrides \
-						 	 LambdaCodeS3Key="$(CODE_PREFIX)code-`cat $(EMPTY)/.deploy-code`.zip" \
-							 LambdaCodeDependencyArchive="$(CODE_PREFIX)dependencies-`cat $(EMPTY)/.deploy-dependencies`.zip" \
-							 BucketMapFile=$(BUCKET_MAP_OBJECT_KEY) \
-							 URSAuthCredsSecretName=$(URS_CREDS_SECRET_NAME) \
-							 AuthBaseUrl=$(URS_URL) \
-							 ConfigBucket=$(CONFIG_BUCKET) \
-							 LambdaCodeS3Bucket=$(CODE_BUCKET) \
-							 PermissionsBoundaryName= \
-							 PublicBucketsFile="" \
-							 PrivateBucketsFile="" \
-							 BucketnamePrefix=$(BUCKETNAME_PREFIX) \
-							 DownloadRoleArn="" \
-							 DownloadRoleInRegionArn="" \
-							 HtmlTemplateDir= \
-							 StageName=API \
-							 Loglevel=DEBUG \
-							 Logtype=json \
-							 Maturity=DEV\
-							 PrivateVPC= \
-							 VPCSecurityGroupIDs= \
-							 VPCSubnetIDs= \
-							 EnableApiGatewayLogToCloudWatch="False" \
-							 DomainName=$(DOMAIN_NAME-"") \
-							 DomainCertArn=$(DOMAIN_CERT_ARN-"")  \
-							 CookieDomain=$(COOKIE_DOMAIN-"") \
-							 LambdaTimeout=$(LAMBDA_TIMEOUT) \
-							 LambdaMemory=$(LAMBDA_MEMORY) \
-							 JwtAlgo=$(JWTALGO) \
-							 JwtKeySecretName=$(JWT_KEY_SECRET_NAME) \
-							 UseReverseBucketMap="False" \
-							 UseCorsCookieDomain="False"
+	$(AWS) cloudformation deploy \
+			--profile=$(AWS_PROFILE) \
+			--stack-name $(STACK_NAME) \
+			--template-file $(DIR)/thin-egress-app.yaml \
+			--capabilities CAPABILITY_NAMED_IAM \
+			--parameter-overrides \
+					LambdaCodeS3Key="$(CODE_PREFIX)code-`cat $(EMPTY)/.deploy-code`.zip" \
+					LambdaCodeDependencyArchive="$(CODE_PREFIX)dependencies-`cat $(EMPTY)/.deploy-dependencies`.zip" \
+					BucketMapFile="$(BUCKET_MAP_OBJECT_KEY)" \
+					URSAuthCredsSecretName=$(URS_CREDS_SECRET_NAME) \
+					AuthBaseUrl=$(URS_URL) \
+					ConfigBucket=$(CONFIG_BUCKET) \
+					LambdaCodeS3Bucket=$(CODE_BUCKET) \
+					PermissionsBoundaryName= \
+					PublicBucketsFile="" \
+					PrivateBucketsFile="" \
+					BucketnamePrefix=$(BUCKETNAME_PREFIX) \
+					DownloadRoleArn="" \
+					DownloadRoleInRegionArn="" \
+					HtmlTemplateDir= \
+					StageName=API \
+					Loglevel=DEBUG \
+					Logtype=json \
+					Maturity=DEV\
+					PrivateVPC= \
+					VPCSecurityGroupIDs= \
+					VPCSubnetIDs= \
+					EnableApiGatewayLogToCloudWatch="False" \
+					DomainName=$(DOMAIN_NAME-"") \
+					DomainCertArn=$(DOMAIN_CERT_ARN-"")  \
+					CookieDomain=$(COOKIE_DOMAIN-"") \
+					LambdaTimeout=$(LAMBDA_TIMEOUT) \
+					LambdaMemory=$(LAMBDA_MEMORY) \
+					JwtAlgo=$(JWTALGO) \
+					JwtKeySecretName=$(JWT_KEY_SECRET_NAME) \
+					UseReverseBucketMap="False" \
+					UseCorsCookieDomain="False"
 
 	@mkdir -p $(EMPTY)
 	@touch $(EMPTY)/.deploy-stack

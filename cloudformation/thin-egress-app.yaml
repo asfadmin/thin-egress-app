@@ -290,7 +290,7 @@ Parameters:
   OtPropagators:
     Type: String
     Default: "tracecontext,baggage"
-    Description: The format used for traces
+    Description: 'The format used for traces'
 
   # FUTURE: replace with NGAP-managed layers
   OtLambdaLayer:

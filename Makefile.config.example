@@ -1,3 +1,12 @@
+# ================================= READ ME ================================= #
+# For building artifacts (`make build`), no configuration is necessary.
+# For deploying a dev stack (`make deploy`), all variables marked with
+#
+# REQUIRED_FOR_DEPLOY
+#
+# Must be replaced with values specific to your environment.
+# =========================================================================== #
+
 ##############
 # TEA config #
 ##############
@@ -8,12 +17,12 @@
 STACK_NAME := thin-egress-app-dev
 
 # S3 bucket that will contain the build artifacts
-CODE_BUCKET := REQUIRED!
+CODE_BUCKET := REQUIRED_FOR_DEPLOY!
 # Object prefix for artifacts in the code bucket
 CODE_PREFIX := $(STACK_NAME)/
 
 # S3 bucket that will contain the configuration files such as the bucket map
-CONFIG_BUCKET := REQUIRED!
+CONFIG_BUCKET := REQUIRED_FOR_DEPLOY!
 # Object prefix for artifacts in the config bucket
 CONFIG_PREFIX := $(STACK_NAME)/
 # Uncomment the following line to use an existing bucket map rather than uploading one
@@ -24,8 +33,8 @@ BUCKETNAME_PREFIX :=
 
 # These secrets are required but not managed by the Makefile.
 # For full deployments use `build/deploy.sh`
-JWT_KEY_SECRET_NAME := REQUIRED!
-URS_CREDS_SECRET_NAME := REQUIRED!
+JWT_KEY_SECRET_NAME := REQUIRED_FOR_DEPLOY!
+URS_CREDS_SECRET_NAME := REQUIRED_FOR_DEPLOY!
 
 # EarthData Login base URL
 URS_URL := https://uat.urs.earthdata.nasa.gov

@@ -41,7 +41,7 @@ Makefile.config:
 	@echo "It looks like you are building TEA for the first time."
 	@echo "Please review the configuration in '$@' and run Make again."
 	@echo
-	@test -e $@ || cp Makefile.config.example $@
+	@cp Makefile.config.example $@
 	@exit 1
 
 include Makefile.config
@@ -104,8 +104,8 @@ $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
-$(DIR)/bucket-map.yaml: | config/bucket-map-template.yaml
-	cp -i $| $@
+$(DIR)/bucket-map.yaml:
+	cp config/bucket-map-template.yaml $@
 
 $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
 	@mkdir -p $(DIR)

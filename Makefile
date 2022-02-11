@@ -37,10 +37,11 @@ S3_ARTIFACT_TAG = $(DATE_SHORT)
 
 # Include custom configuration
 Makefile.config:
+	@echo
 	@echo "It looks like you are building TEA for the first time."
 	@echo "Please review the configuration in '$@' and run Make again."
 	@echo
-	@cp --no-clobber Makefile.config.example $@
+	@test -e $@ || cp Makefile.config.example $@
 	@exit 1
 
 include Makefile.config
@@ -104,7 +105,7 @@ $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
 $(DIR)/bucket-map.yaml: | config/bucket-map-template.yaml
-	cp --interactive $< $@
+	cp -i $| $@
 
 $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
 	@mkdir -p $(DIR)

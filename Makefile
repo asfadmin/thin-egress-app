@@ -103,8 +103,8 @@ $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code
 	cd $(DIR)/code && zip -r ../thin-egress-app-code.zip .
 
-$(DIR)/bucket-map.yaml: config/bucket-map-template.yaml
-	cp $< $@
+$(DIR)/bucket-map.yaml: | config/bucket-map-template.yaml
+	cp --interactive $< $@
 
 $(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
 	@mkdir -p $(DIR)

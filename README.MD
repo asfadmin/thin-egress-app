@@ -59,6 +59,7 @@ for a quick and easy TEA bootstrapping script.
     * [Using awscli](#using-awscli)
   * [From Terraform](#from-terraform)
   * [From Cumulus](#from-cumulus)
+  * [For development](#for-development)
 * [Post deployment procedures](#post-deployment-procedures) - What do to AFTER Deploying
   * [Update EDL](#update-edl)
   * [Validating a Deployment](#validating-a-deployment)
@@ -193,67 +194,106 @@ unittest framework (admittedly somewhat unconventionally) to run comprehensive i
 tests on freshly deployed stacks for every build. All test failures prevent successful
 builds and code cannot be released without all tests completing successfully.
 
+There is also a comprehensive unit test suite written using pytest. You can run it in a virtual
+environment like this:
+
+```bash
+# Create virtual environment
+python3 -m venv .venv
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install requirements to the virtual environment.
+# Make sure you see '(.venv)' in your shell prompt before running this!
+pip install -r requirements.txt -r requirements-dev.txt
+
+# Run the tests
+make test
+```
+
 ### Roll-Your-Own
 
-If you prefer to roll your own zip for the lambda code:
+If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
+from source in a bash environment. You will need to have a few tools installed for this to work:
+
+- `zip` for creating zip files
+- `docker` for building the dependency layer
+- `awscli` (optional) for deploying to AWS
+
+If you're building the dependency layer locally (generally not recommended especially not on MacOS)
+you will also need:
+- `python3.8` with `pip`
+- `git` for installing rain-api-core
+
+All build artifacts are created into the `dist` directory.
+```bash
+# Clean up from previous builds
+make clean
+
+# Creates the lambda code zip: dist/thin-egress-app-code.zip
+make code
+# Creates the dependnecy layer zip: dist/thin-egress-app-dependencies.zip
+make dependencies
+# Creates the CloudFormation template: dist/thin-egress-app.yaml
+make yaml
+# Creates the Terraform zip file needed by cumulus
+make terraform
+
+# Creates all of the above
+make build
+```
+
+You can deploy these artifacts to a development stack with
+```bash
+make deploy
+```
+*Note: You can run this command as many times as you like, make will automatically detect
+changes made to the source code and rebuild/update the stack as needed*
+
+#### Configuration
+After you run any `make` command, you will notice a file called `Makefile.config`. This contains
+any Make configuration variables that you may wish to tweak for your development purposes. If you
+need to override any additional variables from the Makefile you can put them in this file.
+Alternatively, if you just need to make a one off change, `make` lets you set variables on the
+command line:
+
+```bash
+make deploy STACK_NAME=thin-egress-app-temp AWS_PROFILE=development
+```
+
+You will need to change any variables that have the value `REQUIRED!` before you can run
+`make deploy`.
 
 #### Dependency Layer
-We've found that if the dependency layer isn't built in an `amazonlinux:2` environment, the JWT crypto doesn't work. Here are instructions for gathering and packaging the dependencies in an `amazonlinux` docker container.
+
 ```bash
-
-# Make up a filename for code archive:
-DEPENDENCYLAYERFILENAME=tea_depencency_layer.zip
-
 # get the repo
 git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
-# copy requirements to a directory that is mounted into the docker container
-cp lambda/requirements.txt lambda/requirements_tea.txt
-cp build/dependency_builder.sh lambda/
-
-docker run --rm -v lambda/:/depbuild/in -v ./:/depbuild/out -e "ZIPFILENAME=${DEPENDENCYLAYERFILENAME}" amazonlinux:2  bash /depbuild/in/dependency_builder.sh
+# Build the zip file
+make dependencies
 
 # Upload to S3
-aws s3 cp --profile=default ./${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}/
+aws s3 cp --profile=default dist/thin-egress-app-dependencies.zip s3://${CODE_BUCKET}/
 ```
+
+*Note: If you are expecting the `cryptography` dependency to be built from source, you may need to
+run these commands in an `amazonlinux:2` docker container. However, as `cryptography` distributes
+`manylinux` wheels, this should not be necessary*
 
 #### Packaging up the egress code:
 
 ```bash
-
-# Make up a filename for code archive:
-CODE_ARCHIVE_FILENAME=thin-egress-app-code.zip
-
-# get the repo
+# Get the repo
 git clone https://github.com/asfadmin/thin-egress-app
 cd thin-egress-app
 
-# Create a scratch directory in which to confine the required module
-
-# To make the archive smaller, you can cull unnecessary packages and files from the directory. The particulars
-# are beyond the scope of this documentation.
-
-# Create the zip archive and put the required modules in
-zip -r9 ./${CODE_ARCHIVE_FILENAME} ./lambda
-
-# Add the egress python code
-zip -g ./${CODE_ARCHIVE_FILENAME} ./app.py
-
-# Add the update lambda
-zip -g ./${CODE_ARCHIVE_FILENAME} ./update_lambda.py
-
-# Add the html templates
-zip -g -r2 ./${CODE_ARCHIVE_FILENAME} ./templates
-
-# Add the common code:
-cd rain_api_core
-zip -g -r9 ./${CODE_ARCHIVE_FILENAME} ./rain_api_core
-cd ..
+# Build the zip file
+make code
 
 # Upload to S3
-aws s3 cp --profile=default ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}/
-
+aws s3 cp --profile=default dist/thin-egress-app-code.zip s3://${CODE_BUCKET}/
 ```
 
 [⬆ Return to Table of Contents](#table-of-contents)
@@ -694,6 +734,20 @@ a write up for this, I'd love to include it.
 Please see the
 [Cumulus documentation](https://nasa.github.io/cumulus/docs/deployment/thin_egress_app)
 for current TEA deployment and configuration procedures.
+
+### For development
+You can deploy the CloudFormation template for development using our Makefile. You'll still need to
+set up your secrets and S3 buckets manually, but once that's done pushing your changes is as easy as
+running `make deploy`.
+
+```bash
+# First time setup. Add your bucket and secret names to this file.
+make Makefile.config
+
+# Build and deploy to the configured AWS profile.
+# Run this whenever you're ready to test your code changes.
+make deploy
+```
 
 [⬆ Return to Table of Contents](#table-of-contents)
 

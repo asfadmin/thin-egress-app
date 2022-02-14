@@ -1,0 +1,78 @@
+# ================================= READ ME ================================= #
+# For building artifacts (`make build`), no configuration is necessary.
+# For deploying a dev stack (`make deploy`), all variables marked with
+#
+# REQUIRED_FOR_DEPLOY
+#
+# Must be replaced with values specific to your environment.
+# =========================================================================== #
+
+##############
+# TEA config #
+##############
+
+# The name of the CloudFormation stack to deploy to.
+# For development, this should be a constant value. If code is changed the
+# stack will be updated with the new zip files.
+STACK_NAME := thin-egress-app-dev
+
+# S3 bucket that will contain the build artifacts
+CODE_BUCKET := REQUIRED_FOR_DEPLOY!
+# Object prefix for artifacts in the code bucket
+CODE_PREFIX := $(STACK_NAME)/
+
+# S3 bucket that will contain the configuration files such as the bucket map
+CONFIG_BUCKET := REQUIRED_FOR_DEPLOY!
+# Object prefix for artifacts in the config bucket
+CONFIG_PREFIX := $(STACK_NAME)/
+# Uncomment the following line to use an existing bucket map rather than uploading one
+# BUCKET_MAP_OBJECT_KEY :=
+
+# String that will be prepended to bucket names after looking them up in the bucket map
+BUCKETNAME_PREFIX :=
+
+# These secrets are required but not managed by the Makefile.
+# For full deployments use `build/deploy.sh`
+JWT_KEY_SECRET_NAME := REQUIRED_FOR_DEPLOY!
+URS_CREDS_SECRET_NAME := REQUIRED_FOR_DEPLOY!
+
+# EarthData Login base URL
+URS_URL := https://uat.urs.earthdata.nasa.gov
+
+####################################
+# CloudFormation Template Defaults #
+####################################
+# These options refer specifically to the CloudFormation yaml file itself
+
+CF_DESCRIPTION := TEA snapshot, version: ${BUILD_ID} built ${DATE}
+CF_BUILD_VERSION := $(BUILD_ID)
+
+# Uncomment the following line to use a different default value for the code bucket
+# CF_DEFAULT_CODE_BUCKET := asf.public.code
+# Default S3 object key for the dependency layer
+CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY :=
+# Default S3 object key for the lambda code
+CF_DEFAULT_CODE_ARCHIVE_KEY :=
+
+##################
+# AWS cli config #
+##################
+
+# AWS cli binary name
+AWS := aws
+
+# AWS profile to use
+AWS_PROFILE := default
+
+########
+# Misc #
+########
+# Uncomment the following line to build the dependencies on the host (without docker)
+# DOCKER_COMMAND :=
+
+# Supported JWT algorithm
+JWTALGO := RS256
+
+# AWS Lambda
+LAMBDA_TIMEOUT := 6
+LAMBDA_MEMORY := 128

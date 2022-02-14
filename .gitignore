@@ -18,8 +18,10 @@ terraform.tfstate*
 
 # Config
 bucket_map.yaml
+Makefile.config
 
 # Other
 /pkg
 build/requirements_dev.txt
 build/tea-dev.Dockerfile
+dist

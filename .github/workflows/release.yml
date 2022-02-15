@@ -1,0 +1,114 @@
+# This workflow runs whenever a GitHub release is created. It gets the version
+# number from the git tag, builds and tests TEA, and then uploads the artifacts
+# to the public bucket for distribution.
+name: Release
+
+on:
+  release:
+    types:
+      - released
+
+jobs:
+  build:
+    uses: ./.github/workflows/re-build.yml
+    with:
+      environment: prod
+    secrets:
+      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
+      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
+
+  # The secrets context is not supported on job level `if`. So we need to hack around it:
+  # https://github.com/actions/runner/issues/520#issuecomment-907427748
+  check-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      run-tests: ${{ steps.eval.outputs.defined }}
+    steps:
+      - id: eval
+        env:
+          SKIP_TESTS: ${{ secrets.SKIP_TESTS }}
+        if: "${{ env.SKIP_TESTS == '' }}"
+        run: echo "::set-output name=defined::true"
+
+  test-e2e:
+    needs:
+      - build
+      - check-tests
+    if: needs.check-tests.outputs.run-tests == 'true'
+    uses: ./.github/workflows/re-test-e2e.yml
+    with:
+      environment: test
+      dependency-zip: ${{ needs.build.outputs.dependency-zip }}
+      code-zip: ${{ needs.build.outputs.code-zip }}
+      cloudformation-yaml: ${{ needs.build.outputs.cloudformation-yaml }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      URS_USERNAME: ${{ secrets.URS_USERNAME }}
+      URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
+      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
+      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
+      CONFIG_BUCKET: ${{ secrets.CONFIG_BUCKET }}
+      URS_AUTH_CREDS_SECRET_NAME: ${{ secrets.URS_AUTH_CREDS_SECRET_NAME }}
+      URS_URL: ${{ secrets.URS_URL }}
+      BUCKET_MAP_FILE: ${{ secrets.BUCKET_MAP_FILE }}
+      BUCKETNAME_PREFIX: ${{ secrets.BUCKETNAME_PREFIX }}
+      COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN }}
+      DOMAIN_CERT_ARN: ${{ secrets.DOMAIN_CERT_ARN }}
+      DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+      STACK_NAME: ${{ secrets.STACK_NAME }}
+      URS_CLIENT_ID: ${{ secrets.URS_CLIENT_ID }}
+      EDL_APP_UID: ${{ secrets.EDL_APP_UID }}
+      EDL_APP_PASSWORD: ${{ secrets.EDL_APP_PASSWORD }}
+
+  publish:
+    runs-on: ubuntu-latest
+    environment: prod
+    needs:
+      - build
+      - test-e2e
+    if: success() || needs.test-e2e.result == 'skipped'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      - uses: actions/download-artifact@v2
+
+      - name: Upload to public code bucket
+        env:
+          S3_PATH_PREFIX: s3://${{ secrets.CODE_BUCKET }}/${{ secrets.CODE_PREFIX }}
+        run: |
+          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.dependency-zip }}
+          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.code-zip }}
+          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ needs.build.outputs.cloudformation-yaml }}
+          aws s3 cp ./terraform/thin-egress-app-terraform.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.terraform-zip }}
+
+          echo '{"schemaVersion": 1, "label": "Last Release", "message": "'$GITHUB_REF_NAME'", "color": "success"}'  > lastrelease.json
+          aws s3 cp lastrelease.json s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+              --metadata-directive REPLACE \
+              --cache-control no-cache \
+              --expires '2016-06-14T00:00:00Z' \
+              --content-type 'application/json' \
+              --acl public-read
+
+  status:
+    if: always()
+    needs:
+      - build
+      - publish
+    uses: ./.github/workflows/re-status.yml
+    with:
+      environment: prod
+      build_tag: ${{ needs.build.outputs.version }}
+      success: ${{ needs.build.result == 'success' && needs.publish.result == 'success' }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}

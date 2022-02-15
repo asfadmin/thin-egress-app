@@ -1,9 +1,10 @@
 import json
-import boto3
-import urllib.request
 import os
-from netaddr import cidr_merge
+import urllib.request
+
+import boto3
 import cfnresponse
+from netaddr import cidr_merge
 
 
 def lambda_handler(event, context):
@@ -16,7 +17,7 @@ def lambda_handler(event, context):
         print(f"Current region in {current_region}")
         cidr_list = get_region_cidrs(current_region)
 
-        # Get the base policy and add IP list as a conidtion
+        # Get the base policy and add IP list as a condition
         new_policy = get_base_policy(os.getenv("prefix"))
         new_policy["Statement"][0]["Condition"] = {"IpAddress": {"aws:SourceIp": cidr_list}}
 
@@ -59,67 +60,61 @@ def get_region_cidrs(current_region):
                             item["service"] == "AMAZON" and item["region"] == current_region]
     # It's important to filter down the CIDR range as much as possible. Too large can cause the role creation to fail.
     in_region_amazon_ips = [str(ip) for ip in cidr_merge(in_region_amazon_ips)]
-    # Add in Privagte IP Space
+    # Add in Private IP Space
     in_region_amazon_ips.append('10.0.0.0/8')
-    return (in_region_amazon_ips)
+    return in_region_amazon_ips
 
 
 def get_base_policy(prefix):
     vpcid = os.getenv('vpcid')
-    policy = """
-
-    {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:ListBucket",
-                "s3:GetBucketLocation"
-            ],
-            "Resource": [
-                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
-                """ + f'"arn:aws:s3:::{prefix}' + """*"
-            ],
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:ListBucket",
-                "s3:GetBucketLocation"
-            ],
-            "Resource": [
-                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
-                """ + f'"arn:aws:s3:::{prefix}' + """*"
-            ],
-            "Effect": "Allow",
-            "Condition": {
-                "StringEquals": {
-                    "aws:SourceVpc": """ + f'"{vpcid}"' + """
+    return {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Action": [
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation"
+                ],
+                "Resource": [
+                    f"arn:aws:s3:::{prefix}*/*",
+                    f"arn:aws:s3:::{prefix}*"
+                ],
+                "Effect": "Allow"
+            },
+            {
+                "Action": [
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation"
+                ],
+                "Resource": [
+                    f"arn:aws:s3:::{prefix}*/*",
+                    f"arn:aws:s3:::{prefix}*"
+                ],
+                "Effect": "Allow",
+                "Condition": {
+                    "StringEquals": {
+                        "aws:SourceVpc": f"{vpcid}"
+                    }
+                }
+            },
+            {
+                "Action": [
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation"
+                ],
+                "Resource": [
+                    f"arn:aws:s3:::{prefix}*/*",
+                    f"arn:aws:s3:::{prefix}*"
+                ],
+                "Effect": "Allow",
+                "Condition": {
+                    "StringLike": {
+                        "aws:SourceVpc": "vpc-*"
+                    }
                 }
             }
-        },
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:ListBucket",
-                "s3:GetBucketLocation"
-            ],
-            "Resource": [
-                """ + f'"arn:aws:s3:::{prefix}' + """*/*",
-                """ + f'"arn:aws:s3:::{prefix}' + """*"
-            ],
-            "Effect": "Allow",
-            "Condition": {
-                "StringLike": {
-                    "aws:SourceVpc": "vpc-*"
-                }
-            }
-        }
-    ]
-}
-
-    """
-
-    return json.loads(policy)
+        ]
+    }

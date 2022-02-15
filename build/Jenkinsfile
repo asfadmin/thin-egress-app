@@ -62,11 +62,11 @@ pipeline {
     STACKNAME_SAME="${APPTAG}-jenk-same"
     STACKNAME_SCND="${APPTAG}-jenk-scnd"
     URS_CREDS_SECRET_NAME="${URS_CREDS_SECRET_NAME}"
-    DEPENDENCYLAYERFILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
+    DEPENDENCY_LAYER_FILENAME="${env.APPTAG}-dependencylayer-${env.NEWTAG}.zip"
     DOCKERREPO="docker-registry.asf.alaska.edu:5000"
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
-    ZIPFILENAME="${DEPENDENCYLAYERFILENAME}"
+    ZIPFILENAME="${DEPENDENCY_LAYER_FILENAME}"
     LAMBDA_TIMEOUT=6
     LAMBDA_MEMORY=128
     AWS_BIN="/usr/local/bin/aws"
@@ -77,10 +77,11 @@ pipeline {
   }
 
   // Build on a slave with docker on kubernetes
-  agent { kubernetes {
-          yamlFile 'build/k8s.yaml'
-             }
-      }
+  agent {
+    kubernetes {
+      yamlFile 'build/k8s.yaml'
+    }
+  }
   stages {
 
     // just sort of assess the environment
@@ -89,18 +90,18 @@ pipeline {
         container('tea-container') {
 
             // Send chat notification
-            mattermostSend channel: "${CHAT_ROOM}", color: '#EAEA5C', endpoint: "${env.CHATSERVER_SECRET_URL}", message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER}, branch: ${GIT_BRANCH} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            mattermostSend(
+              channel: "${CHAT_ROOM}",
+              color: '#EAEA5C',
+              endpoint: "${env.CHATSERVER_SECRET_URL}",
+              message: "Build started: ${env.JOB_NAME} ${env.BUILD_NUMBER}, branch: ${GIT_BRANCH} (<${env.BUILD_URL}|Open>). See (<{$env.RUN_CHANGES_DISPLAY_URL}|Changes>)."
+            )
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]]) {
               // Dump ENV
               sh 'tree'
               sh 'pwd'
               sh 'env'
             }
-            // Update submodules.
-            sh "echo '>> Updating submodules....'"
-            sh "git config user.email 'jenkins@jenkins.asf.alaska.edu'"
-            sh "git config user.name 'jenkins'"
-            sh "git submodule update --init --recursive"
 
             // show us the params:
             echo "params.APPTAG: ${params.APPTAG}"
@@ -121,58 +122,44 @@ pipeline {
             echo "params.AWSCREDS_TEA_DEPLOY: ${params.AWSCREDS_TEA_DEPLOY}"
             echo "params.COOKIE_DOMAIN: ${params.COOKIE_DOMAIN}"
 
+            // Clear out Makefile config
+            sh 'echo "" > Makefile.config'
         }
       }
     }
-
-    // Download and package dependencies
     stage('Package Dependency Layer') {
       steps {
         container('layer-builder') {
-
-            sh '${WORKSPACE}/build/dependency_builder.sh && echo "built to $WORKSPACE"'
+            sh "echo '>> Building dependency layer....'"
+            // We're already running in the right container so tell make to run without docker
+            sh "make dependencies DOCKER_COMMAND="
+            sh "cp ${WORKSPACE}/dist/thin-egress-app-dependencies.zip ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME}"
 
             sh 'echo "finished depbuilder, now looking in some dirs" && cd "$WORKSPACE" && ls -lah'
-            // zip file now located at $WORKSPACE/$DEPENDENCYLAYERFILENAME
         }
       }
-   }
+    }
     // Package code
     stage('Package Code') {
       steps {
         container('tea-container') {
-            // Zip up the upload.
-            sh "echo '>> Building Zipfile....'"
+            sh "echo '>> Building lambda code....'"
+            sh "make code BUILD_ID=${BUILDTAG}"
+            sh "cp ${WORKSPACE}/dist/thin-egress-app-code.zip ${WORKSPACE}/${CODE_ARCHIVE_FILENAME}"
 
-            sh """ cd ${WORKSPACE}/lambda  && \
-                   sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./app.py && \
-                   zip -g ../${CODE_ARCHIVE_FILENAME} ./app.py && \
-                   sed -i -e "s/<BUILD_ID>/${BUILDTAG}/" ./tea_bumper.py && \
-                   zip -g ../${CODE_ARCHIVE_FILENAME} ./tea_bumper.py && \
-                   zip -g ../${CODE_ARCHIVE_FILENAME} ./update_lambda.py && \
-                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./templates && \
-                   cd .. && \
-                   cd rain-api-core  && \
-                   zip -g -r ../${CODE_ARCHIVE_FILENAME} ./rain_api_core """
-
-            // Swap in BUILD#
-            sh "echo '>> Build Stamping....'"
-
-            sh "cd ${WORKSPACE}"
-
-            // thin-egress-app.yaml
-            sh 'if [ ${APPTAG} != "tea" ]; then sed -i -e "s/asf.public.code/${CODE_BUCKET}/" ./cloudformation/thin-egress-app.yaml; fi'
-            sh 'sed -i -e "s/<CODE_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${CODE_ARCHIVE_FILENAME}/" ./cloudformation/thin-egress-app.yaml'
-            sh 'sed -i -e "s/<DEPENDENCY_ARCHIVE_PATH_FILENAME>/${CODE_DIR}\\/${DEPENDENCYLAYERFILENAME}/" ./cloudformation/thin-egress-app.yaml'
-            sh 'sed -i -e "s/<BUILD_ID>/${BUILD_ID}/g" ./cloudformation/thin-egress-app.yaml'
-            sh 'sed -i -e "s;^Description:.*;Description: \\"TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}\\";" ./cloudformation/thin-egress-app.yaml'
+            sh "echo '>> Building CloudFormation yaml....'"
+            sh """ make yaml \
+                      CF_DEFAULT_CODE_BUCKET=${CODE_BUCKET} \
+                      CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY=${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} \
+                      CF_DEFAULT_CODE_ARCHIVE_KEY=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
+                      CF_BUILD_VERSION=${BUILD_ID} \
+                      CF_DESCRIPTION="TEA built by Jenkins job ${JOB_NAME}, ${BUILDTAG}" """
+            sh "cp ${WORKSPACE}/dist/thin-egress-app.yaml ${WORKSPACE}/cloudformation/thin-egress-app.yaml"
 
             // Zip up terraform
             sh "echo '>> Building Terraform Zip....'"
-            sh "cp ${WORKSPACE}/${CODE_ARCHIVE_FILENAME} ${WORKSPACE}/terraform/lambda.zip"
-            sh "cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} ${WORKSPACE}/terraform/dependencylayer.zip"
-            sh "cp ./cloudformation/thin-egress-app.yaml ${WORKSPACE}/terraform/thin-egress-app.yaml"
-            sh "cd ${WORKSPACE}/terraform && zip ../${TF_ZIP_FILENAME} *.tf thin-egress-app.yaml lambda.zip dependencylayer.zip"
+            sh "make terraform"
+            sh "cp ${WORKSPACE}/dist/thin-egress-app-terraform.zip ${WORKSPACE}/${TF_ZIP_FILENAME}"
         }
       }
    }
@@ -185,7 +172,7 @@ pipeline {
 
               // Push the code up to private bucket
               sh "echo '>> Pushing dependencylayer to ASF Bucket'"
-              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME}"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME}"
               sh "echo '>> Pushing code to ASF Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_BUCKET}${CODE_BUCKET_SUFFIX}/${CODE_DIR}/${CF_TEMPLATE_FILENAME}"
@@ -225,7 +212,7 @@ pipeline {
                            DomainCertArn=${DOMAIN_CERT_ARN-""}  \
                            CookieDomain=${COOKIE_DOMAIN-""} \
                            LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
-                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} \
                            LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
                            LambdaTimeout=${LAMBDA_TIMEOUT} \
                            LambdaMemory=${LAMBDA_MEMORY} \
@@ -263,7 +250,7 @@ pipeline {
                            DomainCertArn=${DOMAIN_CERT_ARN}  \
                            CookieDomain=${COOKIE_DOMAIN} \
                            LambdaCodeS3Key=${CODE_DIR}/${CODE_ARCHIVE_FILENAME} \
-                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCYLAYERFILENAME} \
+                           LambdaCodeDependencyArchive=${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} \
                            LambdaCodeS3Bucket=${CODE_BUCKET}${CODE_BUCKET_SUFFIX} \
                            LambdaTimeout=${LAMBDA_TIMEOUT} \
                            LambdaMemory=${LAMBDA_MEMORY} \
@@ -283,8 +270,8 @@ pipeline {
                 // Load up AWS + URS credentials
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: "${env.URS_ACCT}",  usernameVariable: 'URS_USERNAME', passwordVariable: 'URS_PASSWORD']]) {
                   withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${env.AWSCREDS}"]])  {
-                    // Attempt some downloads
-                    sh("python3 build/test/download_test.py")
+                    // Run end to end tests
+                    sh("pytest tests_e2e --stack-name=${STACKNAME_SAME} --test-results=asf.public.code/thin-egress-app/testresults.json --log-cli-level=DEBUG")
               }
             }
         }
@@ -324,7 +311,7 @@ pipeline {
               sh "echo '>> Pushing code to Public Code Bucket'"
               sh "${AWS_BIN} s3 cp ./${CODE_ARCHIVE_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
               sh "${AWS_BIN} s3 cp ./${TF_ZIP_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/ --acl public-read"
-              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCYLAYERFILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCYLAYERFILENAME} --acl public-read"
+              sh "${AWS_BIN} s3 cp ${WORKSPACE}/${DEPENDENCY_LAYER_FILENAME} s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${DEPENDENCY_LAYER_FILENAME} --acl public-read"
               sh "${AWS_BIN} s3 cp ./cloudformation/thin-egress-app.yaml s3://${CODE_PUBLIC_BUCKETNAME}/${CODE_DIR}/${CF_TEMPLATE_FILENAME} --acl public-read"
               sh """ echo '{ "schemaVersion": 1, "label": "Last Release", "message": "'$BUILDTAG'", "color": "success" }'  > /tmp/lastrelease.json"""
               sh """ ${AWS_BIN} s3 cp --metadata-directive REPLACE --cache-control no-cache \

@@ -1,13 +1,27 @@
+# Python
 *.pyc
-.DS_Store
-/lambda/.chalice
-/.idea
-.terraform
 /venv
-/pkg
+
+# IDE
+.idea
+
+# OS
+.DS_Store
+
+# Tools
+.terraform
 /terraform/providers.tf
-bucket_map.yaml
 terraform.tfstate*
 *.tfvars
+/lambda/.chalice
+.coverage
+
+# Config
+bucket_map.yaml
+Makefile.config
+
+# Other
+/pkg
 build/requirements_dev.txt
 build/tea-dev.Dockerfile
+dist

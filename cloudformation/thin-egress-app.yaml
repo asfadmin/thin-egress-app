@@ -295,7 +295,7 @@ Parameters:
   # FUTURE: replace with NGAP-managed layers
   OtLambdaLayer:
     Type: String
-    Default: "arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
+    Default: "arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python38-ver-1-5-0:3" # TODO needs to be an ENV or have dynamic region
     Description: 'ARN for Open Telemetry Lambda Layer provided by OT/AWS'
 
 

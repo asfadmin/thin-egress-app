@@ -21,32 +21,48 @@ don't need to configure any additional secrets in the `test` environment.
     downloads
   - `URS_PASSWORD` URS password used by end-to-end tests for authenticated
     downloads
-  - `CODE_BUCKET` Bucket to upload build results to for testing. Probably a
-    private bucket.
-  - (optional) `CONFIG_BUCKET` Bucket containing configuration files such as
-    the bucket map. Defaults to `CODE_BUCKET`
-  - (optional) `CODE_PREFIX` All objects uploaded to the code bucket get
-    this prefix
-  - (optional) `STACK_NAME` Name of the CloudFormation stack to update
-  - CloudFormation parameter overrides:
-    - (optional) `URS_AUTH_CREDS_SECRET_NAME` Name of the AWS SecretsManager
-      secret containing URS client id and client secret. This can be omitted
-      and a secret will be created automatically using the following values:
-      - `URS_CLIENT_ID`
-      - `EDL_APP_UID`
-      - `EDL_APP_PASSWORD`
-    - (optional) `JWT_KEY_SECRET_NAME` Name of the AWS SecretsManager secret
-      containing the JWT public and private keys. This can be omitted and a
-      secret will be created automatically with a newly generated key pair.
-    - (optional) `DOMAIN_NAME`
-    - (optional) `DOMAIN_CERT_ARN`
-    - (optional) `COOKIE_DOMAIN`
-    - (optional) `BUCKETNAME_PREFIX`
-    - (optional) `BUCKET_MAP_FILE` Name of the bucket map file to use from the
-      config bucket.
+  - If the config file doesn't specify a value for `URS_AUTH_CREDS_SECRET_NAME`,
+    the following secrets are also needed:
+    - `URS_CLIENT_ID`
+    - `EDL_APP_UID`
+    - `EDL_APP_PASSWORD`
 
 ## Setting up AWS Credentials
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - (optional) `AWS_ROLE_ARN`
 - (optional) `AWS_REGION`
+
+## Config file
+Unfortunately, GitHub currently doesn't support non-secret configuration
+variables. Therefore all non-secret configuration is stored in `.env`
+files located in the `config-public` directory. After forking the repo,
+you can commit changes to these files to adjust the setup for your use case.
+
+### Test Configuration
+The end-to-end test configuration is located in `re-test-e2e.env` and
+includes the following options:
+
+- `BUCKET_MAP_FILE` Name of the bucket map file to use from the config
+bucket.
+- `BUCKETNAME_PREFIX`
+- `CODE_BUCKET` Bucket to upload build results to for testing. Probably a
+  private bucket.
+- `CODE_PREFIX` All objects uploaded to the code bucket get this prefix.
+- `CONFIG_BUCKET` Bucket containing configuration files such as
+  the bucket map. Defaults to `CODE_BUCKET`
+- `COOKIE_DOMAIN`
+- `DOMAIN_CERT_ARN`
+- `DOMAIN_NAME`
+- `JWT_KEY_SECRET_NAME` Name of the AWS SecretsManager secret
+  containing the JWT public and private keys. This can be omitted and a
+  secret will be created automatically with a newly generated key pair.
+- `STACK_NAME` Name of the CloudFormation stack to update
+- `URS_AUTH_CREDS_SECRET_NAME` Name of the AWS SecretsManager
+  secret containing URS client id and client secret. This can be omitted
+  and a secret will be created automatically using the following github
+  environment secrets:
+  - `URS_CLIENT_ID`
+  - `EDL_APP_UID`
+  - `EDL_APP_PASSWORD`
+- `URS_URL` URL to use for Earthdata login.

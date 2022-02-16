@@ -48,17 +48,6 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       URS_USERNAME: ${{ secrets.URS_USERNAME }}
       URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
-      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
-      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
-      CONFIG_BUCKET: ${{ secrets.CONFIG_BUCKET }}
-      URS_AUTH_CREDS_SECRET_NAME: ${{ secrets.URS_AUTH_CREDS_SECRET_NAME }}
-      URS_URL: ${{ secrets.URS_URL }}
-      BUCKET_MAP_FILE: ${{ secrets.BUCKET_MAP_FILE }}
-      BUCKETNAME_PREFIX: ${{ secrets.BUCKETNAME_PREFIX }}
-      COOKIE_DOMAIN: ${{ secrets.COOKIE_DOMAIN }}
-      DOMAIN_CERT_ARN: ${{ secrets.DOMAIN_CERT_ARN }}
-      DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
-      STACK_NAME: ${{ secrets.STACK_NAME }}
       URS_CLIENT_ID: ${{ secrets.URS_CLIENT_ID }}
       EDL_APP_UID: ${{ secrets.EDL_APP_UID }}
       EDL_APP_PASSWORD: ${{ secrets.EDL_APP_PASSWORD }}

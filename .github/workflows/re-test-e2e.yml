@@ -25,32 +25,10 @@ on:
         required: true
       URS_PASSWORD:
         required: true
-      CODE_BUCKET:
-        required: true
-      CODE_PREFIX:
-        required: true
       # Optional
-      CONFIG_BUCKET:
-        required: false
       AWS_ROLE_ARN:
         required: false
       AWS_REGION:
-        required: false
-      URS_AUTH_CREDS_SECRET_NAME:
-        required: false
-      URS_URL:
-        required: false
-      BUCKET_MAP_FILE:
-        required: false
-      BUCKETNAME_PREFIX:
-        required: false
-      COOKIE_DOMAIN:
-        required: false
-      DOMAIN_CERT_ARN:
-        required: false
-      DOMAIN_NAME:
-        required: false
-      STACK_NAME:
         required: false
       URS_CLIENT_ID:
         required: false
@@ -69,20 +47,17 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-      # Configuration defaults
-      STACK_NAME: ${{ secrets.STACK_NAME || 'tea-gh-actions-test' }}
-      CONFIG_BUCKET: ${{ secrets.CONFIG_BUCKET || secrets.CODE_BUCKET }}
-      URS_AUTH_CREDS_SECRET_NAME: ${{ secrets.URS_AUTH_CREDS_SECRET_NAME }}
-      URS_URL: ${{ secrets.URS_URL || 'https://uat.urs.earthdata.nasa.gov' }}
 
     steps:
       - uses: actions/checkout@v2
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/re-test-e2e.env >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v2
 
       - name: Upload to AWS
         env:
-          S3_PATH_PREFIX: s3://${{ secrets.CODE_BUCKET }}/${{ secrets.CODE_PREFIX }}
+          S3_PATH_PREFIX: s3://${{ env.CODE_BUCKET }}/${{ env.CODE_PREFIX }}
         run: |
           aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ inputs.dependency-zip }}
           aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ inputs.code-zip }}
@@ -175,18 +150,18 @@ jobs:
               --capabilities "CAPABILITY_NAMED_IAM" \
               --parameter-overrides \
                   AuthBaseUrl="$URS_URL" \
-                  BucketMapFile="${{ secrets.BUCKET_MAP_FILE }}" \
-                  BucketnamePrefix="${{ secrets.BUCKETNAME_PREFIX }}" \
+                  BucketMapFile="$BUCKET_MAP_FILE" \
+                  BucketnamePrefix="$BUCKETNAME_PREFIX" \
                   ConfigBucket="$CONFIG_BUCKET" \
-                  CookieDomain="${{ secrets.COOKIE_DOMAIN }}" \
-                  DomainCertArn="${{ secrets.DOMAIN_CERT_ARN }}" \
-                  DomainName="${{ secrets.DOMAIN_NAME }}" \
+                  CookieDomain="$COOKIE_DOMAIN" \
+                  DomainCertArn="$DOMAIN_CERT_ARN" \
+                  DomainName="$DOMAIN_NAME" \
                   EnableApiGatewayLogToCloudWatch="False" \
                   JwtAlgo="RS256" \
                   JwtKeySecretName="$JWT_KEY_SECRET_NAME" \
-                  LambdaCodeDependencyArchive="${{ secrets.CODE_PREFIX }}${{ inputs.dependency-zip }}" \
-                  LambdaCodeS3Bucket="${{ secrets.CODE_BUCKET }}" \
-                  LambdaCodeS3Key="${{ secrets.CODE_PREFIX }}${{ inputs.code-zip }}" \
+                  LambdaCodeDependencyArchive="${CODE_PREFIX}${{ inputs.dependency-zip }}" \
+                  LambdaCodeS3Bucket="$CODE_BUCKET" \
+                  LambdaCodeS3Key="${CODE_PREFIX}${{ inputs.code-zip }}" \
                   LambdaMemory="128" \
                   Loglevel="DEBUG" \
                   Logtype="json" \

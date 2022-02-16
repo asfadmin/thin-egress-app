@@ -22,19 +22,19 @@ jobs:
   check-tests:
     runs-on: ubuntu-latest
     outputs:
-      run-tests: ${{ steps.eval.outputs.defined }}
+      run-tests: ${{ steps.eval.outputs.val }}
     steps:
       - id: eval
         env:
-          SKIP_TESTS: ${{ secrets.SKIP_TESTS }}
-        if: "${{ env.SKIP_TESTS == '' }}"
-        run: echo "::set-output name=defined::true"
+          RUN_TESTS: ${{ secrets.RUN_TESTS }}
+        if: "${{ env.RUN_TESTS == 'true' }}"
+        run: echo "::set-output name=val::yes"
 
   test-e2e:
     needs:
       - build
       - check-tests
-    if: needs.check-tests.outputs.run-tests == 'true'
+    if: needs.check-tests.outputs.run-tests == 'yes'
     uses: ./.github/workflows/re-test-e2e.yml
     with:
       environment: test

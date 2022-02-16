@@ -1,14 +1,25 @@
-You can stop the integration tests from running by setting `SKIP_TESTS` in your
-repository secrets to `true`. All other configuration is done through GitHub
-environments.
+# GitHub Actions Workflows
+These workflows define a CI/CD pipeline that is intended to work both for the
+main repo and for forks.
+
+GitHub Actions workflows overview:
+- Run unit tests and style checks against PR's
+- Run end-to-end tests whenever a PR is merged
+- Build and publish zip/yaml files needed to spin up a TEA stack on releases
+
+In order for the end-to-end tests to run you need to set the `RUN_TESTS` secret
+in your repository secrets to `true`. However, currently these tests assume
+they are running in ASF's environment, so enabling them is probably not desired
+on forked repos, hence they are disabled by default. All other configuration is
+done through GitHub environments.
 
 ## Environments
 There are two environments used to control which AWS resources will be modified
 by GitHub Actions. The `prod` environment is used for pushing finished build
 artifacts and build status files to a public bucket. The `test` environment is
-used for deploying a test stack and running the end-to-end tests against it. If
-you disable the end-to-end tests with the `SKIP_TESTS` repository secret, you
-don't need to configure any additional secrets in the `test` environment.
+used for deploying a test stack and running the end-to-end tests against it.
+Unless you enable the end-to-end tests with the `RUN_TESTS` repository secret,
+you don't need to configure any secrets in the `test` environment.
 
 - prod
   - AWS Credentials (see below)

@@ -13,9 +13,6 @@ jobs:
     uses: ./.github/workflows/re-build.yml
     with:
       environment: prod
-    secrets:
-      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
-      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
 
   # The secrets context is not supported on job level `if`. So we need to hack around it:
   # https://github.com/actions/runner/issues/520#issuecomment-907427748
@@ -66,11 +63,16 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
     steps:
+      - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/prod.env >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v2
 
       - name: Upload to public code bucket
         env:
-          S3_PATH_PREFIX: s3://${{ secrets.CODE_BUCKET }}/${{ secrets.CODE_PREFIX }}
+          S3_PATH_PREFIX: s3://${{ env.CODE_BUCKET }}/${{ env.CODE_PREFIX }}
         run: |
           aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.dependency-zip }}
           aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.code-zip }}
@@ -78,7 +80,7 @@ jobs:
           aws s3 cp ./terraform/thin-egress-app-terraform.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.terraform-zip }}
 
           echo '{"schemaVersion": 1, "label": "Last Release", "message": "'$GITHUB_REF_NAME'", "color": "success"}'  > lastrelease.json
-          aws s3 cp lastrelease.json s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+          aws s3 cp lastrelease.json s3://${CODE_BUCKET}/thin-egress-app/ \
               --metadata-directive REPLACE \
               --cache-control no-cache \
               --expires '2016-06-14T00:00:00Z' \
@@ -143,4 +145,3 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}

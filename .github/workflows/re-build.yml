@@ -8,12 +8,6 @@ on:
         required: true
         type: string
 
-    secrets:
-      CODE_BUCKET:
-        required: true
-      CODE_PREFIX:
-        required: true
-
     outputs:
       version:
         value: ${{ jobs.variables.outputs.version }}
@@ -53,12 +47,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     needs: variables
-    env:
-      CODE_BUCKET: ${{ secrets.CODE_BUCKET }}
-      CODE_PREFIX: ${{ secrets.CODE_PREFIX }}
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
 
       - name: Set Makefile.config
         run: |

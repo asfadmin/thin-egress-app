@@ -50,8 +50,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Load environment defaults
-        run: cat .github/workflows/config-public/re-test-e2e.env >> $GITHUB_ENV
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v2
 

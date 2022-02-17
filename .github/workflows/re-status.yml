@@ -18,8 +18,6 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-      CODE_BUCKET:
-        required: true
       # Optional
       AWS_ROLE_ARN:
         required: false
@@ -39,6 +37,11 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
     steps:
+      - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v2
 
       - name: Upload success labels
@@ -47,7 +50,7 @@ jobs:
           echo '{"schemaVersion": 1, "label": "Build Status", "message": "Success", "color": "success"}' > buildreport/buildstatus.json
           echo '{"schemaVersion": 1, "label": "Last Successful Build", "message": "${{ inputs.build_tag }}", "color": "success"}'  > buildreport/lastgoodbuild.json
           echo '{"schemaVersion": 1, "label": "Last Build", "message": "${{ inputs.build_tag }}", "color": "success"}' > buildreport/lastbuild.json
-          aws s3 cp buildreport/ s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+          aws s3 cp buildreport/ "s3://${CODE_BUCKET}/thin-egress-app/" \
               --recursive \
               --metadata-directive REPLACE \
               --cache-control no-cache \
@@ -66,6 +69,11 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
     steps:
+      - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
+
       - uses: actions/download-artifact@v2
 
       - name: Upload failure labels
@@ -73,7 +81,7 @@ jobs:
           mkdir -p buildreport
           echo '{"schemaVersion": 1, "label": "Build Status", "message": "Failed!", "color": "critical"}' > buildreport/buildstatus.json
           echo '{"schemaVersion": 1, "label": "Last Build", "message": "${{ inputs.build_tag }}", "color": "critical"}' > buildreport/lastbuild.json
-          aws s3 cp buildreport/ s3://${{ secrets.CODE_BUCKET }}/thin-egress-app/ \
+          aws s3 cp buildreport/ "s3://${CODE_BUCKET}/thin-egress-app/" \
               --recursive \
               --metadata-directive REPLACE \
               --cache-control no-cache \

@@ -1,4 +1,5 @@
-name: test-e2e
+# Reusable workflow for running end-to-end tests
+name: End-to-End Test
 
 on:
   workflow_call:

@@ -1,4 +1,5 @@
-name: status
+# Reusable workflow for reporting build status
+name: Status
 
 on:
   workflow_call:

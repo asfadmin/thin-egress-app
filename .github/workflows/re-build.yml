@@ -1,5 +1,5 @@
 # Reusable workflow for building artifacts
-name: build
+name: Build
 
 on:
   workflow_call:

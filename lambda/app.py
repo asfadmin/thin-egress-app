@@ -32,7 +32,6 @@ from rain_api_core.view_util import (
     make_set_cookie_headers_jwt
 )
 
-# TODO this comes from a Lambda layer - might prevent local builds from working correctly if not included
 from opentelemetry import baggage,trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.propagate import inject
@@ -123,9 +122,12 @@ def get_aux_request_headers():
     if origin_request_id:
         req_headers["x-origin-request-id"] = origin_request_id
 
+    # Insert Open Telemetry headers
+    inject(req_headers)
+
     return req_headers
 
-
+@tracefunc
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
 
@@ -291,12 +293,12 @@ def get_bcconfig(user_id: str) -> dict:
 
     return bcconfig
 
+@tracefunc
 @cachetools.cached(
     get_bucket_region_cache,
     # Cache by bucketname only
     key=lambda _, bucketname: hashkey(bucketname)
 )
-@tracefunc
 def get_bucket_region(session, bucketname) -> str:
     try:
         timer = time.time()
@@ -567,8 +569,8 @@ def get_new_session_client(user_id):
     log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
     return new_bc_client
 
-@tracefunc
 # refresh bc_client after 50 minutes
+@tracefunc
 @ttl_cache(ttl=50 * 60)
 def get_bc_config_client(user_id):
     return get_new_session_client(user_id)

@@ -279,7 +279,7 @@ Parameters:
 
   OtServiceName:
     Type: String
-    Default: "tea"
+    Default: "tea" # TODO might want this DAAC-specific
     Description: 'Name for Open Telemetry service as it will appear in traces'
 
   OtTracesSampler:
@@ -295,7 +295,7 @@ Parameters:
   # FUTURE: replace with NGAP-managed layers
   OtLambdaLayer:
     Type: String
-    Default: "arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python38-ver-1-5-0:3" # TODO needs to be an ENV or have dynamic region
+    Default: !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
     Description: 'ARN for Open Telemetry Lambda Layer provided by OT/AWS'
 
 

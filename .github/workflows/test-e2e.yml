@@ -57,12 +57,13 @@ jobs:
   status:
     if: always()
     needs:
+      - build
       - test-e2e
     uses: ./.github/workflows/re-status.yml
     with:
       environment: prod
       build_tag: ${{ needs.build.outputs.version }}
-      success: ${{ needs.test-e2e.result == 'success' }}
+      success: ${{ needs.build.result != 'failure' && needs.test-e2e.result != 'failure' }}
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -137,7 +137,7 @@ jobs:
     with:
       environment: prod
       build_tag: ${{ needs.build.outputs.version }}
-      success: ${{ needs.build.result == 'success' && needs.publish.result == 'success' }}
+      success: ${{ needs.build.result != 'failure' && needs.publish.result != 'failure' }}
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

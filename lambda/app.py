@@ -37,23 +37,25 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.propagate import inject
 from functools import wraps
 
-def tracefunc(func):
-    @wraps(func)
-    def wrapper(*args,**kw):
-        tracer = trace.get_tracer("tracer")
-        with tracer.start_as_current_span(func.__name__):
-            return func(*args,**kw)
-    return wrapper
+# Decorator for adding Open Telemetry tracing.
+# @param root - Boolean that designates the span as a "root" or parent span. Typically
+#  in a top-level handler function.
+def with_trace(root=False):
+    def tracefunc(func):
+        @wraps(func)
+        def wrapper(*args,**kw):
+            tracer = trace.get_tracer("tracer")
 
-def tracerootfunc(func):
-    print("in root context for span %s" % func.__name__)
-    @wraps(func)
-    def wrapper(*args,**kw):
-        print("in root context wrapper for span %s" % func.__name__)
-        tracer = trace.get_tracer("tracer")
-        with tracer.start_as_current_span(func.__name__,context={}):
-            return func(*args,**kw)
-    return wrapper
+            # The "root" span is the top-level parent span that sets the traceGroup. It needs
+            # to be initialized with a truthy but invalid context.
+            if root:
+                with tracer.start_as_current_span(func.__name__,context={}):
+                    return func(*args,**kw)
+
+            with tracer.start_as_current_span(func.__name__):
+                return func(*args,**kw)
+        return wrapper
+    return tracefunc
 
 log = get_log()
 conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
@@ -100,7 +102,7 @@ class EulaException(TeaException):
     def __init__(self, payload: dict):
         self.payload = payload
 
-@tracefunc
+@with_trace(root=False)
 def get_request_id() -> str:
     assert app.lambda_context is not None
 
@@ -108,13 +110,13 @@ def get_request_id() -> str:
 
 # TODO(reweeden): fix typing
 # typing module causes errors in AWS lambda?
-@tracefunc
+@with_trace(root=False)
 def get_origin_request_id() -> str:
     assert app.current_request is not None
 
     return app.current_request.headers.get("x-origin-request-id")
 
-@tracefunc
+@with_trace(root=False)
 def get_aux_request_headers():
     req_headers = {"x-request-id": get_request_id()}
     origin_request_id = get_origin_request_id()
@@ -127,11 +129,11 @@ def get_aux_request_headers():
 
     return req_headers
 
-@tracefunc
+@with_trace(root=False)
 def check_for_browser(hdrs):
     return 'user-agent' in hdrs and hdrs['user-agent'].lower().startswith('mozilla')
 
-@tracefunc
+@with_trace(root=False)
 def get_user_from_token(token):
     """
     This may be moved to rain-api-core.urs_util.py once things stabilize.
@@ -209,12 +211,12 @@ def get_user_from_token(token):
         log.debug(f'url: {url}, params: {params}, ')
     return None
 
-@tracefunc
+@with_trace(root=False)
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
     k_v.update({'code': code, 'http_method': http_method, 'status': outcome, 'requestid': get_request_id()})
     print(json.dumps(k_v))
 
-@tracefunc
+@with_trace(root=False)
 def restore_bucket_vars():
     global b_map  # pylint: disable=global-statement
 
@@ -227,7 +229,7 @@ def restore_bucket_vars():
     else:
         log.info('reusing old bucket configs')
 
-@tracefunc
+@with_trace(root=False)
 def do_auth_and_return(ctxt):
     log.debug('context: {}'.format(ctxt))
     here = ctxt['path']
@@ -244,7 +246,7 @@ def do_auth_and_return(ctxt):
     log.info("Redirecting for auth: {0}".format(urs_url))
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
-@tracefunc
+@with_trace(root=False)
 def add_cors_headers(headers):
     assert app.current_request is not None
 
@@ -258,7 +260,7 @@ def add_cors_headers(headers):
         else:
             log.warning(f'Origin {origin_header} is not an approved CORS host: {cors_origin}')
 
-@tracefunc
+@with_trace(root=False)
 def make_redirect(to_url, headers=None, status_code=301):
     if headers is None:
         headers = {}
@@ -269,7 +271,7 @@ def make_redirect(to_url, headers=None, status_code=301):
     log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
 
-@tracefunc
+@with_trace(root=False)
 def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):
     template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
     template_vars.update(t_vars)
@@ -279,7 +281,7 @@ def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, templat
 
     return Response(body=get_html_body(template_vars, template_file), status_code=status_code, headers=headers)
 
-@tracefunc
+@with_trace(root=False)
 def get_bcconfig(user_id: str) -> dict:
     bcconfig = {"user_agent": "Thin Egress App for userid={0}".format(user_id),
                 "s3": {"addressing_style": "path"},
@@ -293,7 +295,7 @@ def get_bcconfig(user_id: str) -> dict:
 
     return bcconfig
 
-@tracefunc
+@with_trace(root=False)
 @cachetools.cached(
     get_bucket_region_cache,
     # Cache by bucketname only
@@ -316,7 +318,7 @@ def get_bucket_region(session, bucketname) -> str:
         log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
         raise
 
-@tracefunc
+@with_trace(root=False)
 def get_user_ip():
     assert app.current_request is not None
 
@@ -330,7 +332,7 @@ def get_user_ip():
     log.debug(f"NO x_fowarded_for, using sourceIp: {ip} instead")
     return ip
 
-@tracefunc
+@with_trace(root=False)
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     # Attempt to pull userid from profile
     user_id = None
@@ -440,12 +442,12 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
                             {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
         return make_html_response(template_vars, headers, 404, 'error.html')
 
-@tracefunc
+@with_trace(root=False)
 def get_jwt_field(cookievar: dict, fieldname: str):
     return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
 
 @app.route('/')
-@tracerootfunc
+@with_trace(root=True)
 def root():
     user_profile = False
     template_vars = {'title': 'Welcome'}
@@ -467,7 +469,7 @@ def root():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 @app.route('/logout')
-@tracerootfunc
+@with_trace(root=True)
 def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
@@ -485,7 +487,7 @@ def logout():
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 @app.route('/login')
-@tracerootfunc
+@with_trace(root=True)
 def login():
     try:
         headers = {}
@@ -508,7 +510,7 @@ def login():
 
 
 @app.route('/version')
-@tracerootfunc
+@with_trace(root=True)
 def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
@@ -521,7 +523,7 @@ def version():
 
 
 @app.route('/locate')
-@tracerootfunc
+@with_trace(root=True)
 def locate():
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
@@ -540,7 +542,7 @@ def locate():
                     status_code=404,
                     headers={'Content-Type': 'text/plain'})
 
-@tracefunc
+@with_trace(root=False)
 def collapse_bucket_configuration(bucket_map):
     for k, v in bucket_map.items():
         if isinstance(v, dict):
@@ -550,7 +552,7 @@ def collapse_bucket_configuration(bucket_map):
                 collapse_bucket_configuration(v)
     return bucket_map
 
-@tracefunc
+@with_trace(root=False)
 def get_range_header_val():
     if 'Range' in app.current_request.headers:
         return app.current_request.headers['Range']
@@ -558,7 +560,7 @@ def get_range_header_val():
         return app.current_request.headers['range']
     return None
 
-@tracefunc
+@with_trace(root=False)
 def get_new_session_client(user_id):
     # Default Config
     params = {"config": bc_Config(**get_bcconfig(user_id))}
@@ -570,17 +572,17 @@ def get_new_session_client(user_id):
     return new_bc_client
 
 # refresh bc_client after 50 minutes
-@tracefunc
+@with_trace(root=False)
 @ttl_cache(ttl=50 * 60)
 def get_bc_config_client(user_id):
     return get_new_session_client(user_id)
 
-@tracefunc
+@with_trace(root=False)
 def get_data_dl_s3_client():
     user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
     return get_bc_config_client(user_id)
 
-@tracefunc
+@with_trace(root=False)
 def try_download_head(bucket, filename):
     t = [time.time()]  # t0
     client = get_data_dl_s3_client()
@@ -640,7 +642,7 @@ def try_download_head(bucket, filename):
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
-@tracerootfunc
+@with_trace(root=True)
 def dynamic_url_head():
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
@@ -671,7 +673,7 @@ def dynamic_url_head():
 
     return try_download_head(bucket, filename)
 
-@tracefunc
+@with_trace(root=False)
 def handle_auth_bearer_header(token):
     """
     Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
@@ -711,7 +713,7 @@ def handle_auth_bearer_header(token):
 
 
 @app.route('/{proxy+}', methods=['GET'])
-@tracerootfunc
+@with_trace(root=True)
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}
@@ -827,13 +829,13 @@ def dynamic_url():
     return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
 
 @app.route('/profile')
-@tracerootfunc
+@with_trace(root=True)
 def profile():
     return Response(body='Profile not available.',
                     status_code=200, headers={})
 
 @app.route('/pubkey', methods=['GET'])
-@tracerootfunc
+@with_trace(root=True)
 def pubkey():
     thebody = json.dumps({
         'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),

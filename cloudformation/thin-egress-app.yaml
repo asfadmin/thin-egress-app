@@ -292,12 +292,10 @@ Parameters:
     Default: "tracecontext,baggage"
     Description: 'The format used for traces'
 
-  # FUTURE: replace with NGAP-managed layers
-  OtLambdaLayer:
+  OtCollectorURL:
     Type: String
-    Default: !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
-    Description: 'ARN for Open Telemetry Lambda Layer provided by OT/AWS'
-
+    Default: "https://metrics-otel.ngap.sit.earthdata.nasa.gov"
+    Description: 'Cloud Metrics URL for Open Telemetry collector'
 
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
@@ -620,12 +618,13 @@ Resources:
           OTEL_SERVICE_NAME: !Ref OtServiceName
           OTEL_TRACES_SAMPLER: !Ref OtTracesSampler
           OTEL_PROPAGATORS: !Ref OtPropagators
+          OTEL_COLLECTOR_URL: !Ref OtCollectorURL
       Timeout: !Ref LambdaTimeout
       Handler: app.app
       Runtime: 'python3.8'
       Layers:
         - !Ref EgressLambdaDependencyLayer
-        - !Ref OtLambdaLayer
+        - !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
       MemorySize: !Ref LambdaMemory
 
   ExtDomainName:

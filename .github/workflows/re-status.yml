@@ -35,7 +35,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
     steps:
       - uses: actions/checkout@v2
@@ -67,7 +67,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
     steps:
       - uses: actions/checkout@v2

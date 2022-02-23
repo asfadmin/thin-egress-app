@@ -83,3 +83,11 @@ bucket.
   - `EDL_APP_UID`
   - `EDL_APP_PASSWORD`
 - `URS_URL` URL to use for Earthdata login.
+
+## CodeCov
+The unit test workflows that run on PR's report coverage data to CodeCov. This
+service is free to use for open source projects, however, it does need to be
+activated before the codecov uploader will work. To do this just go to
+[https://codecov.io/](https://codecov.io/), sign in and add your fork. You can
+then add the CodeCov app in your repository integration settings to get
+statuses from CodeCov on PR's.

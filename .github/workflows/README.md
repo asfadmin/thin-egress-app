@@ -2,6 +2,9 @@
 These workflows define a CI/CD pipeline that is intended to work both for the
 main repo and for forks.
 
+*NOTE: GitHub will prevent actions from running on forks by default. You will
+have to enable them under the 'Actions' tab after forking.*
+
 GitHub Actions workflows overview:
 - Run unit tests and style checks against PR's
 - Run end-to-end tests whenever a PR is merged

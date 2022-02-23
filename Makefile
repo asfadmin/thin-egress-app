@@ -24,7 +24,7 @@ DOCKER := docker
 # On Linux we need to do a bit of userid finagling so that the output files
 # end up being owned by us and not by root. On Mac this works out of the box.
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
-DOCKER_COMMAND := $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task lambci/lambda:build-python3.8
+DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS) lambci/lambda:build-python3.8
 
 #####################
 # Deployment Config #
@@ -84,7 +84,7 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -rf $(DIR)
 
-$(DIR)/thin-egress-app-dependencies.zip: requirements.txt
+$(DIR)/thin-egress-app-dependencies.zip: requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"

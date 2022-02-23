@@ -67,8 +67,14 @@ AWS_PROFILE := default
 ########
 # Misc #
 ########
+# Add any local dependencies here that are required for the dependency layer to be built.
+# You will likely also need to add a volume mapping to DOCKER_ARGS or configure the
+# dependency layer build to run on the host (see below) for it to work properly.
+REQUIREMENTS_DEPS :=
 # Uncomment the following line to build the dependencies on the host (without docker)
 # DOCKER_COMMAND :=
+# Any additional arguments for the docker command
+DOCKER_ARGS :=
 
 # Supported JWT algorithm
 JWTALGO := RS256

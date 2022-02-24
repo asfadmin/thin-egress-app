@@ -194,8 +194,6 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					ConfigBucket=$(CONFIG_BUCKET) \
 					LambdaCodeS3Bucket=$(CODE_BUCKET) \
 					PermissionsBoundaryName= \
-					PublicBucketsFile="" \
-					PrivateBucketsFile="" \
 					BucketnamePrefix=$(BUCKETNAME_PREFIX) \
 					DownloadRoleArn="" \
 					DownloadRoleInRegionArn="" \

@@ -1,0 +1,96 @@
+# Reusable workflow for building artifacts
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+    outputs:
+      version:
+        value: ${{ jobs.variables.outputs.version }}
+      code-zip:
+        value: ${{ jobs.variables.outputs.code-zip }}
+      dependency-zip:
+        value: ${{ jobs.variables.outputs.dependency-zip }}
+      cloudformation-yaml:
+        value: ${{ jobs.variables.outputs.cloudformation-yaml }}
+      terraform-zip:
+        value: ${{ jobs.variables.outputs.terraform-zip }}
+
+
+jobs:
+  # Generate some names from the version info in the tag name
+  variables:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.step1.outputs.version }}
+      code-zip: ${{ steps.step1.outputs.code-zip }}
+      dependency-zip: ${{ steps.step1.outputs.dependency-zip }}
+      cloudformation-yaml: ${{ steps.step1.outputs.cloudformation-yaml }}
+      terraform-zip: ${{ steps.step1.outputs.terraform-zip }}
+
+    steps:
+      - id: step1
+        run: |
+          VERSION=${GITHUB_REF_NAME#*.}
+          echo "::set-output name=version::$VERSION"
+          echo "::set-output name=code-zip::tea-code-build.$VERSION.zip"
+          echo "::set-output name=dependency-zip::tea-dependencylayer-build.$VERSION.zip"
+          echo "::set-output name=cloudformation-yaml::tea-cloudformation-build.$VERSION.yaml"
+          echo "::set-output name=terraform-zip::tea-terraform-build.$VERSION.zip"
+
+  # Build everything
+  build-all:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: variables
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - name: Set Makefile.config
+        run: |
+          TIMESTAMP=$(TZ=America/Anchorage date)
+
+          cat > Makefile.config << EOF
+          BUILD_ID := ${{ needs.variables.outputs.version }}
+
+          CF_DEFAULT_CODE_BUCKET := ${{ env.CODE_BUCKET }}
+          CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.code-zip }}
+          CF_DEFAULT_CODE_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.dependency-zip }}
+          CF_BUILD_VERSION := \$(BUILD_ID)
+          CF_DESCRIPTION := TEA version ${{ needs.variables.outputs.version }} (${GITHUB_SHA:0:7}) built by GitHub Actions on $TIMESTAMP.
+          EOF
+
+      - name: Build artifacts
+        run: make build
+
+      - name: Save dependency layer zip
+        uses: actions/upload-artifact@v2
+        with:
+          name: dependency-layer
+          path: dist/thin-egress-app-dependencies.zip
+
+      - name: Save Lambda code
+        uses: actions/upload-artifact@v2
+        with:
+          name: code
+          path: dist/thin-egress-app-code.zip
+
+      - name: Save CloudFormation yaml
+        uses: actions/upload-artifact@v2
+        with:
+          name: cloudformation
+          path: dist/thin-egress-app.yaml
+
+      - name: Save Terraform zip
+        uses: actions/upload-artifact@v2
+        with:
+          name: terraform
+          path: dist/thin-egress-app-terraform.zip

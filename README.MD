@@ -212,6 +212,8 @@ make test
 ```
 
 ### Roll-Your-Own
+*If you will forking the repository for the purposes of making your own
+releases see the [GitHub Actions README](.github/workflows/README.md).*
 
 If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
 from source in a bash environment. You will need to have a few tools installed for this to work:

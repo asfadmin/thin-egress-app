@@ -16,7 +16,8 @@ from cachetools.func import ttl_cache
 from cachetools.keys import hashkey
 from chalice import Chalice, Response
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
-from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
+from rain_api_core.bucket_map import BucketMap
+from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
 from rain_api_core.urs_util import (
     do_login,
@@ -240,12 +241,19 @@ def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
 def restore_bucket_vars():
     global b_map  # pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket, bucket_map_file))
+    log.debug('conf bucket: %s, bucket_map_file: %s', conf_bucket, bucket_map_file)
     if b_map is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket, bucket_map_file))
+        log.info('downloading various bucket configs from %s: bucketmapfile: %s, ', conf_bucket, bucket_map_file)
 
-        b_map = get_yaml_file(conf_bucket, bucket_map_file)
-        log.debug('bucket map: {}'.format(b_map))
+        b_map_dict = get_yaml_file(conf_bucket, bucket_map_file)
+        reverse = os.getenv('USE_REVERSE_BUCKET_MAP', 'FALSE').lower() == 'true'
+
+        log.debug('bucket map: %s', b_map_dict)
+        b_map = BucketMap(
+            b_map_dict,
+            bucket_name_prefix=get_bucket_name_prefix(),
+            reverse=reverse
+        )
     else:
         log.info('reusing old bucket configs')
 
@@ -663,29 +671,30 @@ def dynamic_url_head():
     timer.mark("restore_bucket_vars()")
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
-    timer.mark("process_request()")
+    timer.mark("b_map.get()")
 
     param = app.current_request.uri_params.get('proxy')
     if param is None:
         return Response(body='HEAD failed', headers={}, status_code=400)
 
-    path, bucket, filename, _ = process_request(param, b_map)
+    entry = b_map.get(param)
     timer.mark()
 
-    process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
-    log.debug(process_results)
+    log.debug("entry: %s", entry)
 
-    if not bucket:
-        template_vars = {'contentstring': 'Bucket not available',
-                         'title': 'Bucket not available',
-                         'requestid': get_request_id(), }
+    if entry is None:
+        template_vars = {
+            'contentstring': 'Bucket not available',
+            'title': 'Bucket not available',
+            'requestid': get_request_id()
+        }
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
     timer.mark()
     log.debug('timing for dynamic_url_head()')
     timer.log_all(log)
 
-    return try_download_head(bucket, filename)
+    return try_download_head(entry.bucket, entry.object_key)
 
 
 def handle_auth_bearer_header(token):
@@ -734,21 +743,37 @@ def dynamic_url():
     custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
-    log.debug(f'b_map: {b_map}')
+    log.debug(f'b_map: {b_map.bucket_map}')
     timer.mark()
 
     log.info(app.current_request.headers)
 
-    if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
-        if not bucket:
-            template_vars = {'contentstring': 'File not found', 'title': 'File not found',
-                             'requestid': get_request_id(), }
-            headers = {}
-            return make_html_response(template_vars, headers, 404, 'error.html')
-    else:
-        path, bucket, filename = (None, None, None)
+    param = app.current_request.uri_params.get("proxy")
+    entry = None
+    if param is not None:
+        entry = b_map.get(param)
+
+    log.debug('entry: %s', entry)
+
+    if not entry:
+        template_vars = {
+            'contentstring': 'File not found',
+            'title': 'File not found',
+            'requestid': get_request_id(),
+        }
+        headers = {}
+        return make_html_response(template_vars, headers, 404, 'error.html')
+
+    if not entry.object_key:
+        log.warning('Request was made to directory listing instead of object: %s', entry.bucket_path)
+
+        template_vars = {
+            'contentstring': 'Request does not appear to be valid.',
+            'title': 'Request Not Serviceable',
+            'requestid': get_request_id()
+        }
+        headers = {}
+        return make_html_response(template_vars, headers, 404, 'error.html')
 
     cookievars = get_cookie_vars(app.current_request.headers)
     user_profile = None
@@ -760,12 +785,14 @@ def dynamic_url():
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
-    timer.mark("check_public_bucket()")
+    timer.mark("get_required_groups()")
+    # It's only necessary to be in one of these groups
+    required_groups = entry.get_required_groups()
+    log.debug('required_groups: %s', required_groups)
     # Check for public bucket
-    pub_bucket = check_public_bucket(bucket, b_map, filename)
     timer.mark("possible auth header handling")
-    if pub_bucket:
-        log.debug("Accessing public bucket {0}".format(path))
+    if required_groups is None:
+        log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
     elif not user_profile:
         authorization = app.current_request.headers.get('Authorization')
         if not authorization:
@@ -794,15 +821,9 @@ def dynamic_url():
         else:
             return do_auth_and_return(app.current_request.context)
 
-    timer.mark("check_private_bucket()")
-    # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, b_map, filename)  # NOTE: Is an optimization attempt worth it
-    # if we're asking for a public file and we
-    # omit this check?
-    log.debug('private check: {}'.format(private_check))
     timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
+    u_in_g, new_user_profile = user_in_group(required_groups, cookievars, False, aux_headers=aux_headers)
     timer.mark()
 
     new_jwt_cookie_headers = {}
@@ -817,18 +838,14 @@ def dynamic_url():
 
     log.debug('user_in_group: {}'.format(u_in_g))
 
-    if private_check and not u_in_g:
-        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
-                         'requestid': get_request_id(), }
+    # Check that the bucket is either NOT private, or user belongs to that group
+    if required_groups and not u_in_g:
+        template_vars = {
+            'contentstring': 'This data is not currently available.',
+            'title': 'Could not access data',
+            'requestid': get_request_id()
+        }
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
-
-    if not filename:  # Maybe this belongs up above, right after setting the filename var?
-        log.warning("Request was made to directory listing instead of object: {0}".format(path))
-
-        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
-                         'requestid': get_request_id(), }
-
-        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 
     custom_headers.update(new_jwt_cookie_headers)
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
@@ -837,7 +854,7 @@ def dynamic_url():
     log.debug("timing for dynamic_url()")
     timer.log_all(log)
 
-    return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
+    return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers)
 
 
 @app.route('/profile')

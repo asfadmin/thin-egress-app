@@ -177,7 +177,7 @@ def test_restore_bucket_vars(mock_get_yaml_file, resources):
 
     app.restore_bucket_vars()
 
-    assert app.b_map == buckets
+    assert app.b_map.bucket_map == buckets
 
 
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
@@ -985,6 +985,7 @@ def test_dynamic_url(
         }
     }
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
+    app.b_map = None
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()

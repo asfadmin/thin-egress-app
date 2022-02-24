@@ -202,7 +202,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					HtmlTemplateDir= \
 					StageName=API \
 					Loglevel=DEBUG \
-					Logtype=json \
+					Logtype=$(LOG_TYPE) \
 					Maturity=DEV\
 					PrivateVPC= \
 					VPCSecurityGroupIDs= \

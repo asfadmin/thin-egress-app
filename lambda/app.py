@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Optional
 from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
@@ -57,10 +58,10 @@ class TeaChalice(Chalice):
 
         resp = super().__call__(event, context)
 
-        resp['headers'].update({'x-request-id': context.aws_request_id})
+        resp['headers']['x-request-id'] = context.aws_request_id
         if origin_request_id:
             # If we were passed in an x-origin-request-id header, pass it out too
-            resp['headers'].update({'x-origin-request-id': origin_request_id})
+            resp['headers']['x-origin-request-id'] = origin_request_id
 
         log_context(user_id=None, route=None, request_id=None)
 
@@ -85,9 +86,7 @@ def get_request_id() -> str:
     return app.lambda_context.aws_request_id
 
 
-# TODO(reweeden): fix typing
-# typing module causes errors in AWS lambda?
-def get_origin_request_id() -> str:
+def get_origin_request_id() -> Optional[str]:
     assert app.current_request is not None
 
     return app.current_request.headers.get("x-origin-request-id")

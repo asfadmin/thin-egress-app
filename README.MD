@@ -166,19 +166,6 @@ you have all the information you need to do the right thing.
 
 ![build-process](https://github.com/asfadmin/thin-egress-app/blob/devel/tea-build.png)
 
-To build TEA locally, you will need to initialize and update the `rain-api-core` submodule. After cloning the Thin Egress App repo:
-
-```
-cd thin-egress-app
-git submodule init
-git submodule update
-```
-This will put the `rain-api-core` submodule inside `thin-egress-app`.
-
-Note this process requires a valid SSH key in GitHub and your local machine. See the [GitHub Docs](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/about-ssh) for more info.
-
-You can now start building the dependencies for deploying thin-egress-app.
-
 ### Code Quality
 
 TEA leverages several open source platforms along with mandatory peer code review to help

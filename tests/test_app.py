@@ -1075,6 +1075,32 @@ def test_dynamic_url_private(
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+def test_dynamic_url_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    current_request.uri_params = {"proxy": "DATA-TYPE-1/NONEXISTENT/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    # TODO(reweeden): Why is the text different for get and head?
+    mock_make_html_response.assert_called_once_with(
+        {
+            "contentstring": "File not found",
+            "title": "File not found",
+            "requestid": "request_1234"
+        },
+        {},
+        404,
+        "error.html"
+    )
+    assert response.body == "Mock response"
+    assert response.status_code == 404
+    assert response.headers == {}
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_directory(

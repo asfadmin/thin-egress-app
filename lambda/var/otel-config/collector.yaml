@@ -1,0 +1,20 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  logging:
+    loglevel: debug
+
+  otlphttp/otelcollector:
+    endpoint: "${OTEL_COLLECTOR_URL}"
+
+
+#enables output for traces to log
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlphttp/otelcollector,logging]

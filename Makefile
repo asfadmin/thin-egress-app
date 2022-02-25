@@ -1,4 +1,5 @@
 SOURCES := \
+    lambda/var/otel-config/collector.yaml \
 	lambda/app.py \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py

@@ -6,6 +6,33 @@ BROWSE_FILE = "SA/BROWSE/S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813
 OBJ_PREFIX_FILE = "SA/METADATA_GRD_HS_CH/browse/ALAV2A104483200-OORIRFU_000.png"
 
 
+def test_version(urls):
+    url = urls.join("version")
+    r = requests.get(url)
+    data = r.json()
+
+    assert r.status_code == 200
+    assert "version_id" in data
+
+
+def test_pubkey(urls):
+    url = urls.join("pubkey")
+    r = requests.get(url)
+    data = r.json()
+
+    assert r.status_code == 200
+    assert "rsa_pub_key" in data
+    assert data["algorithm"] == "RS256"
+
+
+def test_profile(urls):
+    # This endpoint exists, but it doesn't do anything
+    url = urls.join("profile")
+    r = requests.get(url)
+
+    assert r.status_code == 200
+
+
 @pytest.mark.parametrize("method", ("get", "head"))
 def test_public_images(urls, method):
     url = urls.join(BROWSE_FILE)

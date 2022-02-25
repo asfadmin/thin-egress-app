@@ -2,6 +2,7 @@ import base64
 import json
 from uuid import uuid1
 
+import pytest
 import requests
 
 LOCATE_BUCKET = "s1-ocn-1e29d408"
@@ -29,20 +30,24 @@ def test_origin_request_header(urls, auth_cookies):
     assert headers.get('x-origin-request-id') == origin_request_value
 
 
-def test_range_request_works(urls, auth_cookies):
+@pytest.mark.parametrize("method", ("get", "head"))
+def test_range_request_works(urls, auth_cookies, method):
     url = urls.join(urls.METADATA_FILE)
     headers = {"Range": "bytes=1035-1042"}
 
-    r = requests.get(url, cookies=auth_cookies, headers=headers)
+    r = requests.request(method, url, cookies=auth_cookies, headers=headers)
 
     assert r.status_code == 206
-    assert len(r.text) == 8
+    assert r.headers["Content-Length"] == "8"
+    if method == "get":
+        assert len(r.text) == 8
 
 
-def test_approved_user_can_access_private_data(urls, auth_cookies):
+@pytest.mark.parametrize("method", ("get", "head"))
+def test_approved_user_can_access_private_data(urls, auth_cookies, method):
     url = urls.join("PRIVATE", "ACCESS", "testfile")
 
-    r = requests.get(url, cookies=auth_cookies)
+    r = requests.request(method, url, cookies=auth_cookies)
 
     assert r.status_code == 200
 

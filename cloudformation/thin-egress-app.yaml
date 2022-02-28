@@ -294,7 +294,7 @@ Parameters:
 
   OtCollectorURL:
     Type: String
-    Default: "https://metrics-otel.ngap.sit.earthdata.nasa.gov"
+    Default: "https://metrics-otel.ngap.earthdata.nasa.gov"
     Description: 'Cloud Metrics URL for Open Telemetry collector'
 
 Conditions:

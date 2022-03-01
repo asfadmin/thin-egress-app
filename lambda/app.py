@@ -32,8 +32,7 @@ from rain_api_core.view_util import (
     make_set_cookie_headers_jwt
 )
 
-from opentelemetry import baggage,trace
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
 from opentelemetry.propagate import inject
 from functools import wraps
 

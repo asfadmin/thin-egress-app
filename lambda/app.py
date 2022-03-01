@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from functools import wraps
 from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
@@ -12,6 +13,8 @@ from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
 from cachetools.keys import hashkey
 from chalice import Chalice, Response
+from opentelemetry import trace
+from opentelemetry.propagate import inject
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
 from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
@@ -31,10 +34,6 @@ from rain_api_core.view_util import (
     get_jwt_keys,
     make_set_cookie_headers_jwt
 )
-
-from opentelemetry import trace
-from opentelemetry.propagate import inject
-from functools import wraps
 
 
 # Decorator for adding Open Telemetry tracing.

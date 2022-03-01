@@ -1,0 +1,8 @@
+cachetools==5.0.0
+cfnresponse==1.1.2
+chalice==1.26.6
+flatdict==4.0.1
+git+https://github.com/asfadmin/rain-api-core.git@17f5e026749da048553fab825543cbf76c8a4f77
+netaddr==0.8.0
+
+pip>=19.2 # not directly required, pinned by Snyk to avoid a vulnerability

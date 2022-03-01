@@ -1,15 +1,17 @@
-import json
-import boto3
 import os
-
 from datetime import datetime
+
+import boto3
 from rain_api_core.general_util import get_log
+
 log = get_log()
 
 client = boto3.client('lambda')
 TEA_LAMBDA_NAME = os.getenv('TEA_LAMBDA_NAME')
 
+
 def lambda_handler(event, context):
+    del event
 
     log.info('teabumper!')
 
@@ -25,7 +27,3 @@ def lambda_handler(event, context):
         Environment=egress_env
     )
     log.debug(response)
-
-
-def version():
-    return json.dumps({'version_id': '<BUILD_ID>'})

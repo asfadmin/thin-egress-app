@@ -1,0 +1,67 @@
+name: End-to-End Test
+
+on:
+  push:
+    branches:
+      - devel
+      - master
+
+jobs:
+  build:
+    uses: ./.github/workflows/re-build.yml
+    with:
+      environment: prod
+
+  # The secrets context is not supported on job level `if`. So we need to hack around it:
+  # https://github.com/actions/runner/issues/520#issuecomment-907427748
+  check-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      run-tests: ${{ steps.eval.outputs.val }}
+    steps:
+      - id: eval
+        env:
+          RUN_TESTS: ${{ secrets.RUN_TESTS }}
+        if: "${{ env.RUN_TESTS == 'true' }}"
+        run: echo "::set-output name=val::yes"
+
+  test-e2e:
+    needs:
+      - build
+      - check-tests
+    if: needs.check-tests.outputs.run-tests == 'yes'
+    uses: ./.github/workflows/re-test-e2e.yml
+    with:
+      environment: test
+      dependency-zip: ${{ needs.build.outputs.dependency-zip }}
+      code-zip: ${{ needs.build.outputs.code-zip }}
+      cloudformation-yaml: ${{ needs.build.outputs.cloudformation-yaml }}
+    # Reusable workflows + Environments behave very strangely
+    # https://github.com/AllanOricil/workflow-template-bug/blob/fc8ae4264938adb560fa6928cb19c69d110d8bbd/.github/workflows/workflow-inplementation.yml#L46
+    # Yea, seriously hope this gets fixed!!!!!
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      URS_USERNAME: ${{ secrets.URS_USERNAME }}
+      URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
+      URS_CLIENT_ID: ${{ secrets.URS_CLIENT_ID }}
+      EDL_APP_UID: ${{ secrets.EDL_APP_UID }}
+      EDL_APP_PASSWORD: ${{ secrets.EDL_APP_PASSWORD }}
+
+  status:
+    if: always()
+    needs:
+      - build
+      - test-e2e
+    uses: ./.github/workflows/re-status.yml
+    with:
+      environment: prod
+      build_tag: ${{ needs.build.outputs.version }}
+      success: ${{ needs.build.result != 'failure' && needs.test-e2e.result != 'failure' }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}

@@ -62,8 +62,8 @@ jobs:
           BUILD_ID := ${{ needs.variables.outputs.version }}
 
           CF_DEFAULT_CODE_BUCKET := ${{ env.CODE_BUCKET }}
-          CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.code-zip }}
-          CF_DEFAULT_CODE_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.dependency-zip }}
+          CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.dependency-zip }}
+          CF_DEFAULT_CODE_ARCHIVE_KEY := ${{ env.CODE_PREFIX }}${{ needs.variables.outputs.code-zip }}
           CF_BUILD_VERSION := \$(BUILD_ID)
           CF_DESCRIPTION := TEA version ${{ needs.variables.outputs.version }} (${GITHUB_SHA:0:7}) built by GitHub Actions on $TIMESTAMP.
           EOF

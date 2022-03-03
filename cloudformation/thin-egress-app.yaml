@@ -279,12 +279,12 @@ Parameters:
 
   OtServiceName:
     Type: String
-    Default: "tea" # TODO might want this DAAC-specific
+    Default: "tea"
     Description: 'Name for Open Telemetry service as it will appear in traces'
 
   OtTracesSampler:
     Type: String
-    Default: "always_on"
+    Default: "always_off"
     Description: 'The sampler to use for Open Telemetry tracing'
 
   OtPropagators:

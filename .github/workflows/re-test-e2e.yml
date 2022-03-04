@@ -1,0 +1,194 @@
+# Reusable workflow for running end-to-end tests
+name: End-to-End Test
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      dependency-zip:
+        required: true
+        type: string
+      code-zip:
+        required: true
+        type: string
+      cloudformation-yaml:
+        required: true
+        type: string
+
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      URS_USERNAME:
+        required: true
+      URS_PASSWORD:
+        required: true
+      # Optional
+      AWS_ROLE_ARN:
+        required: false
+      AWS_REGION:
+        required: false
+      URS_CLIENT_ID:
+        required: false
+      EDL_APP_UID:
+        required: false
+      EDL_APP_PASSWORD:
+        required: false
+
+jobs:
+  # Deploy to the test environment and run end to end tests
+  test-end-to-end:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Load environment defaults
+        run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v2
+
+      - name: Upload to AWS
+        env:
+          S3_PATH_PREFIX: s3://${{ env.CODE_BUCKET }}/${{ env.CODE_PREFIX }}
+        run: |
+          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ inputs.dependency-zip }}
+          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ inputs.code-zip }}
+          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ inputs.cloudformation-yaml }}
+
+      - name: Update JWT secret
+        if: env.JWT_KEY_SECRET_NAME == ''
+        run: |
+          JWT_KEY_SECRET_NAME="$STACK_NAME-jwt-key"
+          echo "JWT_KEY_SECRET_NAME=$JWT_KEY_SECRET_NAME" >> $GITHUB_ENV
+
+          # Check if the secret exists
+          secret_arn=$(aws secretsmanager describe-secret \
+              --secret-id "$JWT_KEY_SECRET_NAME" \
+              --query "ARN" --output=text 2>&1 \
+              | grep -v ResourceNotFoundException)
+
+          if [ -z "$secret_arn" ]; then
+              echo "Creating JWT secret '$JWT_KEY_SECRET_NAME'"
+
+              ssh-keygen -t rsa -b 4096 -m PEM -N '' -f "$JWT_KEY_SECRET_NAME"
+              rsa_priv_key=$(openssl base64 -in "$JWT_KEY_SECRET_NAME" -A)
+              rsa_pub_key=$(openssl base64 -in "$JWT_KEY_SECRET_NAME.pub" -A)
+              cat << EOF > keys.txt
+          {
+              "rsa_priv_key": "$rsa_priv_key",
+              "rsa_pub_key": "$rsa_pub_key"
+          }
+          EOF
+
+              aws secretsmanager create-secret \
+                  --name "$JWT_KEY_SECRET_NAME" \
+                  --description "JWT keys for TEA $STACK_NAME created by GitHub Actions" \
+                  --secret-string file://keys.txt
+
+              shred keys.txt
+          else
+             echo "JWT secret '$JWT_KEY_SECRET_NAME' already exists"
+          fi
+
+      - name: Update URS secret
+        if: env.URS_AUTH_CREDS_SECRET_NAME == ''
+        run: |
+          URS_AUTH_CREDS_SECRET_NAME="$STACK_NAME-jwt-key"
+          echo "URS_AUTH_CREDS_SECRET_NAME=$URS_AUTH_CREDS_SECRET_NAME" >> $GITHUB_ENV
+
+          # Check if the secret exists
+          secret_arn=$(aws secretsmanager describe-secret \
+              --secret-id "$URS_AUTH_CREDS_SECRET_NAME" \
+              --query "ARN" --output=text 2>&1 \
+              | grep -v ResourceNotFoundException)
+
+          urs_auth=$(echo -n "${{ secrets.EDL_APP_UID }}:${{ secrets.EDL_APP_PASSWORD }}" | base64)
+          cat << EOF > secret.txt
+          {
+             "UrsAuth": "$urs_auth",
+             "UrsId": "${{ secrets.URS_CLIENT_ID }}"
+          }
+          EOF
+
+          if [ -z "$secret_arn" ]; then
+              echo ">> Creating URS secret '$URS_AUTH_CREDS_SECRET_NAME'"
+
+              aws secretsmanager create-secret \
+                  --name "$URS_AUTH_CREDS_SECRET_NAME" \
+                  --description "URS creds for TEA $STACK_NAME created by GitHub Actions" \
+                  --secret-string file://secret.txt
+
+          else
+             echo ">> Updating URS secret '$URS_AUTH_CREDS_SECRET_NAME'"
+
+             aws secretsmanager put-secret-value \
+                --secret-id "$URS_AUTH_CREDS_SECRET_NAME" \
+                --secret-string file://secret.txt
+          fi
+
+          shred secret.txt
+
+      - name: Update CloudFormation stack description
+        run: |
+          cp ./cloudformation/thin-egress-app.yaml ./cloudformation/thin-egress-app-deployed.yaml
+
+          sed -i -E "s;^(Description:.*)\";\1 Job: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\";" ./cloudformation/thin-egress-app-deployed.yaml
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+              --stack-name "$STACK_NAME" \
+              --template-file "./cloudformation/thin-egress-app-deployed.yaml" \
+              --capabilities "CAPABILITY_NAMED_IAM" \
+              --parameter-overrides \
+                  AuthBaseUrl="$URS_URL" \
+                  BucketMapFile="$BUCKET_MAP_FILE" \
+                  BucketnamePrefix="$BUCKETNAME_PREFIX" \
+                  ConfigBucket="$CONFIG_BUCKET" \
+                  CookieDomain="$COOKIE_DOMAIN" \
+                  DomainCertArn="$DOMAIN_CERT_ARN" \
+                  DomainName="$DOMAIN_NAME" \
+                  EnableApiGatewayLogToCloudWatch="False" \
+                  JwtAlgo="RS256" \
+                  JwtKeySecretName="$JWT_KEY_SECRET_NAME" \
+                  LambdaCodeDependencyArchive="${CODE_PREFIX}${{ inputs.dependency-zip }}" \
+                  LambdaCodeS3Bucket="$CODE_BUCKET" \
+                  LambdaCodeS3Key="${CODE_PREFIX}${{ inputs.code-zip }}" \
+                  LambdaMemory="128" \
+                  Loglevel="DEBUG" \
+                  Logtype="json" \
+                  Maturity="TEST"\
+                  StageName="API" \
+                  URSAuthCredsSecretName="$URS_AUTH_CREDS_SECRET_NAME" \
+                  UseCorsCookieDomain="True" \
+                  UseReverseBucketMap="False" \
+                  DownloadRoleArn= \
+                  DownloadRoleInRegionArn= \
+                  HtmlTemplateDir= \
+                  PermissionsBoundaryName= \
+                  PrivateBucketsFile= \
+                  PrivateVPC= \
+                  PublicBucketsFile= \
+                  VPCSecurityGroupIDs= \
+                  VPCSubnetIDs=
+
+      - name: Run end to end tests
+        env:
+          URS_USERNAME: ${{ secrets.URS_USERNAME }}
+          URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests_e2e \
+              --stack-name=$STACK_NAME \
+              --test-results=asf.public.code/thin-egress-app/testresults.json \
+              --log-cli-level=DEBUG

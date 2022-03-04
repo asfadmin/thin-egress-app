@@ -20,7 +20,7 @@ def substitute(pattern, replacement, buf_in, buf_out):
 
 def pattern(arg):
     try:
-        return re.compile(arg)
+        return re.compile(arg, flags=re.MULTILINE)
     except re.error:
         raise ValueError()
 

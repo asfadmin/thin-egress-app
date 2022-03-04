@@ -194,8 +194,6 @@ pipeline {
                            ConfigBucket=${BUCKETNAME_PREFIX}config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \
-                           PublicBucketsFile="" \
-                           PrivateBucketsFile="" \
                            BucketnamePrefix=${BUCKETNAME_PREFIX} \
                            DownloadRoleArn="" \
                            DownloadRoleInRegionArn="" \
@@ -232,8 +230,6 @@ pipeline {
                            ConfigBucket=rain-t-config \
                            PermissionsBoundaryName= \
                            BucketMapFile=bucket_map_customheaders.yaml \
-                           PublicBucketsFile="" \
-                           PrivateBucketsFile="" \
                            BucketnamePrefix=${BUCKETNAME_PREFIX_SCND} \
                            DownloadRoleArn=${DOWNLOAD_ROLE_ARN} \
                            DownloadRoleInRegionArn=${DOWNLOAD_ROLE_ARN_INREGION} \

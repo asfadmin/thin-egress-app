@@ -1,8 +1,6 @@
 import json
-import logging
 import os
 import time
-from dataclasses import dataclass
 from typing import Optional
 from urllib import request
 from urllib.error import HTTPError
@@ -19,6 +17,7 @@ from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_
 from rain_api_core.bucket_map import BucketMap
 from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
+from rain_api_core.timer import Timer
 from rain_api_core.urs_util import (
     do_login,
     get_new_token_and_profile,
@@ -81,52 +80,6 @@ class TeaException(Exception):
 class EulaException(TeaException):
     def __init__(self, payload: dict):
         self.payload = payload
-
-
-# TODO(reweeden): Refactor to rain api core? Somewhere else?
-@dataclass(eq=False)
-class Interval():
-    start: Optional[float] = None
-    end: Optional[float] = None
-
-    def duration(self):
-        if None in (self.start, self.end):
-            raise ValueError(f"Interval not complete! [{self.start}, {self.end}]")
-
-        return self.end - self.start
-
-
-class Timer():
-    """Not thread safe!"""
-
-    def __init__(self, timer=time.time):
-        self.times = {}
-        self.timer = timer
-        self.last_name = None
-        self.total = Interval()
-
-    def mark(self, name: str = None) -> float:
-        t = self.timer()
-        if self.last_name is not None:
-            self.times[self.last_name].end = t
-        elif self.total.start is None:
-            self.total.start = t
-
-        if name is not None:
-            self.times[name] = Interval(start=t)
-        self.last_name = name
-        self.total.end = t
-
-        return t
-
-    def log_all(self, logger: logging.Logger, level: int = logging.DEBUG):
-        if not self.times or self.total.end is None:
-            return
-
-        for name, interval in self.times.items():
-            logger.log(level, "ET for %s: %.4fs", name, interval.duration())
-
-        logger.log(level, "ET for total: %.4fs", self.total.duration())
 
 
 def get_request_id() -> str:

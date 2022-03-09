@@ -13,8 +13,14 @@ from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
 from cachetools.keys import hashkey
 from chalice import Chalice, Response
-from opentelemetry import trace
-from opentelemetry.propagate import inject
+
+try:
+    from opentelemetry import trace
+    from opentelemetry.propagate import inject
+except ImportError:
+    trace = None
+    def inject(obj): return obj
+
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
 from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
@@ -36,23 +42,28 @@ from rain_api_core.view_util import (
 )
 
 
-# Decorator for adding Open Telemetry tracing.
-# @param root - Boolean that designates the span as a "root" or parent span. Typically
-#  in a top-level handler function.
 def with_trace(root=False):
+    """Decorator for adding Open Telemetry tracing.
+
+    root - Boolean that designates the span as a "root" or parent span. Typically
+        in a top-level handler function.
+    """
     def tracefunc(func):
+        if trace is None:
+            return func
+
         @wraps(func)
-        def wrapper(*args, **kw):
+        def wrapper(*args, **kwargs):
             tracer = trace.get_tracer("tracer")
 
             # The "root" span is the top-level parent span that sets the traceGroup. It needs
             # to be initialized with a truthy but invalid context.
             if root:
                 with tracer.start_as_current_span(func.__name__, context={}):
-                    return func(*args, **kw)
+                    return func(*args, **kwargs)
 
             with tracer.start_as_current_span(func.__name__):
-                return func(*args, **kw)
+                return func(*args, **kwargs)
         return wrapper
     return tracefunc
 
@@ -512,7 +523,6 @@ def login():
     try:
         headers = {}
         aux_headers = get_aux_request_headers()
-        print(aux_headers)
         status_code, template_vars, headers = do_login(
             app.current_request.query_params,
             app.current_request.context,

@@ -212,6 +212,8 @@ make test
 ```
 
 ### Roll-Your-Own
+*If you will forking the repository for the purposes of making your own
+releases see the [GitHub Actions README](.github/workflows/README.md).*
 
 If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
 from source in a bash environment. You will need to have a few tools installed for this to work:
@@ -295,6 +297,27 @@ make code
 # Upload to S3
 aws s3 cp --profile=default dist/thin-egress-app-code.zip s3://${CODE_BUCKET}/
 ```
+
+#### Configuring local pip dependencies
+If you need to build against a local version of one of the requirements in the `requirements.txt`
+such as `rain_api_core`, you will need to make a few adjustments to your `Makefile.config` for the
+docker container to be able to install those dependencies.
+
+1. Mount the local dependency as a docker volume using `DOCKER_ARGS` in your `Makefile.config`:
+```makefile
+DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/task/rain-api-core
+```
+2. Add the container path to the `requirements.txt` file:
+```
+file:/var/task/rain-api-core
+```
+3. Add any source files of that dependency to the `REQUIREMENTS_DEPS` in your `Makefile.config`:
+```makefile
+REQUIREMENTS_DEPS := $(shell find /host/path/to/rain-api-core/rain_api_core/ -name '*.py')
+```
+
+Now when you run `make build`, the dependency layer should be correctly rebuilt if any of the
+source files in your local version of the dependency have changed.
 
 [⬆ Return to Table of Contents](#table-of-contents)
 

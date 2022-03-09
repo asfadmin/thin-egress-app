@@ -58,6 +58,13 @@ def test_404_on_bad_request(urls, method):
     assert r.status_code == 404
 
 
+def test_404_on_request_directory(urls):
+    url = urls.join("SA", "BROWSE/")
+    r = requests.get(url)
+
+    assert r.status_code == 404
+
+
 def test_bad_cookie_value_cause_URS_redirect(urls):
     url = urls.join(urls.METADATA_FILE)
     cookies = {

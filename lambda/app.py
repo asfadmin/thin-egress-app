@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from typing import Optional
 from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
@@ -13,8 +14,10 @@ from cachetools.func import ttl_cache
 from cachetools.keys import hashkey
 from chalice import Chalice, Response
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
-from rain_api_core.egress_util import check_private_bucket, check_public_bucket, get_presigned_url, process_request
+from rain_api_core.bucket_map import BucketMap
+from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
+from rain_api_core.timer import Timer
 from rain_api_core.urs_util import (
     do_login,
     get_new_token_and_profile,
@@ -57,10 +60,10 @@ class TeaChalice(Chalice):
 
         resp = super().__call__(event, context)
 
-        resp['headers'].update({'x-request-id': context.aws_request_id})
+        resp['headers']['x-request-id'] = context.aws_request_id
         if origin_request_id:
             # If we were passed in an x-origin-request-id header, pass it out too
-            resp['headers'].update({'x-origin-request-id': origin_request_id})
+            resp['headers']['x-origin-request-id'] = origin_request_id
 
         log_context(user_id=None, route=None, request_id=None)
 
@@ -85,9 +88,7 @@ def get_request_id() -> str:
     return app.lambda_context.aws_request_id
 
 
-# TODO(reweeden): fix typing
-# typing module causes errors in AWS lambda?
-def get_origin_request_id() -> str:
+def get_origin_request_id() -> Optional[str]:
     assert app.current_request is not None
 
     return app.current_request.headers.get("x-origin-request-id")
@@ -134,7 +135,7 @@ def get_user_from_token(token):
     headers.update(get_aux_request_headers())
     log.debug(f'headers: {headers}, params: {params}')
 
-    timer = time.time()
+    _time = time.time()
 
     req = request.Request(url, headers=headers, method='POST')
     try:
@@ -144,7 +145,7 @@ def get_user_from_token(token):
         log.debug("%s", e)
 
     payload = response.read()
-    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(timer)))
+    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(_time)))
 
     try:
         msg = json.loads(payload)
@@ -193,12 +194,19 @@ def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
 def restore_bucket_vars():
     global b_map  # pylint: disable=global-statement
 
-    log.debug('conf bucket: {}, bucket_map_file: {}'.format(conf_bucket, bucket_map_file))
+    log.debug('conf bucket: %s, bucket_map_file: %s', conf_bucket, bucket_map_file)
     if b_map is None:
-        log.info('downloading various bucket configs from {}: bucketmapfile: {}, '.format(conf_bucket, bucket_map_file))
+        log.info('downloading various bucket configs from %s: bucketmapfile: %s, ', conf_bucket, bucket_map_file)
 
-        b_map = get_yaml_file(conf_bucket, bucket_map_file)
-        log.debug('bucket map: {}'.format(b_map))
+        b_map_dict = get_yaml_file(conf_bucket, bucket_map_file)
+        reverse = os.getenv('USE_REVERSE_BUCKET_MAP', 'FALSE').lower() == 'true'
+
+        log.debug('bucket map: %s', b_map_dict)
+        b_map = BucketMap(
+            b_map_dict,
+            bucket_name_prefix=get_bucket_name_prefix(),
+            reverse=reverse
+        )
     else:
         log.info('reusing old bucket configs')
 
@@ -276,12 +284,12 @@ def get_bcconfig(user_id: str) -> dict:
 )
 def get_bucket_region(session, bucketname) -> str:
     try:
-        timer = time.time()
+        _time = time.time()
         bucket_region = session.client('s3').get_bucket_location(Bucket=bucketname)['LocationConstraint'] or 'us-east-1'
         log.info(return_timing_object(
             service="s3",
             endpoint=f"client().get_bucket_location({bucketname})",
-            duration=duration(timer)
+            duration=duration(_time)
         ))
         log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
 
@@ -307,6 +315,9 @@ def get_user_ip():
 
 
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
+    timer = Timer()
+    timer.mark()
+
     # Attempt to pull userid from profile
     user_id = None
     if isinstance(user_profile, dict):
@@ -317,17 +328,17 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     log.info("User Id for download is {0}".format(user_id))
     log_context(user_id=user_id)
 
-    t0 = time.time()
+    timer.mark("check_in_region_request()")
     is_in_region = check_in_region_request(get_user_ip())
-    t1 = time.time()
+    timer.mark("get_role_creds()")
     creds, offset = get_role_creds(user_id, is_in_region)
-    t2 = time.time()
+    timer.mark("get_role_session()")
     session = get_role_session(creds=creds, user_id=user_id)
-    t3 = time.time()
+    timer.mark("get_bucket_region()")
 
     try:
         bucket_region = get_bucket_region(session, bucket)
-        t4 = time.time()
+        timer.mark()
     except ClientError as e:
         try:
             code = e.response['ResponseMetadata']['HTTPStatusCode']
@@ -352,11 +363,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
-    log.debug('ET for check_in_region_request(): {}s'.format(t1 - t0))
-    log.debug('ET for get_role_creds(): {}s'.format(t2 - t1))
-    log.debug('ET for get_role_session(): {}s'.format(t3 - t2))
-    log.debug('ET for get_bucket_region(): {}s'.format(t4 - t3))
-    log.debug('ET for total: {}'.format(t4 - t0))
+    timer.log_all(log)
 
     log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
 
@@ -368,9 +375,9 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         range_header = get_range_header_val()
 
         if not os.getenv("SUPPRESS_HEAD"):
-            timer = time.time()
+            _time = time.time()
             head_check = client.head_object(Bucket=bucket, Key=filename, Range=(range_header or ""))
-            log.info(return_timing_object(service="s3", endpoint="client.head_object()", duration=duration(timer)))
+            log.info(return_timing_object(service="s3", endpoint="client.head_object()", duration=duration(_time)))
 
         redirheaders = {'Range': range_header} if range_header else {}
 
@@ -536,9 +543,9 @@ def get_new_session_client(user_id):
     params = {"config": bc_Config(**get_bcconfig(user_id))}
     session = get_role_session(user_id=user_id)
 
-    timer = time.time()
+    _time = time.time()
     new_bc_client = session.client('s3', **params)
-    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(timer)))
+    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(_time)))
     return new_bc_client
 
 
@@ -554,21 +561,23 @@ def get_data_dl_s3_client():
 
 
 def try_download_head(bucket, filename):
-    t = [time.time()]  # t0
+    timer = Timer()
+
+    timer.mark("get_data_dl_s3_client()")
     client = get_data_dl_s3_client()
-    t.append(time.time())  # t1
+    timer.mark("client.get_object()")
     # Check for range request
     range_header = get_range_header_val()
     try:
-        timer = time.time()
+        _time = time.time()
         if not range_header:
             client.get_object(Bucket=bucket, Key=filename)
         else:
             # TODO: Should both `client.get_object()` be `client.head_object()` ?!?!?!
             log.info("Downloading range {0}".format(range_header))
             client.get_object(Bucket=bucket, Key=filename, Range=range_header)
-        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(timer)))
-        t.append(time.time())  # t2
+        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(_time)))
+        timer.mark()
     except ClientError as e:
         log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
         # cumulus uses this log message for metrics purposes.
@@ -586,26 +595,24 @@ def try_download_head(bucket, filename):
     log_context(user_id=user_id)
 
     # Generate URL
-    t.append(time.time())  # t3
+    timer.mark("get_role_creds()")
     creds, offset = get_role_creds(user_id=user_id)
     url_lifespan = 3600 - offset
 
     session = get_role_session(creds=creds, user_id=user_id)
-    t.append(time.time())  # t4
+    timer.mark("get_bucket_region()")
     bucket_region = get_bucket_region(session, bucket)
-    t.append(time.time())  # t5
+    timer.mark("get_presigned_url()")
     presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
-    t.append(time.time())  # t6
+    timer.mark()
+
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
     log.debug("Presigned HEAD URL host was {0}".format(s3_host))
+
     log.debug('timing for try_download_head()')
-    log.debug('ET for get_data_dl_s3_client(): {}s'.format(t[1] - t[0]))
-    log.debug('ET for client.get_object(): {}s'.format(t[2] - t[1]))
-    log.debug('ET for get_role_creds(): {}s'.format(t[4] - t[3]))
-    log.debug('ET for get_bucket_region(): {}s'.format(t[5] - t[4]))
-    log.debug('ET for get_presigned_url(): {}s'.format(t[6] - t[5]))
+    timer.log_all(log)
 
     return make_redirect(presigned_url, {}, 303)
 
@@ -613,34 +620,34 @@ def try_download_head(bucket, filename):
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
 def dynamic_url_head():
-    t = [time.time()]
+    timer = Timer()
+    timer.mark("restore_bucket_vars()")
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
-    t.append(time.time())
+    timer.mark("b_map.get()")
 
     param = app.current_request.uri_params.get('proxy')
     if param is None:
         return Response(body='HEAD failed', headers={}, status_code=400)
 
-    path, bucket, filename, _ = process_request(param, b_map)
-    t.append(time.time())
+    entry = b_map.get(param)
+    timer.mark()
 
-    process_results = 'path: {}, bucket: {}, filename:{}'.format(path, bucket, filename)
-    log.debug(process_results)
+    log.debug("entry: %s", entry)
 
-    if not bucket:
-        template_vars = {'contentstring': 'Bucket not available',
-                         'title': 'Bucket not available',
-                         'requestid': get_request_id(), }
+    if entry is None:
+        template_vars = {
+            'contentstring': 'Bucket not available',
+            'title': 'Bucket not available',
+            'requestid': get_request_id()
+        }
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
-    t.append(time.time())
+    timer.mark()
     log.debug('timing for dynamic_url_head()')
-    log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
-    log.debug('ET for process_request(): {}s'.format(t[2] - t[1]))
-    log.debug('ET for total: {}s'.format(t[3] - t[0]))
+    timer.log_all(log)
 
-    return try_download_head(bucket, filename)
+    return try_download_head(entry.bucket, entry.object_key)
 
 
 def handle_auth_bearer_header(token):
@@ -683,25 +690,43 @@ def handle_auth_bearer_header(token):
 
 @app.route('/{proxy+}', methods=['GET'])
 def dynamic_url():
-    t = [time.time()]
+    timer = Timer()
+    timer.mark("restore_bucket_vars()")
+
     custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
-    log.debug(f'b_map: {b_map}')
-    t.append(time.time())
+    log.debug(f'b_map: {b_map.bucket_map}')
+    timer.mark()
 
     log.info(app.current_request.headers)
 
-    if 'proxy' in app.current_request.uri_params:
-        path, bucket, filename, custom_headers = process_request(app.current_request.uri_params['proxy'], b_map)
-        log.debug('path, bucket, filename, custom_headers: {}'.format((path, bucket, filename, custom_headers)))
-        if not bucket:
-            template_vars = {'contentstring': 'File not found', 'title': 'File not found',
-                             'requestid': get_request_id(), }
-            headers = {}
-            return make_html_response(template_vars, headers, 404, 'error.html')
-    else:
-        path, bucket, filename = (None, None, None)
+    param = app.current_request.uri_params.get("proxy")
+    entry = None
+    if param is not None:
+        entry = b_map.get(param)
+
+    log.debug('entry: %s', entry)
+
+    if not entry:
+        template_vars = {
+            'contentstring': 'File not found',
+            'title': 'File not found',
+            'requestid': get_request_id(),
+        }
+        headers = {}
+        return make_html_response(template_vars, headers, 404, 'error.html')
+
+    if not entry.object_key:
+        log.warning('Request was made to directory listing instead of object: %s', entry.bucket_path)
+
+        template_vars = {
+            'contentstring': 'Request does not appear to be valid.',
+            'title': 'Request Not Serviceable',
+            'requestid': get_request_id()
+        }
+        headers = {}
+        return make_html_response(template_vars, headers, 404, 'error.html')
 
     cookievars = get_cookie_vars(app.current_request.headers)
     user_profile = None
@@ -713,12 +738,14 @@ def dynamic_url():
         else:
             log.warning('jwt cookie not found')
             # Not kicking user out just yet. We might be dealing with a public bucket
-    t.append(time.time())  # 2
+    timer.mark("get_required_groups()")
+    # It's only necessary to be in one of these groups
+    required_groups = entry.get_required_groups()
+    log.debug('required_groups: %s', required_groups)
     # Check for public bucket
-    pub_bucket = check_public_bucket(bucket, b_map, filename)
-    t.append(time.time())  # 3
-    if pub_bucket:
-        log.debug("Accessing public bucket {0}".format(path))
+    timer.mark("possible auth header handling")
+    if required_groups is None:
+        log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
     elif not user_profile:
         authorization = app.current_request.headers.get('Authorization')
         if not authorization:
@@ -747,16 +774,10 @@ def dynamic_url():
         else:
             return do_auth_and_return(app.current_request.context)
 
-    t.append(time.time())  # 4
-    # Check that the bucket is either NOT private, or user belongs to that group
-    private_check = check_private_bucket(bucket, b_map, filename)  # NOTE: Is an optimization attempt worth it
-    # if we're asking for a public file and we
-    # omit this check?
-    log.debug('private check: {}'.format(private_check))
-    t.append(time.time())  # 5
+    timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(private_check, cookievars, False, aux_headers=aux_headers)
-    t.append(time.time())  # 6
+    u_in_g, new_user_profile = user_in_group(required_groups, cookievars, False, aux_headers=aux_headers)
+    timer.mark()
 
     new_jwt_cookie_headers = {}
     if new_user_profile:
@@ -770,31 +791,23 @@ def dynamic_url():
 
     log.debug('user_in_group: {}'.format(u_in_g))
 
-    if private_check and not u_in_g:
-        template_vars = {'contentstring': 'This data is not currently available.', 'title': 'Could not access data',
-                         'requestid': get_request_id(), }
+    # Check that the bucket is either NOT private, or user belongs to that group
+    if required_groups and not u_in_g:
+        template_vars = {
+            'contentstring': 'This data is not currently available.',
+            'title': 'Could not access data',
+            'requestid': get_request_id()
+        }
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
-
-    if not filename:  # Maybe this belongs up above, right after setting the filename var?
-        log.warning("Request was made to directory listing instead of object: {0}".format(path))
-
-        template_vars = {'contentstring': 'Request does not appear to be valid.', 'title': 'Request Not Serviceable',
-                         'requestid': get_request_id(), }
-
-        return make_html_response(template_vars, new_jwt_cookie_headers, 404, 'error.html')
 
     custom_headers.update(new_jwt_cookie_headers)
     log.debug(f'custom headers before try download from bucket: {custom_headers}')
-    t.append(time.time())  # 7
+    timer.mark()
 
-    log.debug('timing for dynamic_url()')
-    log.debug('ET for restore_bucket_vars(): {}s'.format(t[1] - t[0]))
-    log.debug('ET for check_public_bucket(): {}s'.format(t[3] - t[2]))
-    log.debug('ET for possible auth header handling: {}s'.format(t[4] - t[3]))
-    log.debug('ET for user_in_group(): {}s'.format(t[6] - t[5]))
-    log.debug('ET for total: {}s'.format(t[7] - t[0]))
+    log.debug("timing for dynamic_url()")
+    timer.log_all(log)
 
-    return try_download_from_bucket(bucket, filename, user_profile, custom_headers)
+    return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers)
 
 
 @app.route('/profile')

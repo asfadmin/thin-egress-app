@@ -177,7 +177,7 @@ def test_restore_bucket_vars(mock_get_yaml_file, resources):
 
     app.restore_bucket_vars()
 
-    assert app.b_map == buckets
+    assert app.b_map.bucket_map == buckets
 
 
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
@@ -805,6 +805,7 @@ def test_try_download_head_error(
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.try_download_head", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources, current_request):
     mock_try_download_head.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
     with resources.open("bucket_map_example.yaml") as f:
@@ -822,6 +823,7 @@ def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources,
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -847,6 +849,7 @@ def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
     mock_get_yaml_file.return_value = {}
     current_request.uri_params = {}
@@ -968,6 +971,7 @@ def test_handle_auth_bearer_header_no_user_id(
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url(
     mock_get_cookie_vars,
     mock_try_download_from_bucket,
@@ -985,6 +989,7 @@ def test_dynamic_url(
         }
     }
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
+    app.b_map = None
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
@@ -1004,6 +1009,7 @@ def test_dynamic_url(
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_public(
     mock_get_cookie_vars,
     mock_try_download_from_bucket,
@@ -1033,6 +1039,7 @@ def test_dynamic_url_public(
 @mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
 @mock.patch(f"{MODULE}.make_set_cookie_headers_jwt", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_private(
     mock_make_set_cookie_headers_jwt,
     mock_get_cookie_vars,
@@ -1070,6 +1077,67 @@ def test_dynamic_url_private(
     )
     assert response.body == "Mock response"
     assert response.status_code == 200
+    assert response.headers == {}
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_public_within_private(
+    mock_get_cookie_vars,
+    mock_try_download_from_bucket,
+    mock_get_yaml_file,
+    current_request
+):
+    # TODO(reweeden): Make an end-to-end version of this test as well
+    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    mock_get_yaml_file.return_value = {
+        "MAP": {
+            "FOO": "bucket"
+        },
+        "PUBLIC_BUCKETS": ["bucket/BROWSE"],
+        "PRIVATE_BUCKETS": {
+            "bucket": ["PERMISSION"]
+        }
+    }
+
+    mock_get_cookie_vars.return_value = {}
+    current_request.uri_params = {"proxy": "FOO/BROWSE/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {})
+    assert response.body == "Mock response"
+    assert response.status_code == 200
+    assert response.headers == {}
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+def test_dynamic_url_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    current_request.uri_params = {"proxy": "DATA-TYPE-1/NONEXISTENT/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    # TODO(reweeden): Why is the text different for get and head?
+    mock_make_html_response.assert_called_once_with(
+        {
+            "contentstring": "File not found",
+            "title": "File not found",
+            "requestid": "request_1234"
+        },
+        {},
+        404,
+        "error.html"
+    )
+    assert response.body == "Mock response"
+    assert response.status_code == 404
     assert response.headers == {}
 
 

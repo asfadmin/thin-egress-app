@@ -452,15 +452,6 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "arn:aws:logs:*:*:*"
-              - Effect: Allow
-                Action:
-                  - xray:PutTraceSegments
-                  - xray:PutTelemetryRecords
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - lambda:GetLayerVersion
-                Resource: '*'
 
   UpdatePolicyLambdaIamRole:
     Type: AWS::IAM::Role

@@ -979,7 +979,8 @@ def test_dynamic_url(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -1000,9 +1001,7 @@ def test_dynamic_url(
         {"urs-user-id": "user_name"},
         {}
     )
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1017,7 +1016,8 @@ def test_dynamic_url_public(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -1028,9 +1028,7 @@ def test_dynamic_url_public(
     response = app.dynamic_url()
 
     mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {})
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1049,7 +1047,8 @@ def test_dynamic_url_private(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     user_profile = {
         "urs-user-id": "user_name",
         "urs-access-token": "access_token",
@@ -1075,9 +1074,7 @@ def test_dynamic_url_private(
         user_profile,
         {"SET-COOKIE": "cookie"}
     )
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1092,7 +1089,8 @@ def test_dynamic_url_public_within_private(
     current_request
 ):
     # TODO(reweeden): Make an end-to-end version of this test as well
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     mock_get_yaml_file.return_value = {
         "MAP": {
             "FOO": "bucket"
@@ -1110,9 +1108,7 @@ def test_dynamic_url_public_within_private(
     response = app.dynamic_url()
 
     mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {})
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)

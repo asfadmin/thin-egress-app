@@ -12,6 +12,17 @@ logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger("botocore").setLevel(logging.INFO)
 
 
+def get_env(key):
+    """Helper to prevent environment from being printed"""
+    __tracebackhide__ = True
+    val = os.environ.get(key)
+
+    if val is None:
+        raise KeyError(key)
+
+    return val
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--stack-name",
@@ -66,12 +77,12 @@ def _configure_from_options(aws_profile):
 
 @pytest.fixture(scope="session")
 def urs_username():
-    return os.environ["URS_USERNAME"]
+    return get_env("URS_USERNAME")
 
 
 @pytest.fixture(scope="session")
 def urs_password():
-    return Secret(os.environ["URS_PASSWORD"])
+    return Secret(get_env("URS_PASSWORD"))
 
 
 class Secret():

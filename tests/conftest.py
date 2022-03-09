@@ -18,7 +18,10 @@ sys.modules["boto3"] = mock_boto3
 _ = importlib.import_module("lambda.app")
 _ = importlib.import_module("lambda.tea_bumper")
 
-logging.getLogger().setLevel(logging.DEBUG)
+root_logger = logging.getLogger()
+for handler in root_logger.handlers:
+    root_logger.removeHandler(handler)
+root_logger.setLevel(logging.DEBUG)
 
 RESOURCES_PATH = pathlib.Path(__file__).parent.joinpath("resources/").absolute()
 

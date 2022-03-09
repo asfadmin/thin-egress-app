@@ -1,5 +1,6 @@
 import json
 import logging
+import netrc
 import os
 import urllib.parse
 from datetime import datetime
@@ -43,6 +44,11 @@ def pytest_addoption(parser):
         help="AWS profile name to use",
         action="store",
     )
+    parser.addoption(
+        "--netrc",
+        help="Netrc file to get auth credentials from",
+        action="store",
+    )
 
     def S3Object(text):
         if "/" not in text:
@@ -76,13 +82,17 @@ def _configure_from_options(aws_profile):
 
 
 @pytest.fixture(scope="session")
-def urs_username():
-    return get_env("URS_USERNAME")
+def _netrc(request):
+    filename = request.config.getoption("--netrc")
+    if filename is None:
+        return
+
+    return netrc.netrc(filename)
 
 
 @pytest.fixture(scope="session")
-def urs_password():
-    return Secret(get_env("URS_PASSWORD"))
+def creds(_netrc):
+    return CredsHelper(_netrc)
 
 
 class Secret():
@@ -94,6 +104,21 @@ class Secret():
 
     def __str__(self):
         return self.val
+
+
+class CredsHelper():
+    def __init__(self, netrc_file):
+        self.netrc_file = netrc_file
+
+    def get(self, url):
+        if self.netrc_file:
+            res = urllib.parse.urlparse(url)
+            entry = self.netrc_file.hosts.get(res.hostname)
+            if entry:
+                (login, account, password) = entry
+                return login, Secret(password)
+
+        return get_env("URS_USERNAME"), Secret(get_env("URS_PASSWORD"))
 
 
 @pytest.fixture(scope="session")
@@ -161,12 +186,16 @@ class UrlsConfig():
 
 
 @pytest.fixture(scope="module")
-def auth_cookies(urls, api_host, urs_username, urs_password):
+def auth_cookies(urls, api_host, creds):
     url = urls.join(urls.METADATA_FILE)
     session = requests.session()
+    # Disable automatic detection of .netrc.
+    session.trust_env = False
+
     request = session.get(url)
     url_earthdata = request.url
 
+    urs_username, urs_password = creds.get(url_earthdata)
     session.get(url_earthdata, auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password)))
     cookiejar = session.cookies
 

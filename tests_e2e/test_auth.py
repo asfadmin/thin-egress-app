@@ -2,9 +2,11 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
-def test_auth_process(urls, api_host, urs_username, urs_password):
+def test_auth_process(urls, api_host, creds):
     url = urls.join(urls.METADATA_FILE)
     session = requests.session()
+    # Disable automatic detection of .netrc.
+    session.trust_env = False
 
     # Follow redirects to get the urthdata URL. We will get access denied because
     # we aren't passing our creds in yet.
@@ -12,6 +14,7 @@ def test_auth_process(urls, api_host, urs_username, urs_password):
     assert resp1.status_code == 401
 
     url_earthdata = resp1.url
+    urs_username, urs_password = creds.get(url_earthdata)
     resp2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, str(urs_password)))
 
     assert resp2.status_code == 200

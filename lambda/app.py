@@ -762,7 +762,6 @@ def dynamic_url():
     timer = Timer()
     timer.mark("restore_bucket_vars()")
 
-    custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
     log.debug(f'b_map: {b_map.bucket_map}')
@@ -797,6 +796,7 @@ def dynamic_url():
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
 
+    custom_headers = dict(entry.headers)
     cookievars = get_cookie_vars(app.current_request.headers)
     user_profile = None
     if cookievars:

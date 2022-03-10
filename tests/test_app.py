@@ -979,7 +979,8 @@ def test_dynamic_url(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -1000,9 +1001,7 @@ def test_dynamic_url(
         {"urs-user-id": "user_name"},
         {}
     )
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1017,7 +1016,8 @@ def test_dynamic_url_public(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -1028,9 +1028,42 @@ def test_dynamic_url_public(
     response = app.dynamic_url()
 
     mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {})
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_public_custom_headers(
+    mock_get_cookie_vars,
+    mock_try_download_from_bucket,
+    mock_get_yaml_file,
+    resources,
+    current_request
+):
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    mock_get_cookie_vars.return_value = {}
+    current_request.uri_params = {"proxy": "HEADERS/BROWSE/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    mock_try_download_from_bucket.assert_called_once_with(
+        "gsfc-ngap-d-pa-bro",
+        "OBJECT_1",
+        None,
+        {
+            "custom-header-1": "custom-header-1-value",
+            "custom-header-2": "custom-header-2-value"
+        }
+    )
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1049,7 +1082,8 @@ def test_dynamic_url_private(
     resources,
     current_request
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     user_profile = {
         "urs-user-id": "user_name",
         "urs-access-token": "access_token",
@@ -1075,9 +1109,57 @@ def test_dynamic_url_private(
         user_profile,
         {"SET-COOKIE": "cookie"}
     )
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.user_in_group", autospec=True)
+@mock.patch(f"{MODULE}.get_cookie_vars", autospec=True)
+@mock.patch(f"{MODULE}.make_set_cookie_headers_jwt", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_private_custom_headers(
+    mock_make_set_cookie_headers_jwt,
+    mock_get_cookie_vars,
+    mock_user_in_group,
+    mock_try_download_from_bucket,
+    mock_get_yaml_file,
+    resources,
+    current_request
+):
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
+    user_profile = {
+        "urs-user-id": "user_name",
+        "urs-access-token": "access_token",
+        "first_name": "First",
+        "last_name": "Last",
+        "email_address": "user@example.com",
+        "user_groups": []
+    }
+    mock_make_set_cookie_headers_jwt.return_value = {"SET-COOKIE": "cookie"}
+    mock_user_in_group.return_value = (True, user_profile)
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    mock_get_cookie_vars.return_value = {"asf-cookie": user_profile}
+    current_request.uri_params = {"proxy": "HEADERS/PRIVATE/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    mock_try_download_from_bucket.assert_called_once_with(
+        "gsfc-ngap-d-pa-priv",
+        "OBJECT_1",
+        user_profile,
+        {
+            "custom-header-3": "custom-header-3-value",
+            "custom-header-4": "custom-header-4-value",
+            "SET-COOKIE": "cookie"
+        }
+    )
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1092,7 +1174,8 @@ def test_dynamic_url_public_within_private(
     current_request
 ):
     # TODO(reweeden): Make an end-to-end version of this test as well
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     mock_get_yaml_file.return_value = {
         "MAP": {
             "FOO": "bucket"
@@ -1110,9 +1193,7 @@ def test_dynamic_url_public_within_private(
     response = app.dynamic_url()
 
     mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {})
-    assert response.body == "Mock response"
-    assert response.status_code == 200
-    assert response.headers == {}
+    assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)

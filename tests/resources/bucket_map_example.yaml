@@ -5,18 +5,23 @@ MAP:
   DATA-TYPE-1:
     PLATFORM-A:         pa-dt1
     PLATFORM-B:         pb-dt1
-  DATA-TYPE-2:
-    PLATFORM-A:         pa-dt2
-    PLATFORM-B:         pb-dt2
-  DATA-TYPE-3:
-    PLATFORM-A:         pa-dt3
-    PLATFORM-B:         pb-dt3
   BROWSE:
     PLATFORM-A:         pa-bro
     PLATFORM-B:         pb-bro
   PRIVATE:
     PLATFORM-A:         pa-priv
     PLATFORM-B:         pb-priv
+  HEADERS:
+    BROWSE:
+      bucket: pa-bro
+      headers:
+        custom-header-1: custom-header-1-value
+        custom-header-2: custom-header-2-value
+    PRIVATE:
+      bucket: pa-priv
+      headers:
+        custom-header-3: custom-header-3-value
+        custom-header-4: custom-header-4-value
 
 PUBLIC_BUCKETS:
   - pa-bro

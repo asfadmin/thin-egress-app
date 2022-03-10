@@ -121,6 +121,7 @@ def get_request_id() -> str:
 
     return app.lambda_context.aws_request_id
 
+
 @with_trace()
 def get_origin_request_id() -> Optional[str]:
     assert app.current_request is not None

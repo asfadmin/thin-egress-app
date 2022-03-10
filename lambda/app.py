@@ -42,11 +42,13 @@ from rain_api_core.view_util import (
 )
 
 
-def with_trace(root=False):
+def with_trace(context=None):
     """Decorator for adding Open Telemetry tracing.
 
-    root - Boolean that designates the span as a "root" or parent span. Typically
-        in a top-level handler function.
+    context: An optional Open Telemetry context containing the span's parent.
+      For top-level spans the context should be a truthy but invalid value e.g. {}.
+      This will cause the newly created span to create its own context that will be
+      passed to subsequent child spans.
     """
     def tracefunc(func):
         if trace is None:
@@ -56,14 +58,9 @@ def with_trace(root=False):
         def wrapper(*args, **kwargs):
             tracer = trace.get_tracer("tracer")
 
-            # The "root" span is the top-level parent span that sets the traceGroup. It needs
-            # to be initialized with a truthy but invalid context.
-            if root:
-                with tracer.start_as_current_span(func.__name__, context={}):
-                    return func(*args, **kwargs)
-
-            with tracer.start_as_current_span(func.__name__):
+            with tracer.start_as_current_span(func.__name__, context):
                 return func(*args, **kwargs)
+
         return wrapper
     return tracefunc
 
@@ -476,7 +473,7 @@ def get_jwt_field(cookievar: dict, fieldname: str):
 
 
 @app.route('/')
-@with_trace(root=True)
+@with_trace(context={})
 def root():
     user_profile = False
     template_vars = {'title': 'Welcome'}
@@ -499,7 +496,7 @@ def root():
 
 
 @app.route('/logout')
-@with_trace(root=True)
+@with_trace(context={})
 def logout():
     cookievars = get_cookie_vars(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
@@ -518,7 +515,7 @@ def logout():
 
 
 @app.route('/login')
-@with_trace(root=True)
+@with_trace(context={})
 def login():
     try:
         headers = {}
@@ -543,7 +540,7 @@ def login():
 
 
 @app.route('/version')
-@with_trace(root=True)
+@with_trace(context={})
 def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
@@ -556,7 +553,7 @@ def version():
 
 
 @app.route('/locate')
-@with_trace(root=True)
+@with_trace(context={})
 def locate():
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
@@ -681,7 +678,7 @@ def try_download_head(bucket, filename):
 
 # Attempt to validate HEAD request
 @app.route('/{proxy+}', methods=['HEAD'])
-@with_trace(root=True)
+@with_trace(context={})
 def dynamic_url_head():
     t = [time.time()]
     log.debug('attempting to HEAD a thing')
@@ -753,7 +750,7 @@ def handle_auth_bearer_header(token):
 
 
 @app.route('/{proxy+}', methods=['GET'])
-@with_trace(root=True)
+@with_trace(context={})
 def dynamic_url():
     t = [time.time()]
     custom_headers = {}
@@ -879,14 +876,14 @@ def dynamic_url():
 
 
 @app.route('/profile')
-@with_trace(root=True)
+@with_trace(context={})
 def profile():
     return Response(body='Profile not available.',
                     status_code=200, headers={})
 
 
 @app.route('/pubkey', methods=['GET'])
-@with_trace(root=True)
+@with_trace(context={})
 def pubkey():
     thebody = json.dumps({
         'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),

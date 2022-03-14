@@ -20,7 +20,8 @@ try:
     from opentelemetry.propagate import inject
 except ImportError:
     trace = None
-    def inject(obj): return obj
+    def inject(obj):
+        return obj
 
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
 from rain_api_core.bucket_map import BucketMap
@@ -530,7 +531,8 @@ def login():
         status_code, template_vars, headers = do_login(
             app.current_request.query_params,
             app.current_request.context,
-            os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers
+            os.getenv('COOKIE_DOMAIN', ''),
+            aux_headers=aux_headers
         )
     except ClientError as e:
         log.error("%s", e)
@@ -762,7 +764,6 @@ def dynamic_url():
     timer = Timer()
     timer.mark("restore_bucket_vars()")
 
-    custom_headers = {}
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
     log.debug(f'b_map: {b_map.bucket_map}')
@@ -797,6 +798,7 @@ def dynamic_url():
         headers = {}
         return make_html_response(template_vars, headers, 404, 'error.html')
 
+    custom_headers = dict(entry.headers)
     cookievars = get_cookie_vars(app.current_request.headers)
     user_profile = None
     if cookievars:

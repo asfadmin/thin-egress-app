@@ -531,7 +531,8 @@ def login():
         status_code, template_vars, headers = do_login(
             app.current_request.query_params,
             app.current_request.context,
-            os.getenv('COOKIE_DOMAIN', ''), aux_headers=aux_headers
+            os.getenv('COOKIE_DOMAIN', ''),
+            aux_headers=aux_headers
         )
     except ClientError as e:
         log.error("%s", e)

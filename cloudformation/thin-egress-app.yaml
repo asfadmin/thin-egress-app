@@ -265,37 +265,37 @@ Parameters:
   OtLambdaExecWrapper:
     Type: String
     Default: "/opt/otel-instrument"
-    Description: 'Path to Open Telemetry instrumentation'
+    Description: "Path to Open Telemetry instrumentation"
 
   OtCollectorConfigFile:
     Type: String
     Default: "/var/task/var/otel-config/collector.yaml"
-    Description: 'Path to Open Telemetry Collector configuration file'
+    Description: "Path to Open Telemetry Collector configuration file"
 
   OtLogLevel:
     Type: String
     Default: "debug"
-    Description: 'Logging level for Open Telemetry'
+    Description: "Logging level for Open Telemetry"
 
   OtServiceName:
     Type: String
     Default: "tea"
-    Description: 'Name for Open Telemetry service as it will appear in traces'
+    Description: "Name for Open Telemetry service as it will appear in traces"
 
   OtTracesSampler:
     Type: String
     Default: "always_off"
-    Description: 'The sampler to use for Open Telemetry tracing'
+    Description: "The sampler to use for Open Telemetry tracing"
 
   OtPropagators:
     Type: String
     Default: "tracecontext,baggage"
-    Description: 'The format used for traces'
+    Description: "The format used for traces"
 
   OtCollectorURL:
     Type: String
     Default: "https://metrics-otel.ngap.earthdata.nasa.gov"
-    Description: 'Cloud Metrics URL for Open Telemetry collector'
+    Description: "Cloud Metrics URL for Open Telemetry collector"
 
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]

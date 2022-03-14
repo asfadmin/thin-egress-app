@@ -35,9 +35,6 @@ jobs:
     uses: ./.github/workflows/re-test-e2e.yml
     with:
       environment: test
-      dependency-zip: ${{ needs.build.outputs.dependency-zip }}
-      code-zip: ${{ needs.build.outputs.code-zip }}
-      cloudformation-yaml: ${{ needs.build.outputs.cloudformation-yaml }}
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}

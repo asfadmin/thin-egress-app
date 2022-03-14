@@ -33,9 +33,6 @@ jobs:
     uses: ./.github/workflows/re-test-e2e.yml
     with:
       environment: test
-      dependency-zip: ${{ needs.build.outputs.dependency-zip }}
-      code-zip: ${{ needs.build.outputs.code-zip }}
-      cloudformation-yaml: ${{ needs.build.outputs.cloudformation-yaml }}
     # Reusable workflows + Environments behave very strangely
     # https://github.com/AllanOricil/workflow-template-bug/blob/fc8ae4264938adb560fa6928cb19c69d110d8bbd/.github/workflows/workflow-inplementation.yml#L46
     # Yea, seriously hope this gets fixed!!!!!

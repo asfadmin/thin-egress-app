@@ -115,7 +115,7 @@ class CredsHelper():
             res = urllib.parse.urlparse(url)
             entry = self.netrc_file.hosts.get(res.hostname)
             if entry:
-                (login, account, password) = entry
+                login, _, password = entry
                 return login, Secret(password)
 
         return get_env("URS_USERNAME"), Secret(get_env("URS_PASSWORD"))

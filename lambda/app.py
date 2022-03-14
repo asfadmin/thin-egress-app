@@ -20,6 +20,7 @@ try:
     from opentelemetry.propagate import inject
 except ImportError:
     trace = None
+
     def inject(obj):
         return obj
 

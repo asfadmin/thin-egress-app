@@ -20,7 +20,8 @@ try:
     from opentelemetry.propagate import inject
 except ImportError:
     trace = None
-    def inject(obj): return obj
+    def inject(obj):
+        return obj
 
 from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
 from rain_api_core.bucket_map import BucketMap

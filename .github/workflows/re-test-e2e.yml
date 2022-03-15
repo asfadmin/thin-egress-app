@@ -159,6 +159,7 @@ jobs:
                   LambdaCodeS3Bucket="$CODE_BUCKET" \
                   LambdaCodeS3Key="${CODE_PREFIX}${CODE_NAME}" \
                   LambdaMemory="128" \
+                  LambdaTimeout="10" \
                   Loglevel="DEBUG" \
                   Logtype="json" \
                   Maturity="TEST"\

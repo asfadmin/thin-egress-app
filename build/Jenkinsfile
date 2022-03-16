@@ -67,7 +67,7 @@ pipeline {
     JWTKEYSECRETNAME="${JWTKEYSECRETNAME}"
     JWTALGO="RS256"
     ZIPFILENAME="${DEPENDENCY_LAYER_FILENAME}"
-    LAMBDA_TIMEOUT=6
+    LAMBDA_TIMEOUT=10
     LAMBDA_MEMORY=128
     AWS_BIN="/usr/local/bin/aws"
     CODE_BUCKET_SUFFIX="""${sh(script:'if [ "${AWS_DEFAULT_REGION}" = "us-west-2" ]; then printf %s ".usw2"; else printf %s ""; fi', returnStdout: true)}"""

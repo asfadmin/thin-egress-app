@@ -1,0 +1,14 @@
+site_name: ASF Thin Egress App
+
+theme:
+  name: asf-theme
+
+repo_url: https://github.com/asfadmin/thin-egress-app
+repo_name: ASF Thin Egress App
+edit_uri: ''
+
+nav:
+  - Home: index.md
+
+plugins:
+  - include-markdown

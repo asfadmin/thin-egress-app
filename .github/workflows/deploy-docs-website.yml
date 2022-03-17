@@ -1,0 +1,19 @@
+name: deploy documentation to Github Pages
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - run: pip install -r requirement-docs.txt
+      - run: mkdocs gh-deploy --force
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

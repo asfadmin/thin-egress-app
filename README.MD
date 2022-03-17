@@ -380,7 +380,7 @@ MAP:
 You can derive the following object -> URL mappings:
 ```
 s3://bucket-path-1/object.txt           => https://[APP-BASE-URL]/path1/object.txt
-s3://bucket-path-2a/file.ext            => https://[APP-BASE-URL]/path2/path2a/file.ext  
+s3://bucket-path-2a/file.ext            => https://[APP-BASE-URL]/path2/path2a/file.ext
 s3://bucket-path-2b/low-res/browse.jpg  => https://[APP-BASE-URL]/path2/path2b/low-res/browse.jpg
 s3://bucket-path-3ai/some-product.h5    => https://[APP-BASE-URL]/path3/path3a/path3ai/some-product.h5
 ```
@@ -394,7 +394,7 @@ It is **NOT** possible to have distribution at the app root. That is,
 Custom HTTP response headers can be added to bucket mappings:
 
 ```yaml
-MAP:         
+MAP:
   path1:
       bucket: bucket-path-1
       headers:
@@ -650,7 +650,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `DomainName` - (OPTIONAL) domain name as a user will access it (ie CloudFront, CNAME, etc)
    * `CookieDomain` - (OPTIONAL) domain name value for minting cookies
    * `DomainCertArn` - (OPTIONAL) Arn to a AWS ACM SSL Cert for HTTPS access
-   * `UseCorsCookieDomain` - If `True`, and `CookieDomain` is set, this enables CORS Response Headers  
+   * `UseCorsCookieDomain` - If `True`, and `CookieDomain` is set, this enables CORS Response Headers
 * **Lambda Code**:
    * `LambdaCodeS3Bucket` - S3 bucket where Lambda code zip files are kept
    * `LambdaCodeS3Key` - Object name of Lambda code zip

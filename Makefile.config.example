@@ -2,7 +2,7 @@
 # For building artifacts (`make build`), no configuration is necessary.
 # For deploying a dev stack (`make deploy`), all variables marked with
 #
-# REQUIRED_FOR_DEPLOY
+# REQUIRED_FOR_DEPLOY!
 #
 # Must be replaced with values specific to your environment.
 # =========================================================================== #

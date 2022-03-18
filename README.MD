@@ -9,12 +9,17 @@
 [![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
 [![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 
-If you want the fastest path between 0 and S3 distribution, see the [TL;DR](#tldr) section
-for a quick and easy TEA bootstrapping script.
+A fully Earthdata Cloud (EDC) compliant
+Amazon S3 distribution application.
 
 
-### For development
-You can deploy the CloudFormation template for development using our Makefile. You'll still need to
+<!-- TODO: Add link to docs page -->
+See the documentation for a guide on deploying TEA in a production environment.
+
+
+# Development
+
+You can deploy the CloudFormation template for development using our Makefile. You'll need to
 set up your secrets and S3 buckets manually, but once that's done pushing your changes is as easy as
 running `make deploy`.
 
@@ -27,23 +32,23 @@ make Makefile.config
 make deploy
 ```
 
-### Roll-Your-Own
-*If you will forking the repository for the purposes of making your own
+*If you are forking the repository for the purpose of making your own
 releases see the [GitHub Actions README](.github/workflows/README.md).*
 
-If you prefer to roll your own zip for the lambda code you can use our Makefile to build it
-from source in a bash environment. You will need to have a few tools installed for this to work:
+## Dependencies
 
-- `zip` for creating zip files
+In order to build TEA, you will need to have a few tools installed:
+
+- `python3.8` for running tests and creating the CloudFormation template
 - `docker` for building the dependency layer
+- `git` for installing rain-api-core
+- `zip` for creating zip files
 - `awscli` (optional) for deploying to AWS
 
-If you're building the dependency layer locally (generally not recommended especially not on MacOS)
-you will also need:
-- `python3.8` with `pip`
-- `git` for installing rain-api-core
 
-All build artifacts are created into the `dist` directory.
+## Local Builds
+All build artifacts are created in the `dist` directory. Numerous configuration options are available through the `Makefile.config` which is created the first time you run `make` (see [Configuration](#configuration)).
+
 ```bash
 # Clean up from previous builds
 make clean
@@ -68,8 +73,8 @@ make deploy
 *Note: You can run this command as many times as you like, make will automatically detect
 changes made to the source code and rebuild/update the stack as needed*
 
-#### Configuration
-After you run any `make` command, you will notice a file called `Makefile.config`. This contains
+### Configuration
+After you run any `make` command for the first time, you will get a file called `Makefile.config`. This contains
 any Make configuration variables that you may wish to tweak for your development purposes. If you
 need to override any additional variables from the Makefile you can put them in this file.
 Alternatively, if you just need to make a one off change, `make` lets you set variables on the
@@ -79,43 +84,11 @@ command line:
 make deploy STACK_NAME=thin-egress-app-temp AWS_PROFILE=development
 ```
 
-You will need to change any variables that have the value `REQUIRED!` before you can run
+You will need to change any variables that have the value `REQUIRED_FOR_DEPLOY!` before you can run
 `make deploy`.
 
-#### Dependency Layer
 
-```bash
-# get the repo
-git clone https://github.com/asfadmin/thin-egress-app
-cd thin-egress-app
-
-# Build the zip file
-make dependencies
-
-# Upload to S3
-aws s3 cp --profile=default dist/thin-egress-app-dependencies.zip s3://${CODE_BUCKET}/
-```
-
-*Note: If you are expecting the `cryptography` dependency to be built from source, you may need to
-run these commands in an `amazonlinux:2` docker container. However, as `cryptography` distributes
-`manylinux` wheels, this should not be necessary*
-
-#### Packaging up the egress code:
-
-```bash
-# Get the repo
-git clone https://github.com/asfadmin/thin-egress-app
-cd thin-egress-app
-
-# Build the zip file
-make code
-
-# Upload to S3
-aws s3 cp --profile=default dist/thin-egress-app-code.zip s3://${CODE_BUCKET}/
-```
-
-
-#### Configuring local pip dependencies
+#### Local Pip Dependencies
 If you need to build against a local version of one of the requirements in the `requirements.txt`
 such as `rain_api_core`, you will need to make a few adjustments to your `Makefile.config` for the
 docker container to be able to install those dependencies.
@@ -137,15 +110,12 @@ Now when you run `make build`, the dependency layer should be correctly rebuilt 
 source files in your local version of the dependency have changed.
 
 
-### Automated Testing
+## Running Tests
+TEA has two types of automated tests. End-to-End tests and unit tests. The End-to-End tests rely on a lot of ASF specific resources to exist in the test environment, so they may be harder to adapt for custom builds.
 
-Along with full-project human-executed manual regression testing, TEA also uses the Python
-unittest framework (admittedly somewhat unconventionally) to run comprehensive integration
-tests on freshly deployed stacks for every build. All test failures prevent successful
-builds and code cannot be released without all tests completing successfully.
+### Unit Tests
 
-There is also a comprehensive unit test suite written using pytest. You can run it in a virtual
-environment like this:
+The unit test suite is written using pytest. It can be run in a virtual environment with the following commands:
 
 ```bash
 # Create virtual environment

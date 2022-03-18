@@ -1,5 +1,5 @@
 boto3==1.20.54
 pytest-cov==3.0.0
-pytest==7.0.1
+pytest==7.1.1
 pyyaml==6.0
 opentelemetry-instrumentation==0.28b1

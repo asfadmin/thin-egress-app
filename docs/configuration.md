@@ -1,6 +1,4 @@
-## TEA Core Features
-
-### Bucket Mapping
+## Bucket Mapping
 
 At the heart of TEA is the concept of the Bucket Map. This YAML file tells TEA how to
 map URLs to buckets and how to control access to data in buckets. Mapping depths are
@@ -40,7 +38,7 @@ It is **NOT** possible to have distribution at the app root. That is,
 `s3://bucket-path-1/object.txt` cannot be configured to be distributed at
 `https://[APP-BASE-URL]/object.txt`.
 
-#### Custom Headers
+### Custom Headers
 
 Custom HTTP response headers can be added to bucket mappings:
 
@@ -54,7 +52,7 @@ MAP:
 
 ### EDL Access Control
 
-By default, all buckets are assumed to require a user to log into Earthdata Login to
+By default, all buckets are assumed to require a user to log into EarthData Login to
 download data. However, there are two options to change that behavior
 
 #### Public Buckets
@@ -101,7 +99,7 @@ object prefixing to control access:
 
 ```yaml
 MAP:
-   data-bucket: data-bucket
+   data-path: data-bucket
 
 PUBLIC_BUCKETS:
    data-bucket/browse: "Browse image"
@@ -112,11 +110,11 @@ PRIVATE_BUCKETS:
      - external_team
 ```
 
-In the above example, while access data in `data-bucket` requires simple auth,
+In the above example, while access to data in `data-bucket` requires simple auth,
 accessing an object with the prefix `browse/` will require NO auth, and
 `pre-commission-data/` will require EDL App group access as specified.
 
-### Custom Templating
+## Custom Templating
 
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html
 templates. If no custom templates are supplied in the `HtmlTemplateDir` subdirectory
@@ -128,31 +126,34 @@ are used.
 This is the base template.
 
 Blocks:
- * `pagetitle`: Gets inserted inside the `<title></title>` element
- * `content`: Content payload fed into the template.
+
+  * `pagetitle`: Gets inserted inside the `<title></title>` element
+  * `content`: Content payload fed into the template.
 
 **root.html**
 Child template. Gets called by `/` and `/logout` for 200 responses.
 
 Variables:
- * `title`: page title
- * `URS_URL`: used to make the login link
- * `STAGE`: used to make a URL back to the egress app
- * `profile`: in the default template, `profile.first_name` and `profile.last_name` are used to greet a logged-in user. The entire profile dict is available to the template.
- * `contentstring`: any text can go here
+
+  * `title`: page title
+  * `URS_URL`: used to make the login link
+  * `STAGE`: used to make a URL back to the egress app
+  * `profile`: in the default template, `profile.first_name` and `profile.last_name` are used to greet a logged-in user. The entire profile dict is available to the template.
+  * `contentstring`: any text can go here
 
 **error.html**
 Child template that gets called when various 400 type errors happen.
 
 Variables:
- * `title`: page title
- * `status_code`: http status code goes here
- * `contentstring`: any text can go here
+
+  * `title`: page title
+  * `status_code`: http status code goes here
+  * `contentstring`: any text can go here
 
 **profile.html**
 Child template that displays profile info. Only used for debugging in dev.
 
-### Shared Token Support
+## Shared Token Support
 
 TEA can accept a shared EDL Token as an Authorization (Bearer Token) method. To
 enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App
@@ -162,19 +163,17 @@ enforcement is preserved with shared tokens.
 
 ![TEA](images/harmony-chain.png)
 
-### Updating configuration of a live TEA
-
-If the bucket map is updated, because of caching it can take quite some time before TEA loads it.
-If you would like to force TEA to load the new configs immediately, invoke the bumper lambda:
-```bash
-aws $AWSENV lambda invoke --function-name="${STACK_NAME}-BumperLambda" output.txt
-```
-
-### Using custom domain names
+## Using custom domain names
 
 There is a process by which you can request an Alternate Domain name to your
 CloudFront endpoint. If you do this, you'll need to update the `DomainName`,
 `CookieName`, and `DomainCertArn` parameters of your
-[TEA Deploment](#all-parameters).
+[TEA Deploment](deploying.md#all-parameters).
 
-[⬆ Return to Table of Contents](#table-of-contents)
+## Updating configuration of a live TEA
+
+If the bucket map is updated, because of caching it can take quite some time before TEA loads it.
+If you would like to force TEA to load the new configs immediately, invoke the bumper lambda:
+```bash
+aws lambda invoke --function-name="${STACK_NAME}-BumperLambda" output.txt
+```

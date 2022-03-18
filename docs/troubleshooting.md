@@ -1,3 +1,26 @@
+## When things go wrong
+
+There is a lot that _can_ go wrong, but we hope that if you followed this
+guide, you'll have prevented many of the common problems. If not, start
+here!
+
+### Error message:
+If you see an error message in the Cloudformation Events like this:
+> CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
+
+### Solution:
+
+`EnableApiGatewayLogToCloudWatch` is set to `True`. If you don't need API Gateway logging to cloudwatch, set to `False`. If you do, you must create a role with write access to Cloudwatch Logs and add its ARN here: `https://console.aws.amazon.com/apigateway/home?region=<REGION>#/settings`.
+
+### Updating Cached Values:
+
+For efficiency, TEA will cache configuration into the Lambda run environment.
+Certain changes, like modifications to the bucket map or secrets, may not be
+immediately picked up. Lambda run times will eventually time out, but you can
+force refetching of cached values be simply adding a dummy environment
+variable to the running Lambda environment. There may be a better way to
+trigger Lambda environment flushing, lets us know if you find a way.
+
 ## Logs
 
 The two primary locations where you can see the affects of TEA in the logs.
@@ -22,38 +45,10 @@ also added to the s3 download request that CloudFront generates. CloudFront
 will also add a `sourceip` parameter that holds the true IP of the external
 user.
 
-[⬆ Return to Table of Contents](#table-of-contents)
-
-## When things go wrong
-
-There is a lot that _can_ go wrong, but we hope that if you followed this
-guide, you'll have prevented many of the common problems. If not, start
-here!
-
-### Troubleshooting
-
-#### Error message:
-If you see an error message in the Cloudformation Events like this:
-> CloudWatch Logs role ARN must be set in account settings to enable logging (Service: AmazonApiGateway; Status Code: 400; Error Code: BadRequestException; ...
-
-#### Solution:
-
-`EnableApiGatewayLogToCloudWatch` is set to `True`. If you don't need API Gateway logging to cloudwatch, set to `False`. If you do, you must create a role with write access to Cloudwatch Logs and add its ARN here: `https://console.aws.amazon.com/apigateway/home?region=<REGION>#/settings`.
-
-#### Updating Cached Values:
-
-For efficiency, TEA will cache configuration into the Lambda run environment.
-Certain changes, like modifications to the bucket map or secrets, may not be
-immediately picked up. Lambda run times will eventually time out, but you can
-force refetching of cached values be simply adding a dummy environment
-variable to the running Lambda environment. There may be a better way to
-trigger Lambda environment flushing, lets us know if you find a way.
-
-
-### Bug reporting/tracking
+## Bug reporting/tracking
 
 First step when you encounter an error is to check the
-[Troubleshooting](#troubleshooting) section. If your problem is not there,
+[Troubleshooting](troubleshooting.md) section. If your problem is not there,
 feel free to reach out in the `#tea-pot` Slack Channel. If your problem
 can't be resolved, we'll put in a
 [Github Issue](https://github.com/asfadmin/thin-egress-app/issues) to help

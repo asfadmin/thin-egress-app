@@ -16,7 +16,6 @@ edit_uri: ''
 nav:
   - Home: index.md
   - Vision: vision.md
-  - History: history.md
   - Deploying: deploying.md
   - Configuration: configuration.md
   - Technical: technical.md

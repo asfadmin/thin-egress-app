@@ -9,7 +9,7 @@
 [![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
 [![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 
-A fully Earthdata Cloud (EDC) compliant
+A fully EarthData Cloud (EDC) compliant
 Amazon S3 distribution application.
 
 

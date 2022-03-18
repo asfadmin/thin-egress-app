@@ -1,13 +1,4 @@
-## Deploying TEA
-
-## TL;DR
-
-There are LOTS of words in this document. Lots of steps. Lots of ways
-things can go wrong. It's understandable that you might not be
-interested reading all the words and performing all the steps. In that
-case, try our magic bootstrapping script!
-
-### Walk me through this!
+## Quickstart
 
 You can either download [`deploy.sh`](https://github.com/asfadmin/thin-egress-app/blob/devel/build/deploy.sh)
 and run it, or, as show below, curl the output directly into bash.
@@ -40,15 +31,7 @@ All parameters are optional, but not supplying params affects behavior.
 ## Getting TEA Code
 
 Major release documentation can be found
-[in github](https://github.com/asfadmin/thin-egress-app/releases/latest).
-
-### github.com
-
-Raw TEA code is broken into two github repos:
- * [thin-egress-app](https://github.com/asfadmin/thin-egress-app/) -
-     Chalice App, infrastructure-as-code, build scaffolding
- * [rain-api-core](https://github.com/asfadmin/rain-api-core/) -
-     EDL, AWS, Session Management helper functions
+[on github](https://github.com/asfadmin/thin-egress-app/releases/latest).
 
 ### s3://asf.public.code
 
@@ -62,7 +45,7 @@ files:
 * **tea-terraform-build.#.zip** - TEA as a Terraform module (For cumulus!)
 
 
-## Deploying TEA
+## Deployment Steps
 
 At its core, TEA uses a CloudFormation template to deploy all of its resources to
 AWS. Additionally, there is an available [Terraform module](#from-terraform) that can be used on its
@@ -158,8 +141,8 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `URSAuthCredsSecretName` - [URS Auth Creds Secret](#urs-auth-creds-secret)
    * `AuthBaseUrl` - Which maturity of URS to hit
 * **Data Bucket Setup**:
-   * `BucketnamePrefix` - (OPTIONAL) Bucket prefix value (see [Bucket Mapping](#bucket-mapping))
-   * `BucketMapFile` - bucket map YAML file (see [Bucket Mapping](#bucket-mapping))
+   * `BucketnamePrefix` - (OPTIONAL) Bucket prefix value (see [Bucket Mapping](configuration.md#bucket-mapping))
+   * `BucketMapFile` - bucket map YAML file (see [Bucket Mapping](configuration#bucket-mapping))
    * `UseReverseBucketMap` - Ignore this value!
    * `DownloadRoleArn` - (OPTIONAL) Pre-created IAM Role for minting presigned urls
      * Leave blank to create a new role for deployment
@@ -180,10 +163,9 @@ probably `NGAPShRoleBoundary`
 
 #### AWS Console
 
-Originally, I was going to walk through deploying TEA via the AWS
-CloudFormation web console, but there are
-[better guides](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html)
-out there. So, instead, I'd just remind you that you need [THREE files](#getting-tea-code):
+See [this guide](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html)
+for deploying the CloudFormation template using the AWS web console.
+You'll need [three files](#getting-tea-code):
 
 * This file will be uploaded to the CloudFormation web console:
   * **tea-cloudformation-build.#.yaml**
@@ -194,9 +176,9 @@ out there. So, instead, I'd just remind you that you need [THREE files](#getting
 #### Using awscli
 
 As with [AWS Console](#aws-console) deployments, you'll need to upload the
-two zip files to a code bucket in your account.  After doing that, be sure you've
-sourced the [VPC and Networking](#vpc-and-networking) parameters as well as create
-the two required [Secrets](#secrets-setup).
+two zip files to a code bucket in your account.  After doing that, be sure
+you've sourced the [VPC and Networking](#vpc-and-networking) parameters as
+well as create the two required [Secrets](#secrets-setup).
 
 ```bash
 # Code path variables

@@ -13,8 +13,8 @@ A fully EarthData Cloud (EDC) compliant
 Amazon S3 distribution application.
 
 
-<!-- TODO: Add link to docs page -->
-See the documentation for a guide on deploying TEA in a production environment.
+See the [documentation](https://tea-docs.asf.alaska.edu) for a guide on
+deploying TEA in a production environment.
 
 
 # Development

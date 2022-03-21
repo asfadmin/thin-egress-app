@@ -168,10 +168,10 @@ def get_user_from_token(token):
         'token': token
     }
 
-    url = '{}/oauth/tokens/user?{}'.format(os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov'),
-                                           urlencode(params))
+    base_url = os.getenv('AUTH_BASE_URL', 'https://urs.earthdata.nasa.gov')
+    url = f'{base_url}/oauth/tokens/user?{urlencode(params)}'
 
-    authval = "Basic {}".format(urs_creds['UrsAuth'])
+    authval = f"Basic {urs_creds['UrsAuth']}"
     headers = {'Authorization': authval}
 
     # Tack on auxillary headers
@@ -258,7 +258,7 @@ def restore_bucket_vars():
 
 @with_trace()
 def do_auth_and_return(ctxt):
-    log.debug('context: {}'.format(ctxt))
+    log.debug('context: %s', ctxt)
     here = ctxt['path']
     if os.getenv('DOMAIN_NAME'):
         # Pop STAGE value off the request if we have a custom domain
@@ -267,10 +267,10 @@ def do_auth_and_return(ctxt):
         if here.startswith(prefix):
             here = here[len(prefix):]
 
-    log.info("here will be {0}".format(here))
+    log.info("here will be %s", here)
     redirect_here = quote_plus(here)
     urs_url = get_urs_url(ctxt, redirect_here)
-    log.info("Redirecting for auth: {0}".format(urs_url))
+    log.info("Redirecting for auth: %s", urs_url)
     return Response(body='', status_code=302, headers={'Location': urs_url})
 
 
@@ -314,11 +314,13 @@ def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, templat
 
 @with_trace()
 def get_bcconfig(user_id: str) -> dict:
-    bcconfig = {"user_agent": "Thin Egress App for userid={0}".format(user_id),
-                "s3": {"addressing_style": "path"},
-                "connect_timeout": 600,
-                "read_timeout": 600,
-                "retries": {"max_attempts": 10}}
+    bcconfig = {
+        "user_agent": f"Thin Egress App for userid={user_id}",
+        "s3": {"addressing_style": "path"},
+        "connect_timeout": 600,
+        "read_timeout": 600,
+        "retries": {"max_attempts": 10}
+    }
 
     signature_version = os.getenv('S3_SIGNATURE_VERSION')
     if signature_version:
@@ -342,12 +344,12 @@ def get_bucket_region(session, bucketname) -> str:
             endpoint=f"client().get_bucket_location({bucketname})",
             duration=duration(_time)
         ))
-        log.debug("bucket {0} is in region {1}".format(bucketname, bucket_region))
+        log.debug("bucket %s is in region %s", bucketname, bucket_region)
 
         return bucket_region
     except ClientError as e:
         # We hit here if the download role cannot access a bucket, or if it doesn't exist
-        log.error("Could not access download bucket {0}: {1}".format(bucketname, e))
+        log.error("Could not access download bucket %s: %s", bucketname, e)
         raise
 
 
@@ -378,7 +380,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             user_id = user_profile['urs-user-id']
         elif 'uid' in user_profile:
             user_id = user_profile['uid']
-    log.info("User Id for download is {0}".format(user_id))
+    log.info("User Id for download is %s", user_id)
     log_context(user_id=user_id)
 
     timer.mark("check_in_region_request()")
@@ -408,17 +410,19 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         headers = {}
         return make_html_response(template_vars, headers, code, 'error.html')
 
-    log.debug('this region: {}'.format(os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist')))
+    log.debug('this region: %', os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist'))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
-        log_message = "bucket {0} is in region {1}, we are in region {2}! " + \
-                      "This is double egress in Proxy mode!"
-        log.warning(log_message.format(bucket, bucket_region, os.getenv('AWS_DEFAULT_REGION')))
+        log.warning(
+            "bucket %s is in region %s, we are in region %s! "
+            "This is double egress in Proxy mode!",
+            bucket, bucket_region, os.getenv('AWS_DEFAULT_REGION')
+        )
     client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
     timer.log_all(log)
 
-    log.info("Attempting to download s3://{0}/{1}".format(bucket, filename))
+    log.info("Attempting to download s3://%s/%s", bucket, filename)
 
     # We'll cache the size later.
     head_check = {}
@@ -435,15 +439,15 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         redirheaders = {'Range': range_header} if range_header else {}
 
         expires_in = 3600 - offset
-        redirheaders['Cache-Control'] = 'private, max-age={0}'.format(expires_in - 60)
+        redirheaders['Cache-Control'] = f'private, max-age={expires_in - 60}'
         if isinstance(headers, dict):
-            log.debug(f'adding {headers} to redirheaders {redirheaders}')
+            log.debug('adding %s to redirheaders %s', headers, redirheaders)
             redirheaders.update(headers)
 
         # Generate URL
         presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
-        log.debug("Presigned URL host was {0}".format(s3_host))
+        log.debug("Presigned URL host was %s", s3_host)
 
         download_stat = {"bucket": bucket, "object": filename, "range": range_header}
         download_stat.update({"InRegion": "True" if is_in_region else "False"})
@@ -643,12 +647,12 @@ def try_download_head(bucket, filename):
             client.get_object(Bucket=bucket, Key=filename)
         else:
             # TODO: Should both `client.get_object()` be `client.head_object()` ?!?!?!
-            log.info("Downloading range {0}".format(range_header))
+            log.info("Downloading range %s", range_header)
             client.get_object(Bucket=bucket, Key=filename, Range=range_header)
         log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(_time)))
         timer.mark()
     except ClientError as e:
-        log.warning("Could not get head for s3://{0}/{1}: {2}".format(bucket, filename, e))
+        log.warning("Could not get head for s3://%s/%s: %s", bucket, filename, e)
         # cumulus uses this log message for metrics purposes.
 
         template_vars = {'contentstring': 'File not found',
@@ -678,7 +682,7 @@ def try_download_head(bucket, filename):
     s3_host = urlparse(presigned_url).netloc
 
     # Return a redirect to a HEAD
-    log.debug("Presigned HEAD URL host was {0}".format(s3_host))
+    log.debug("Presigned HEAD URL host was %s", s3_host)
 
     log.debug('timing for try_download_head()')
     timer.log_all(log)
@@ -803,7 +807,7 @@ def dynamic_url():
     cookievars = get_cookie_vars(app.current_request.headers)
     user_profile = None
     if cookievars:
-        log.debug('cookievars: {}'.format(cookievars))
+        log.debug('cookievars: %s', cookievars)
         if JWT_COOKIE_NAME in cookievars:
             # this means our cookie is a jwt and we don't need to go digging in the session db
             user_profile = cookievars[JWT_COOKIE_NAME]
@@ -828,7 +832,7 @@ def dynamic_url():
 
         if method == "bearer":
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
-            log.debug('we got an Authorization header. {}'.format(authorization))
+            log.debug('we got an Authorization header. %s', authorization)
             action, data = handle_auth_bearer_header(token)
 
             if action == 'return':
@@ -861,7 +865,7 @@ def dynamic_url():
         new_jwt_cookie_headers.update(
             make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
 
-    log.debug('user_in_group: {}'.format(u_in_g))
+    log.debug('user_in_group: %s', u_in_g)
 
     # Check that the bucket is either NOT private, or user belongs to that group
     if required_groups and not u_in_g:

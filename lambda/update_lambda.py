@@ -35,18 +35,20 @@ def lambda_handler(event, context):
 
         # Check if response is coming from CloudFormation
         if 'ResponseURL' in event:
-            print("Sending success message to callback URL {0}".format(event['ResponseURL']))
+            print(f"Sending success message to callback URL {event['ResponseURL']}")
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Data': "Good"})
 
         return response
 
     except Exception as e:
-        error_string = "There was a problem updating policy {0} for Role {1} in region {2}: {3}".format(
-            os.getenv('policy_name'), os.getenv('iam_role_name'), current_region, e)
+        error_string = (
+            f"There was a problem updating policy {os.getenv('policy_name')} "
+            f"for Role {os.getenv('iam_role_name')} in region {current_region}: {e}"
+        )
         print(error_string)
 
         if 'ResponseURL' in event:
-            print("Sending FAILURE message to callback URL {0}".format(event['ResponseURL']))
+            print(f"Sending FAILURE message to callback URL {event['ResponseURL']}")
             cfnresponse.send(event, context, cfnresponse.FAILED, {'Data': error_string})
 
     return False

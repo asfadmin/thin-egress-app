@@ -595,9 +595,9 @@ def version():
     log.info("Got a version request!")
     version_return = {'version_id': '<BUILD_ID>'}
 
-    # If we've flushed, lets return the flush time.
-    if os.getenv('BUMP'):
-        version_return['last_flush'] = os.getenv('BUMP')
+    flush_time = os.getenv('BUMP')
+    if flush_time:
+        version_return['last_flush'] = flush_time
 
     return json.dumps(version_return)
 
@@ -617,7 +617,7 @@ def locate():
     bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
-    if (len(matching_paths) > 0):
+    if matching_paths:
         return Response(
             body=json.dumps(matching_paths),
             status_code=200,

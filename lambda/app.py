@@ -231,7 +231,12 @@ def get_user_from_token(token):
 
 @with_trace()
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
-    k_v.update({'code': code, 'http_method': http_method, 'status': outcome, 'requestid': get_request_id()})
+    k_v.update({
+        'code': code,
+        'http_method': http_method,
+        'status': outcome,
+        'requestid': get_request_id()
+    })
     print(json.dumps(k_v))
 
 
@@ -296,20 +301,30 @@ def make_redirect(to_url, headers=None, status_code=301):
     headers['Location'] = to_url
     add_cors_headers(headers)
     log.info(f'Redirect created. to_url: {to_url}')
-    cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
+    cumulus_log_message(
+        'success', status_code, 'GET',
+        {'redirect': 'yes', 'redirect_URL': to_url}
+    )
     log.debug(f'headers for redirect: {headers}')
     return Response(body='', headers=headers, status_code=status_code)
 
 
 @with_trace()
 def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):
-    template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
+    template_vars = {
+        'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None,
+        'status_code': status_code
+    }
     template_vars.update(t_vars)
 
     headers = {'Content-Type': 'text/html'}
     headers.update(hdrs)
 
-    return Response(body=get_html_body(template_vars, template_file), status_code=status_code, headers=headers)
+    return Response(
+        body=get_html_body(template_vars, template_file),
+        status_code=status_code,
+        headers=headers
+    )
 
 
 @with_trace()
@@ -401,11 +416,15 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             code = 400
         log.debug(f'response: {e.response}')
         log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
-        cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
-        template_vars = {'contentstring': 'There was a problem accessing download data.',
-                         'title': 'Data Not Available',
-                         'requestid': get_request_id(),
-                         }
+        cumulus_log_message(
+            'failure', code, 'GET',
+            {'reason': 'ClientError', 's3': f'{bucket}/{filename}'}
+        )
+        template_vars = {
+            'contentstring': 'There was a problem accessing download data.',
+            'title': 'Data Not Available',
+            'requestid': get_request_id(),
+        }
 
         headers = {}
         return make_html_response(template_vars, headers, code, 'error.html')
@@ -464,19 +483,31 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
             # cumulus uses this log message for metrics purposes.
             log.error(f"Invalid Range 416, Could not get range {get_range_header_val()} s3://{bucket}/{filename}: {e}")
-            cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range',
-                                                        's3': f'{bucket}/{filename}',
-                                                        'range': get_range_header_val()})
+            cumulus_log_message(
+                'failure', 416, 'GET',
+                {
+                    'reason': 'Invalid Range',
+                    's3': f'{bucket}/{filename}',
+                    'range': get_range_header_val()
+                }
+            )
             return Response(body='Invalid Range', status_code=416, headers={})
 
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
-        template_vars = {'contentstring': 'Could not find requested data.',
-                         'title': 'Data Not Available',
-                         'requestid': get_request_id(), }
+        template_vars = {
+            'contentstring': 'Could not find requested data.',
+            'title': 'Data Not Available',
+            'requestid': get_request_id(),
+        }
         headers = {}
-        cumulus_log_message('failure', 404, 'GET',
-                            {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message(
+            'failure', 404, 'GET',
+            {
+                'reason': 'Could not find requested data',
+                's3': f'{bucket}/{filename}'
+            }
+        )
         return make_html_response(template_vars, headers, 404, 'error.html')
 
 
@@ -571,20 +602,28 @@ def version():
 def locate():
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
-        return Response(body='Required "bucket_name" query paramater not specified',
-                        status_code=400,
-                        headers={'Content-Type': 'text/plain'})
+        return Response(
+            body='Required "bucket_name" query paramater not specified',
+            status_code=400,
+            headers={'Content-Type': 'text/plain'}
+        )
+
     bucket_name = query_params.get('bucket_name')
     bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if (len(matching_paths) > 0):
-        return Response(body=json.dumps(matching_paths),
-                        status_code=200,
-                        headers={'Content-Type': 'application/json'})
-    return Response(body=f'No route defined for {bucket_name}',
-                    status_code=404,
-                    headers={'Content-Type': 'text/plain'})
+        return Response(
+            body=json.dumps(matching_paths),
+            status_code=200,
+            headers={'Content-Type': 'application/json'}
+        )
+
+    return Response(
+        body=f'No route defined for {bucket_name}',
+        status_code=404,
+        headers={'Content-Type': 'text/plain'}
+    )
 
 
 @with_trace()
@@ -655,12 +694,19 @@ def try_download_head(bucket, filename):
         log.warning("Could not get head for s3://%s/%s: %s", bucket, filename, e)
         # cumulus uses this log message for metrics purposes.
 
-        template_vars = {'contentstring': 'File not found',
-                         'title': 'File not found',
-                         'requestid': get_request_id(), }
+        template_vars = {
+            'contentstring': 'File not found',
+            'title': 'File not found',
+            'requestid': get_request_id(),
+        }
         headers = {}
-        cumulus_log_message('failure', 404, 'HEAD',
-                            {'reason': 'Could not find requested data', 's3': f'{bucket}/{filename}'})
+        cumulus_log_message(
+            'failure', 404, 'HEAD',
+            {
+                'reason': 'Could not find requested data',
+                's3': f'{bucket}/{filename}'
+            }
+        )
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     # Try Redirecting to HEAD. There should be a better way.
@@ -859,11 +905,14 @@ def dynamic_url():
     if new_user_profile:
         log.debug(f"We got new profile from user_in_group() {new_user_profile}")
         user_profile = new_user_profile
-        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
-                                                        get_jwt_field(cookievars, 'urs-access-token'),
-                                                        user_profile)
+        jwt_cookie_payload = user_profile_2_jwt_payload(
+            get_jwt_field(cookievars, 'urs-user-id'),
+            get_jwt_field(cookievars, 'urs-access-token'),
+            user_profile
+        )
         new_jwt_cookie_headers.update(
-            make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+            make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', ''))
+        )
 
     log.debug('user_in_group: %s', u_in_g)
 
@@ -889,8 +938,11 @@ def dynamic_url():
 @app.route('/profile')
 @with_trace(context={})
 def profile():
-    return Response(body='Profile not available.',
-                    status_code=200, headers={})
+    return Response(
+        body='Profile not available.',
+        status_code=200,
+        headers={}
+    )
 
 
 @app.route('/pubkey', methods=['GET'])
@@ -900,6 +952,8 @@ def pubkey():
         'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),
         'algorithm': JWT_ALGO
     })
-    return Response(body=thebody,
-                    status_code=200,
-                    headers={'content-type': 'application/json'})
+    return Response(
+        body=thebody,
+        status_code=200,
+        headers={'content-type': 'application/json'}
+    )

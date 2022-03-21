@@ -30,8 +30,11 @@ def lambda_handler(event, context):
                 response = client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
 
         # Put the new policy
-        response = client.put_role_policy(RoleName=RoleName, PolicyName=os.getenv('policy_name'),
-                                          PolicyDocument=json.dumps(new_policy))
+        response = client.put_role_policy(
+            RoleName=RoleName,
+            PolicyName=os.getenv('policy_name'),
+            PolicyDocument=json.dumps(new_policy)
+        )
 
         # Check if response is coming from CloudFormation
         if 'ResponseURL' in event:
@@ -58,8 +61,10 @@ def get_region_cidrs(current_region):
     # Bandit complains with B310 on the line below. We know the URL, this is safe!
     output = urllib.request.urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json').read().decode('utf-8')  # nosec
     ip_ranges = json.loads(output)['prefixes']
-    in_region_amazon_ips = [item['ip_prefix'] for item in ip_ranges if
-                            item["service"] == "AMAZON" and item["region"] == current_region]
+    in_region_amazon_ips = [
+        item['ip_prefix'] for item in ip_ranges
+        if item["service"] == "AMAZON" and item["region"] == current_region
+    ]
     # It's important to filter down the CIDR range as much as possible. Too large can cause the role creation to fail.
     in_region_amazon_ips = [str(ip) for ip in cidr_merge(in_region_amazon_ips)]
     # Add in Private IP Space

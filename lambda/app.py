@@ -176,7 +176,7 @@ def get_user_from_token(token):
 
     # Tack on auxillary headers
     headers.update(get_aux_request_headers())
-    log.debug(f'headers: {headers}, params: {params}')
+    log.debug('headers: %s, params: %s', headers, params)
 
     _time = time.time()
 
@@ -193,19 +193,21 @@ def get_user_from_token(token):
     try:
         msg = json.loads(payload)
     except json.JSONDecodeError:
-        log.error(f'could not get json message from payload: {payload}')
+        log.error('could not get json message from payload: %s', payload)
         msg = {}
 
-    log.debug(f'raw payload: {payload}')
-    log.debug(f'json loads: {msg}')
-    log.debug(f'code: {response.code}')
+    log.debug('raw payload: %s', payload)
+    log.debug('json loads: %s', msg)
+    log.debug('code: %s', response.code)
 
     if response.code == 200:
         try:
             return msg['uid']
         except KeyError as e:
             log.error(
-                f'Problem with return from URS: e: {e}, url: {url}, params: {params}, response payload: {payload}, ')
+                'Problem with return from URS: e: %s, url: %s, params: %s, response payload: %s',
+                e, url, params, payload
+            )
             return None
     elif response.code == 403:
         if 'error_description' in msg and 'eula' in msg['error_description'].lower():
@@ -215,7 +217,7 @@ def get_user_from_token(token):
             log.warning('user needs to sign the EULA')
             raise EulaException(msg)
         # Probably an expired token if here
-        log.warning(f'403 error from URS: {msg}')
+        log.warning('403 error from URS: %s', msg)
     else:
         if 'error' in msg:
             errtxt = msg["error"]
@@ -224,8 +226,8 @@ def get_user_from_token(token):
         if 'error_description' in msg:
             errtxt = errtxt + ' ' + msg['error_description']
 
-        log.error(f'Error getting URS userid from token: {errtxt} with code {response.code}')
-        log.debug(f'url: {url}, params: {params}, ')
+        log.error('Error getting URS userid from token: %s with code %s', errtxt, response.code)
+        log.debug('url: %s, params: %s', url, params)
     return None
 
 
@@ -291,7 +293,7 @@ def add_cors_headers(headers):
             headers['Access-Control-Allow-Origin'] = origin_header
             headers['Access-Control-Allow-Credentials'] = 'true'
         else:
-            log.warning(f'Origin {origin_header} is not an approved CORS host: {cors_origin}')
+            log.warning('Origin %s is not an approved CORS host: %s', origin_header, cors_origin)
 
 
 @with_trace()
@@ -300,12 +302,12 @@ def make_redirect(to_url, headers=None, status_code=301):
         headers = {}
     headers['Location'] = to_url
     add_cors_headers(headers)
-    log.info(f'Redirect created. to_url: {to_url}')
+    log.info('Redirect created. to_url: %s', to_url)
     cumulus_log_message(
         'success', status_code, 'GET',
         {'redirect': 'yes', 'redirect_URL': to_url}
     )
-    log.debug(f'headers for redirect: {headers}')
+    log.debug('headers for redirect: %s', headers)
     return Response(body='', headers=headers, status_code=status_code)
 
 
@@ -375,11 +377,11 @@ def get_user_ip():
     x_forwarded_for = app.current_request.headers.get('x-forwarded-for')
     if x_forwarded_for:
         ip = x_forwarded_for.replace(' ', '').split(',')[0]
-        log.debug(f"x-fowarded-for: {x_forwarded_for}")
-        log.info(f"Assuming {ip} is the users IP")
+        log.debug("x-fowarded-for: %s", x_forwarded_for)
+        log.info("Assuming %s is the users IP", ip)
         return ip
     ip = app.current_request.context['identity']['sourceIp']
-    log.debug(f"NO x_fowarded_for, using sourceIp: {ip} instead")
+    log.debug("NO x_fowarded_for, using sourceIp: %s instead", ip)
     return ip
 
 
@@ -414,8 +416,8 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             code = e.response['ResponseMetadata']['HTTPStatusCode']
         except (AttributeError, KeyError, IndexError):
             code = 400
-        log.debug(f'response: {e.response}')
-        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
+        log.debug('response: %s', e.response)
+        log.error('ClientError while %s tried downloading %s/%s: %s', user_id, bucket, filename, e)
         cumulus_log_message(
             'failure', code, 'GET',
             {'reason': 'ClientError', 's3': f'{bucket}/{filename}'}
@@ -429,7 +431,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         headers = {}
         return make_html_response(template_vars, headers, code, 'error.html')
 
-    log.debug('this region: %', os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist'))
+    log.debug('this region: %s', os.getenv('AWS_DEFAULT_REGION', 'env var doesnt exist'))
     if bucket_region != os.getenv('AWS_DEFAULT_REGION'):
         log.warning(
             "bucket %s is in region %s, we are in region %s! "
@@ -482,7 +484,10 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         # Watch for bad range request:
         if e.response['ResponseMetadata']['HTTPStatusCode'] == 416:
             # cumulus uses this log message for metrics purposes.
-            log.error(f"Invalid Range 416, Could not get range {get_range_header_val()} s3://{bucket}/{filename}: {e}")
+            log.error(
+                "Invalid Range 416, Could not get range %s s3://%s/%s: %s",
+                get_range_header_val(), bucket, filename, e
+            )
             cumulus_log_message(
                 'failure', 416, 'GET',
                 {
@@ -494,7 +499,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             return Response(body='Invalid Range', status_code=416, headers={})
 
         # cumulus uses this log message for metrics purposes.
-        log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
+        log.warning("Could not download s3://%s/%s: %s", bucket, filename, e)
         template_vars = {
             'contentstring': 'Could not find requested data.',
             'title': 'Data Not Available',
@@ -817,7 +822,7 @@ def dynamic_url():
 
     log.debug('attempting to GET a thing')
     restore_bucket_vars()
-    log.debug(f'b_map: {b_map.bucket_map}')
+    log.debug('b_map: %s', b_map.bucket_map)
     timer.mark()
 
     log.info(app.current_request.headers)
@@ -888,9 +893,9 @@ def dynamic_url():
             user_profile = data
             user_id = user_profile['uid']
             log_context(user_id=user_id)
-            log.debug(f'User {user_id} has user profile: {user_profile}')
+            log.debug('User %s has user profile: %s', user_id, user_profile)
             jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
-            log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
+            log.debug("Encoding JWT_PAYLOAD: %s", jwt_payload)
             custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
             cookievars[JWT_COOKIE_NAME] = jwt_payload
         else:
@@ -903,7 +908,7 @@ def dynamic_url():
 
     new_jwt_cookie_headers = {}
     if new_user_profile:
-        log.debug(f"We got new profile from user_in_group() {new_user_profile}")
+        log.debug("We got new profile from user_in_group() %s", new_user_profile)
         user_profile = new_user_profile
         jwt_cookie_payload = user_profile_2_jwt_payload(
             get_jwt_field(cookievars, 'urs-user-id'),
@@ -926,7 +931,7 @@ def dynamic_url():
         return make_html_response(template_vars, new_jwt_cookie_headers, 403, 'error.html')
 
     custom_headers.update(new_jwt_cookie_headers)
-    log.debug(f'custom headers before try download from bucket: {custom_headers}')
+    log.debug('custom headers before try download from bucket: %s', custom_headers)
     timer.mark()
 
     log.debug("timing for dynamic_url()")

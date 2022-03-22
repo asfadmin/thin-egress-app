@@ -1,0 +1,22 @@
+site_name: Thin Egress App
+site_author: ASF RAIN
+site_description: Thin Egress App
+
+theme:
+  name: asf-theme
+  icon:
+    repo: fontawesome/brands/github-alt
+  features:
+    - navigation.instant
+
+repo_url: https://github.com/asfadmin/thin-egress-app
+repo_name: thin-egress-app
+edit_uri: ''
+
+nav:
+  - Home: index.md
+  - Vision: vision.md
+  - Deploying: deploying.md
+  - Configuration: configuration.md
+  - Technical: technical.md
+  - Trouble Shooting: troubleshooting.md

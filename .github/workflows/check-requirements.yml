@@ -1,0 +1,22 @@
+name: Check Requirements
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - run: pip install -r requirements/requirements.txt -r requirements/requirements-dev.txt
+
+      - run: |
+          pip-compile requirements/requirements.in -o requirements/requirements-compiled.txt
+          diff -s requirements/requirements.txt requirements/requirements-compiled.txt
+
+      - run: |
+          pip-compile requirements/requirements-dev.in -o requirements/requirements-dev-compiled.txt
+          diff -s requirements/requirements-dev.txt requirements/requirements-dev-compiled.txt

@@ -48,7 +48,7 @@ Code Analysis to help ensure our code is secure and safe to run.
 ## External Integrations
 
 TEA cannot really operate in a vacuum. TEA is part of what might be considered
-the EarthData ecosystem.
+the Earthdata ecosystem.
 
 ### Cumulus
 
@@ -59,18 +59,18 @@ tightly coupled TEA+Cumulus deployments.
 
 ### EDL
 
-The EarthData Login OAUTH service is a requirement for distributing data where
+The Earthdata Login OAUTH service is a requirement for distributing data where
 user activity tracking and reporting is required. Before deploying TEA, it is
 important to have access to, or
 [create a new EDL Application](https://urs.earthdata.nasa.gov/apps/new).
 Creating and administrating an EDL Application requires the EDL App Admin role,
-which must be requested through the feedback modal in the EarthData login header
+which must be requested through the feedback modal in the Earthdata login header
 menu.
 
 ### EDC
 
-While TEA can be deployed outside of the EarthData Cloud, it is designed and
-intended to be used within the EarthData Cloud environment. While we assume
+While TEA can be deployed outside of the Earthdata Cloud, it is designed and
+intended to be used within the Earthdata Cloud environment. While we assume
 you'll be deploying to the EDC, we cannot provide assistance in setting up or
 configuring access to EDC. However, when there are steps or considerations that
 are required for integration into EDC, we will help ensure you have all the

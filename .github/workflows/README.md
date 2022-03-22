@@ -85,7 +85,7 @@ bucket.
   - `URS_CLIENT_ID`
   - `EDL_APP_UID`
   - `EDL_APP_PASSWORD`
-- `URS_URL` URL to use for EarthData login.
+- `URS_URL` URL to use for Earthdata login.
 
 ## CodeCov
 The unit test workflows that run on PR's report coverage data to CodeCov. This

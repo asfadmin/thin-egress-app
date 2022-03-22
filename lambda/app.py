@@ -164,7 +164,7 @@ def get_user_from_token(token):
 
     params = {
         'client_id': urs_creds['UrsId'],
-        # The client_id of the non SSO application you registered with EarthData Login
+        # The client_id of the non SSO application you registered with Earthdata Login
         'token': token
     }
 

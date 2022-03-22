@@ -1,7 +1,7 @@
 # Thin Egress App
 ## Purpose of TEA
 
-TEA is a fully EarthData Cloud (EDC) compliant application to enable
+TEA is a fully Earthdata Cloud (EDC) compliant application to enable
 distribution of EOSDIS data from Amazon S3 while ensuring data
 providers have all the tools, controls and metrics required for data
 distribution restriction and reporting compliance. TEA Distribution supports
@@ -37,7 +37,7 @@ belongs in TEA, you have TWO options:
 
 ## History of TEA
 
-TEA was originally designed as a lightweight S3 distribution application with EarthData Login
+TEA was originally designed as a lightweight S3 distribution application with Earthdata Login
 (EDL) support meant to help test and evaluate the (then) forethcoming NGAP Enterprise Egress
 platform. TEA leveraged much of the design and features of ASF's original full-featured s3
 distribution app, without any of the throttling or egress tracking capabilities. Without the

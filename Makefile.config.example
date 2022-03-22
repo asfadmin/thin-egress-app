@@ -36,7 +36,7 @@ BUCKETNAME_PREFIX :=
 JWT_KEY_SECRET_NAME := REQUIRED_FOR_DEPLOY!
 URS_CREDS_SECRET_NAME := REQUIRED_FOR_DEPLOY!
 
-# EarthData Login base URL
+# Earthdata Login base URL
 URS_URL := https://uat.urs.earthdata.nasa.gov
 
 # Logging style, either `flat` for human readable or `json` for machine readable

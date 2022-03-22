@@ -52,7 +52,7 @@ MAP:
 
 ### EDL Access Control
 
-By default, all buckets are assumed to require a user to log into EarthData Login to
+By default, all buckets are assumed to require a user to log into Earthdata Login to
 download data. However, there are two options to change that behavior
 
 #### Public Buckets

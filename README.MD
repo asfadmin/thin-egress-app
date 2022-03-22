@@ -89,7 +89,7 @@ You will need to change any variables that have the value `REQUIRED_FOR_DEPLOY!`
 
 
 #### Local Pip Dependencies
-If you need to build against a local version of one of the requirements in the `requirements.txt`
+If you need to build against a local version of one of the requirements in the `requirements/requirements.txt`
 such as `rain_api_core`, you will need to make a few adjustments to your `Makefile.config` for the
 docker container to be able to install those dependencies.
 
@@ -97,10 +97,12 @@ docker container to be able to install those dependencies.
 ```makefile
 DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/task/rain-api-core
 ```
-2. Replace the dependency in the `requirements.txt` file with the container path:
+2. Replace the dependency in the `requirements/requirements.txt` file with the
+container path:
 ```
 file:/var/task/rain-api-core
 ```
+*NOTE: This is a generated file and you should NOT be committing these changes*
 3. Add any source files of that dependency to the `REQUIREMENTS_DEPS` in your `Makefile.config`:
 ```makefile
 REQUIREMENTS_DEPS := $(shell find /host/path/to/rain-api-core/rain_api_core/ -name '*.py')
@@ -125,7 +127,7 @@ source .venv/bin/activate
 
 # Install requirements to the virtual environment.
 # Make sure you see '(.venv)' in your shell prompt before running this!
-pip install -r requirements.txt -r requirements-dev.txt
+pip install -r requirements/requirements.txt -r requirements/requirements-dev.txt
 
 # Run the tests
 make test

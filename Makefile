@@ -85,7 +85,7 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -rf $(DIR)
 
-$(DIR)/thin-egress-app-dependencies.zip: requirements.txt $(REQUIREMENTS_DEPS)
+$(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
 	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"

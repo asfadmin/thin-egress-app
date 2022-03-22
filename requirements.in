@@ -1,0 +1,6 @@
+cachetools
+cfnresponse
+chalice
+flatdict
+git+https://github.com/asfadmin/rain-api-core.git@5f3969fad39cd16e8ce33d81b37499244522aaf8
+netaddr

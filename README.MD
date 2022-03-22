@@ -97,7 +97,7 @@ docker container to be able to install those dependencies.
 ```makefile
 DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/task/rain-api-core
 ```
-2. Add the container path to the `requirements.txt` file:
+2. Replace the dependency in the `requirements.txt` file with the container path:
 ```
 file:/var/task/rain-api-core
 ```

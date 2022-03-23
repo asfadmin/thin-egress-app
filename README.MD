@@ -95,12 +95,12 @@ docker container to be able to install those dependencies.
 
 1. Mount the local dependency as a docker volume using `DOCKER_ARGS` in your `Makefile.config`:
 ```makefile
-DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/task/rain-api-core
+DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/deps/rain-api-core
 ```
 2. Replace the dependency in the `requirements/requirements.txt` file with the
 container path:
 ```
-file:/var/task/rain-api-core
+file:/var/deps/rain-api-core
 ```
 *NOTE: This is a generated file and you should NOT be committing these changes*
 3. Add any source files of that dependency to the `REQUIREMENTS_DEPS` in your `Makefile.config`:

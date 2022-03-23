@@ -28,7 +28,7 @@ DOCKER := docker
 # On Linux we need to do a bit of userid finagling so that the output files
 # end up being owned by us and not by root. On Mac this works out of the box.
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
-DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS) lambci/lambda:build-python3.8
+DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS)
 
 #####################
 # Deployment Config #
@@ -91,7 +91,7 @@ clean:
 $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
-	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
+	$(DOCKER_COMMAND) lambci/lambda:build-python3.8 build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_RESOURCES)
 $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
@@ -249,10 +249,15 @@ cleandeploy:
 # Development #
 ###############
 
+$(EMPTY)/.lambda-docker-image: build/lambda-ci.Dockerfile
+	$(DOCKER) build -f build/lambda-ci.Dockerfile -t tea-dependency-builder ./build
+	@mkdir -p $(EMPTY)
+	@touch $@
+
 requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
 
-requirements/%.txt: requirements/%.in
-	pip-compile $<
+requirements/%.txt: requirements/%.in | $(EMPTY)/.lambda-docker-image
+	$(DOCKER_COMMAND) tea-dependency-builder pip-compile -q --cache-dir /var/task/$(DIR)/.pip-cache/ $< 
 
 .PHONY: lock
 lock: $(REQUIREMENTS_TXT)

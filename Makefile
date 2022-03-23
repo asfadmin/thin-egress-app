@@ -82,7 +82,7 @@ yaml: $(DIR)/thin-egress-app.yaml
 
 .PHONY: terraform
 terraform: $(DIR)/thin-egress-app-terraform.zip
-	@echo "Build Terraform zip file for version ${BUILD_ID}"
+	@echo "Built Terraform zip file for version ${BUILD_ID}"
 
 .PHONY: clean
 clean:

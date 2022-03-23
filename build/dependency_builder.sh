@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# exit when any command fails
+set -e
+
 WORKSPACE=$(pwd)
 OUT_FILE=$1
 BUILD_DIR="$WORKSPACE/$2"

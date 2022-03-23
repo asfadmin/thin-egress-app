@@ -39,12 +39,38 @@ releases see the [GitHub Actions README](.github/workflows/README.md).*
 
 In order to build TEA, you will need to have a few tools installed:
 
+- `make` for build automation
 - `python3.8` for running tests and creating the CloudFormation template
 - `docker` for building the dependency layer
 - `git` for installing rain-api-core
 - `zip` for creating zip files
 - `awscli` (optional) for deploying to AWS
 
+### Python Dependencies
+
+The Python runtime dependencies are declared in a number of `requirements.in`
+files, and pinned to `requirements.txt` files using
+[pip-tools](https://pypi.org/project/pip-tools/). For housekeeping purposes
+these are all located in the `requirements` directory. If you need to add a
+runtime dependency, put it into `requirements/requirements.in` and then run
+`pip-compile` to generate the `requirements/requirements.txt` file.
+
+Note that `pip-tools` itself is declared as a development dependency, so the
+following commands are sufficient for adding a dependency:
+
+```bash
+# Create virtual environment for development
+python3 -m venv .venv
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install requirements to the virtual environment.
+# Make sure you see '(.venv)' in your shell prompt before running this!
+pip install -r requirements/requirements.txt -r requirements/requirements-dev.txt
+
+# Update the pinned requirements files
+make lock
+```
 
 ## Local Builds
 All build artifacts are created in the `dist` directory. Numerous configuration options are available through the `Makefile.config` which is created the first time you run `make` (see [Configuration](#configuration)).
@@ -117,17 +143,13 @@ TEA has two types of automated tests. End-to-End tests and unit tests. The End-t
 
 ### Unit Tests
 
-The unit test suite is written using pytest. It can be run in a virtual environment with the following commands:
+The unit test suite is written using pytest. It can be run in a virtual
+environment (see [Python Dependencies](#python-dependencies)) with the
+following commands:
 
 ```bash
-# Create virtual environment
-python3 -m venv .venv
 # Activate virtual environment
 source .venv/bin/activate
-
-# Install requirements to the virtual environment.
-# Make sure you see '(.venv)' in your shell prompt before running this!
-pip install -r requirements/requirements.txt -r requirements/requirements-dev.txt
 
 # Run the tests
 make test

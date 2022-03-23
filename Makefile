@@ -7,6 +7,9 @@ SOURCES := \
 RESOURCES := $(wildcard lambda/templates/*)
 TERRAFORM := $(wildcard terraform/*)
 
+REQUIREMENTS_IN := $(wildcard requirements/*.in)
+REQUIREMENTS_TXT := $(REQUIREMENTS_IN:.in=.txt)
+
 # Output directory
 DIR := dist
 EMPTY := $(DIR)/empty
@@ -245,6 +248,14 @@ cleandeploy:
 ###############
 # Development #
 ###############
+
+requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
+
+requirements/%.txt: requirements/%.in
+	pip-compile $<
+
+.PHONY: lock
+lock: $(REQUIREMENTS_TXT)
 
 .PHONY: test
 test:

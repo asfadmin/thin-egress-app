@@ -156,7 +156,7 @@ $(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)dependencies-$(S3_ARTIFACT_TAG).zip
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-dependencies
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 	@echo "Deploying code"
@@ -165,7 +165,7 @@ $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)code-$(S3_ARTIFACT_TAG).zip
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-code
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 $(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 	@echo "Deploying bucket map"
@@ -173,7 +173,7 @@ $(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 		s3://$(CONFIG_BUCKET)/$(CONFIG_PREFIX)bucket-map-$(S3_ARTIFACT_TAG).yaml
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-bucket-map
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 # Optionally upload a bucket map if the user hasn't specified one
 BUCKET_MAP_REQUIREMENT :=
@@ -221,7 +221,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					UseCorsCookieDomain="False"
 
 	@mkdir -p $(EMPTY)
-	@touch $(EMPTY)/.deploy-stack
+	@touch $@
 
 # Deploy everything
 .PHONY: deploy

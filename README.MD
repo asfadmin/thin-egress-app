@@ -53,10 +53,19 @@ files, and pinned to `requirements.txt` files using
 [pip-tools](https://pypi.org/project/pip-tools/). For housekeeping purposes
 these are all located in the `requirements` directory. If you need to add a
 runtime dependency, put it into `requirements/requirements.in` and then run
-`pip-compile` to generate the `requirements/requirements.txt` file.
+`make lock` to generate the `requirements/requirements.txt` file. This will
+run `pip-compile` in a docker container to ensure the file is compiled for a
+lambda compatible environment.
 
-Note that `pip-tools` itself is declared as a development dependency, so the
-following commands are sufficient for adding a dependency:
+```bash
+# Update the pinned requirements files
+make lock
+```
+
+Note that the pinned `requirements.txt` files are environment specific. i.e.
+they might not be correct when run outside of a linux/awslambda environment. If
+you are developing on a different platform such as MacOS, you will have to
+compile your own versions of these files before you can install them locally.
 
 ```bash
 # Create virtual environment for development
@@ -64,12 +73,17 @@ python3 -m venv .venv
 # Activate virtual environment
 source .venv/bin/activate
 
-# Install requirements to the virtual environment.
+# Install pip-tools
 # Make sure you see '(.venv)' in your shell prompt before running this!
-pip install -r requirements/requirements.txt -r requirements/requirements-dev.txt
+pip install pip-tools
 
-# Update the pinned requirements files
-make lock
+# Compile the dependency tree for your particular environment.
+# On Linux, you can skip this and use the versions included in the source
+pip-compile requirements/requirements.in -o requirements/my-requirements.txt
+pip-compile requirements/requirements-dev.in -o requirements/my-requirements-dev.txt
+
+# Install requirements to the virtual environment.
+pip install -r requirements/my-requirements.txt -r requirements/my-requirements-dev.txt
 ```
 
 ## Local Builds

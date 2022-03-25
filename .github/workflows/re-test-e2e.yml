@@ -186,7 +186,7 @@ jobs:
           URS_USERNAME: ${{ secrets.URS_USERNAME }}
           URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
         run: |
-          pip install -r requirements-dev.txt GDAL==3.0.4
+          pip install -r requirements/requirements-test.txt GDAL==3.0.4
           pytest tests_e2e \
               --stack-name=$STACK_NAME \
               --test-results=asf.public.code/thin-egress-app/testresults.json \

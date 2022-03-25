@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 
+# exit when any command fails
+set -e
+
 WORKSPACE=$(pwd)
 OUT_FILE=$1
 BUILD_DIR="$WORKSPACE/$2"
+REQUIREMENTS_FILE="${WORKSPACE}/requirements/requirements.txt"
 
 mkdir -p $BUILD_DIR/python
 cd $BUILD_DIR/python || exit
 
-echo "Installing ${WORKSPACE}/requirements.txt"
+echo "Installing ${REQUIREMENTS_FILE}"
 python3.8 -m pip install \
   --upgrade \
-  -r "${WORKSPACE}/requirements.txt" \
+  -r "$REQUIREMENTS_FILE" \
   --target $BUILD_DIR/python \
   --cache-dir $BUILD_DIR/.pip-cache/
 

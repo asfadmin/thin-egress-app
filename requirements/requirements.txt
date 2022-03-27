@@ -24,7 +24,7 @@ cryptography==36.0.2
     # via pyjwt
 flatdict==4.0.1
     # via -r requirements/requirements.in
-inquirer==2.9.1
+inquirer==2.9.2
     # via chalice
 jinja2==3.0.3
     # via rain-api-core

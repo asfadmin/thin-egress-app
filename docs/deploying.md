@@ -62,8 +62,8 @@ To set up the URS Auth secret object, You'll need these parameters:
 * `UrsId` can be found on your SSO application's URS home page as `Client ID`.
 * `UrsAuth` is the `UID` for your URS SSO app and password separated by a colon.
 You can create the value with the command below. See EDL's
-[Request Authorization Code](https://urs.earthdata.nasa.gov/sso_client_impl)
-documentation for more details.
+[Doumentation](https://urs.earthdata.nasa.gov/documentation/for_integrators/edl_integration)
+for more details.
 
 Encode the Creds
 ```bash
@@ -142,7 +142,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `AuthBaseUrl` - Which maturity of URS to hit
 * **Data Bucket Setup**:
    * `BucketnamePrefix` - (OPTIONAL) Bucket prefix value (see [Bucket Mapping](configuration.md#bucket-mapping))
-   * `BucketMapFile` - bucket map YAML file (see [Bucket Mapping](configuration#bucket-mapping))
+   * `BucketMapFile` - bucket map YAML file (see [Bucket Mapping](configuration.md#bucket-mapping))
    * `UseReverseBucketMap` - Ignore this value!
    * `DownloadRoleArn` - (OPTIONAL) Pre-created IAM Role for minting presigned urls
      * Leave blank to create a new role for deployment

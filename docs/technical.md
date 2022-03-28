@@ -62,7 +62,7 @@ tightly coupled TEA+Cumulus deployments.
 The Earthdata Login OAUTH service is a requirement for distributing data where
 user activity tracking and reporting is required. Before deploying TEA, it is
 important to have access to, or
-[create a new EDL Application](https://urs.earthdata.nasa.gov/apps/new).
+[create a new EDL Application](https://urs.earthdata.nasa.gov/documentation/for_integrators/how_to_register_an_app).
 Creating and administrating an EDL Application requires the EDL App Admin role,
 which must be requested through the feedback modal in the Earthdata login header
 menu.

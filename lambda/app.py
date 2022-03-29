@@ -80,13 +80,13 @@ STAGE = os.getenv('STAGE_NAME', 'DEV')
 
 JWT_COOKIE_NAME = 'asf-urs'
 JWT_KEYS = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
-AUTH_CONFIG = {
-    'algorithm': os.getenv('JWT_ALGO', 'RS256'),
-    'public_key': base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
-    'private_key': base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
-    'cookie_name': os.getenv('JWT_COOKIENAME', '')
-}
-JWT_MANAGER = JwtManager(**AUTH_CONFIG)
+
+JWT_MANAGER = JwtManager(
+    algorithm=os.getenv('JWT_ALGO', 'RS256'),
+    public_key=base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
+    private_key=base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
+    cookie_name=os.getenv('JWT_COOKIENAME', '')
+)
 
 
 class TeaChalice(Chalice):
@@ -822,7 +822,7 @@ def dynamic_url():
                 return user_profile
 
             log_context(user_id=user_profile.user_id)
-            log.debug(f'User {user_profile.user_id} has user profile: {user_profile.to_jwt_payload()}')
+            log.debug(f'User %s has user profile: %s', user_profile.user_id, user_profile.to_jwt_payload())
             custom_headers.update(
                 JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', '')))
         else:

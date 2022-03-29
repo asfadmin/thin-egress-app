@@ -542,7 +542,16 @@ def test_root_with_login(
     mock_make_html_response.assert_called_once_with(
         {
             "title": "Welcome",
-            "profile": user_profile.to_jwt_payload()
+            "profile": {
+                'urs-user-id': 'test_user',
+                'urs-access-token': 'test_token',
+                'urs-groups': [],
+                'first_name': 'John',
+                'last_name': 'Smith',
+                'email': 'j.smith@email.com',
+                'iat': 0,
+                'exp': 0
+            }
         },
         {"Content-Type": "text/html"},
         200,

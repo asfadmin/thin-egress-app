@@ -1,3 +1,0 @@
-mkdocs==1.2.3
-mkdocs-include-markdown-plugin==3.3.0
-mkdocs-asf-theme==0.2.4

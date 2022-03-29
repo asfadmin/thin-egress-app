@@ -39,12 +39,52 @@ releases see the [GitHub Actions README](.github/workflows/README.md).*
 
 In order to build TEA, you will need to have a few tools installed:
 
+- `make` for build automation
 - `python3.8` for running tests and creating the CloudFormation template
 - `docker` for building the dependency layer
 - `git` for installing rain-api-core
 - `zip` for creating zip files
 - `awscli` (optional) for deploying to AWS
 
+### Python Dependencies
+
+The Python runtime dependencies are declared in a number of `requirements.in`
+files, and pinned to `requirements.txt` files using
+[pip-tools](https://pypi.org/project/pip-tools/). For housekeeping purposes
+these are all located in the `requirements` directory. If you need to add a
+runtime dependency, put it into `requirements/requirements.in` and then run
+`make lock` to generate the `requirements/requirements.txt` file. This will
+run `pip-compile` in a docker container to ensure the file is compiled for a
+lambda compatible environment.
+
+```bash
+# Update the pinned requirements files
+make lock
+```
+
+Note that the pinned `requirements.txt` files are environment specific. i.e.
+they might not be correct when run outside of a linux/awslambda environment. If
+you are developing on a different platform such as MacOS, you will have to
+compile your own versions of these files before you can install them locally.
+
+```bash
+# Create virtual environment for development
+python3 -m venv .venv
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install pip-tools
+# Make sure you see '(.venv)' in your shell prompt before running this!
+pip install pip-tools
+
+# Compile the dependency tree for your particular environment.
+# On Linux, you can skip this and use the versions included in the source
+pip-compile requirements/requirements.in -o requirements/my-requirements.txt
+pip-compile requirements/requirements-dev.in -o requirements/my-requirements-dev.txt
+
+# Install requirements to the virtual environment.
+pip install -r requirements/my-requirements.txt -r requirements/my-requirements-dev.txt
+```
 
 ## Local Builds
 All build artifacts are created in the `dist` directory. Numerous configuration options are available through the `Makefile.config` which is created the first time you run `make` (see [Configuration](#configuration)).
@@ -89,18 +129,20 @@ You will need to change any variables that have the value `REQUIRED_FOR_DEPLOY!`
 
 
 #### Local Pip Dependencies
-If you need to build against a local version of one of the requirements in the `requirements.txt`
+If you need to build against a local version of one of the requirements in the `requirements/requirements.txt`
 such as `rain_api_core`, you will need to make a few adjustments to your `Makefile.config` for the
 docker container to be able to install those dependencies.
 
 1. Mount the local dependency as a docker volume using `DOCKER_ARGS` in your `Makefile.config`:
 ```makefile
-DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/task/rain-api-core
+DOCKER_ARGS := -v /host/path/to/rain-api-core:/var/deps/rain-api-core
 ```
-2. Add the container path to the `requirements.txt` file:
+2. Replace the dependency in the `requirements/requirements.txt` file with the
+container path:
 ```
-file:/var/task/rain-api-core
+file:/var/deps/rain-api-core
 ```
+*NOTE: This is a generated file and you should NOT be committing these changes*
 3. Add any source files of that dependency to the `REQUIREMENTS_DEPS` in your `Makefile.config`:
 ```makefile
 REQUIREMENTS_DEPS := $(shell find /host/path/to/rain-api-core/rain_api_core/ -name '*.py')
@@ -115,17 +157,13 @@ TEA has two types of automated tests. End-to-End tests and unit tests. The End-t
 
 ### Unit Tests
 
-The unit test suite is written using pytest. It can be run in a virtual environment with the following commands:
+The unit test suite is written using pytest. It can be run in a virtual
+environment (see [Python Dependencies](#python-dependencies)) with the
+following commands:
 
 ```bash
-# Create virtual environment
-python3 -m venv .venv
 # Activate virtual environment
 source .venv/bin/activate
-
-# Install requirements to the virtual environment.
-# Make sure you see '(.venv)' in your shell prompt before running this!
-pip install -r requirements.txt -r requirements-dev.txt
 
 # Run the tests
 make test

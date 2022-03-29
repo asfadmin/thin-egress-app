@@ -11,8 +11,20 @@ jobs:
         with:
           python-version: 3.8
 
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements/requirements.txt
 
       - uses: TrueBrain/actions-flake8@v2
         with:
           plugins: flake8-isort
+
+  requirements:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check requirements.in order
+        run: |
+          shopt -s nullglob
+          for f in requirements/*.in; do
+            LANG=C sort -c "$f"
+          done

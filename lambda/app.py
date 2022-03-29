@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import time
-from dataclasses import asdict
 from functools import wraps
 from typing import Optional
 from urllib import request
@@ -23,10 +22,10 @@ try:
 except ImportError:
     trace = None
 
-
     def inject(obj):
         return obj
 
+from rain_api_core.auth import JwtManager
 from rain_api_core.aws_util import (
     check_in_region_request,
     get_role_creds,
@@ -38,19 +37,8 @@ from rain_api_core.bucket_map import BucketMap
 from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
 from rain_api_core.timer import Timer
-from rain_api_core.urs_util import (
-    get_user_profile,
-    do_login,
-    get_new_token_and_profile,
-    get_urs_creds,
-    get_urs_url,
-    user_in_group,
-)
-from rain_api_core.view_util import (
-    get_html_body,
-)
-
-from rain_api_core.auth import JwtManager, UserProfile
+from rain_api_core.urs_util import do_login, get_new_token_and_profile, get_urs_creds, get_urs_url, user_in_group
+from rain_api_core.view_util import get_html_body
 
 
 def with_trace(context=None):
@@ -94,8 +82,9 @@ JWT_COOKIE_NAME = 'asf-urs'
 JWT_KEYS = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
 AUTH_CONFIG = {
     'algorithm': os.getenv('JWT_ALGO', 'RS256'),
-    'public_key': base64.b64decode(JWT_KEYS['rsa_pub_key'].encode('utf-8')),
-    'private_key': base64.b64decode(JWT_KEYS['rsa_priv_key'].encode('utf-8')),
+    'public_key': base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
+    'private_key': base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
+    'cookie_name': os.getenv('JWT_COOKIENAME', '')
 }
 JWT_MANAGER = JwtManager(**AUTH_CONFIG)
 
@@ -108,7 +97,8 @@ class TeaChalice(Chalice):
         # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
         user_profile = JWT_MANAGER.get_profile_from_headers(event.get('headers'))
-        log_context(user_id=user_profile.user_id)
+        if user_profile is not None:
+            log_context(user_id=user_profile.user_id)
 
         resp = super().__call__(event, context)
 
@@ -499,7 +489,7 @@ def root():
     if user_profile is not None:
         log_context(user_id=user_profile.user_id)
         if os.getenv('MATURITY') == 'DEV':
-            template_vars['profile'] = asdict(user_profile)
+            template_vars['profile'] = user_profile.to_jwt_payload()
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
     headers = {'Content-Type': 'text/html'}
@@ -663,18 +653,20 @@ def try_download_head(bucket, filename):
 
     # Try Redirecting to HEAD. There should be a better way.
     user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
-    log_context(user_id=user_profile.user_id)
+    user_id = ''
+    if user_profile is not None:
+        user_id = user_profile.user_id
 
     # Generate URL
     timer.mark("get_role_creds()")
-    creds, offset = get_role_creds(user_id=user_profile.user_id)
+    creds, offset = get_role_creds(user_id=user_id)
     url_lifespan = 3600 - offset
 
-    session = get_role_session(creds=creds, user_id=user_profile.user_id)
+    session = get_role_session(creds=creds, user_id=user_id)
     timer.mark("get_bucket_region()")
     bucket_region = get_bucket_region(session, bucket)
     timer.mark("get_presigned_url()")
-    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_profile.user_id,
+    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id,
                                       'HEAD')
     timer.mark()
 
@@ -830,7 +822,7 @@ def dynamic_url():
                 return user_profile
 
             log_context(user_id=user_profile.user_id)
-            log.debug(f'User {user_profile.user_id} has user profile: {asdict(user_profile)}')
+            log.debug(f'User {user_profile.user_id} has user profile: {user_profile.to_jwt_payload()}')
             custom_headers.update(
                 JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', '')))
         else:
@@ -880,7 +872,7 @@ def profile():
 @with_trace(context={})
 def pubkey():
     thebody = json.dumps({
-        'rsa_pub_key': JWT_MANAGER.public_key.decode(),
+        'rsa_pub_key': JWT_MANAGER.public_key,
         'algorithm': JWT_MANAGER.algorithm
     })
     return Response(body=thebody,

@@ -81,6 +81,14 @@ def mock_request():
         yield m
 
 
+@mock.patch(f"{MODULE}.urllib.request", autospec=True)
+def test_update_blacklist(mock_request, monkeypatch):
+    endpoint = 'https://blacklist.com'
+    monkeypatch.setenv('BLACKLIST_ENDPOINT', endpoint)
+    mock_request.urlopen(endpoint).read.return_value = b'{"blacklist": {"foo": "bar"}}'
+    assert app.get_black_list() == {"foo": "bar"}
+
+
 def test_get_request_id(lambda_context):
     lambda_context.aws_request_id = "1234"
     assert app.get_request_id() == "1234"
@@ -126,7 +134,6 @@ def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
     mock_request.urlopen.return_value = mock_response
 
     assert app.get_user_from_token("token") == "user_name"
-    mock_get_urs_creds.assert_called_once()
 
 
 def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, current_request):

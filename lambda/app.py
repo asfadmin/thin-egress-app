@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import time
+import urllib.request
 from functools import wraps
 from typing import Optional
 from urllib import request
@@ -89,8 +90,18 @@ JWT_MANAGER = JwtManager(
 )
 
 
+@ttl_cache(maxsize=2, ttl=10*60, timer=time.time)
+def get_black_list():
+    endpoint = os.getenv('BLACKLIST_ENDPOINT', '')
+    if endpoint:
+        response = urllib.request.urlopen(endpoint).read().decode('utf-8')
+        return json.loads(response)['blacklist']
+    return {}
+
+
 class TeaChalice(Chalice):
     def __call__(self, event, context):
+        JWT_MANAGER.black_list = get_black_list()
         resource_path = event.get('requestContext', {}).get('resourcePath')
         origin_request_id = event.get('headers', {}).get('x-origin-request-id')
         log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
@@ -167,7 +178,7 @@ def get_user_from_token(token):
     :return: user ID of requesting user.
     """
 
-    urs_creds = get_urs_creds()  # noqa
+    urs_creds = get_urs_creds()
 
     params = {
         'client_id': urs_creds['UrsId'],
@@ -822,7 +833,7 @@ def dynamic_url():
                 return user_profile
 
             log_context(user_id=user_profile.user_id)
-            log.debug(f'User %s has user profile: %s', user_profile.user_id, user_profile.to_jwt_payload())
+            log.debug('User %s has user profile: %s', user_profile.user_id, user_profile.to_jwt_payload())
             custom_headers.update(
                 JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', ''))
             )

@@ -1,0 +1,4 @@
+# Requirements for mkdocs pages
+mkdocs
+mkdocs-include-markdown-plugin
+mkdocs-asf-theme

@@ -630,7 +630,10 @@ def get_bc_config_client(user_id):
 @with_trace()
 def get_data_dl_s3_client():
     user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
-    return get_bc_config_client(user_profile.user_id)
+    user_id = ''
+    if user_profile is not None:
+        user_id = user_profile.user_id
+    return get_bc_config_client(user_id)
 
 
 @with_trace()

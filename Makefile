@@ -262,7 +262,7 @@ tea-dependency-builder: build/lambda-ci.Dockerfile
 requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
 
 requirements/%.txt: requirements/%.in
-	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q --cache-dir /var/task/$(DIR)/.pip-cache/ $<
+	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ $<
 
 .PHONY: lock
 lock: $(REQUIREMENTS_TXT)

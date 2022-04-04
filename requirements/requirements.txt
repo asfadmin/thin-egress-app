@@ -8,7 +8,7 @@ attrs==21.4.0
     # via chalice
 blessed==1.19.1
     # via inquirer
-botocore==1.24.24
+botocore==1.24.33
     # via chalice
 cachetools==5.0.0
     # via -r requirements/requirements.in
@@ -18,15 +18,15 @@ cfnresponse==1.1.2
     # via -r requirements/requirements.in
 chalice==1.26.6
     # via -r requirements/requirements.in
-click==8.0.4
+click==8.1.2
     # via chalice
 cryptography==36.0.2
     # via pyjwt
 flatdict==4.0.1
     # via -r requirements/requirements.in
-inquirer==2.9.1
+inquirer==2.9.2
     # via chalice
-jinja2==3.0.3
+jinja2==3.1.1
     # via rain-api-core
 jmespath==0.10.0
     # via
@@ -52,7 +52,7 @@ pyyaml==6.0
     # via
     #   chalice
     #   rain-api-core
-rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@5f3969fad39cd16e8ce33d81b37499244522aaf8
+rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@8523a4a6b4e7a492015910f2224755fd91126d22
     # via -r requirements/requirements.in
 readchar==3.0.5
     # via inquirer

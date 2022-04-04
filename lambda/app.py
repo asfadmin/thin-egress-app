@@ -537,6 +537,7 @@ def login():
         status_code, template_vars, headers = do_login(
             app.current_request.query_params,
             app.current_request.context,
+            JWT_MANAGER,
             os.getenv('COOKIE_DOMAIN', ''),
             aux_headers=aux_headers
         )

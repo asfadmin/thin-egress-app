@@ -249,7 +249,8 @@ cleandeploy:
 # Development #
 ###############
 
-$(EMPTY)/.lambda-docker-image: build/lambda-ci.Dockerfile
+.PHONY: tea-dependency-builder
+tea-dependency-builder: build/lambda-ci.Dockerfile
 	$(DOCKER) build -f build/lambda-ci.Dockerfile -t tea-dependency-builder ./build
 	@mkdir -p $(EMPTY)
 	@touch $@

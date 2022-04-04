@@ -388,16 +388,18 @@ def get_user_ip():
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     timer = Timer()
     timer.mark()
-
-    log.info("User Id for download is {0}".format(user_profile.user_id))
-    log_context(user_id=user_profile.user_id)
+    user_id = None
+    if user_profile is not None:
+        user_id = user_profile.user_id
+    log.info("User Id for download is {0}".format(user_id))
+    log_context(user_id=user_id)
 
     timer.mark("check_in_region_request()")
     is_in_region = check_in_region_request(get_user_ip())
     timer.mark("get_role_creds()")
-    creds, offset = get_role_creds(user_profile.user_id, is_in_region)
+    creds, offset = get_role_creds(user_id, is_in_region)
     timer.mark("get_role_session()")
-    session = get_role_session(creds=creds, user_id=user_profile.user_id)
+    session = get_role_session(creds=creds, user_id=user_id)
     timer.mark("get_bucket_region()")
 
     try:
@@ -409,7 +411,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         except (AttributeError, KeyError, IndexError):
             code = 400
         log.debug(f'response: {e.response}')
-        log.error(f'ClientError while {user_profile.user_id} tried downloading {bucket}/{filename}: {e}')
+        log.error(f'ClientError while {user_id} tried downloading {bucket}/{filename}: {e}')
         cumulus_log_message('failure', code, 'GET', {'reason': 'ClientError', 's3': f'{bucket}/{filename}'})
         template_vars = {'contentstring': 'There was a problem accessing download data.',
                          'title': 'Data Not Available',
@@ -424,7 +426,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
         log_message = "bucket {0} is in region {1}, we are in region {2}! " + \
                       "This is double egress in Proxy mode!"
         log.warning(log_message.format(bucket, bucket_region, os.getenv('AWS_DEFAULT_REGION')))
-    client = get_bc_config_client(user_profile.user_id)
+    client = get_bc_config_client(user_id)
 
     log.debug('timing for try_download_from_bucket(): ')
     timer.log_all(log)
@@ -452,7 +454,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             redirheaders.update(headers)
 
         # Generate URL
-        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_profile.user_id)
+        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was {0}".format(s3_host))
 
@@ -815,7 +817,7 @@ def dynamic_url():
     timer.mark("possible auth header handling")
     if required_groups is None:
         log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
-    elif not user_profile:
+    elif user_profile is None:
         authorization = app.current_request.headers.get('Authorization')
         if not authorization:
             return do_auth_and_return(app.current_request.context)

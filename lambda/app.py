@@ -1,6 +1,8 @@
+import base64
 import json
 import os
 import time
+import urllib.request
 from functools import wraps
 from typing import Optional
 from urllib import request
@@ -24,27 +26,20 @@ except ImportError:
     def inject(obj):
         return obj
 
-from rain_api_core.aws_util import check_in_region_request, get_role_creds, get_role_session, get_yaml_file
+from rain_api_core.auth import JwtManager
+from rain_api_core.aws_util import (
+    check_in_region_request,
+    get_role_creds,
+    get_role_session,
+    get_yaml_file,
+    retrieve_secret
+)
 from rain_api_core.bucket_map import BucketMap
 from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
 from rain_api_core.timer import Timer
-from rain_api_core.urs_util import (
-    do_login,
-    get_new_token_and_profile,
-    get_urs_creds,
-    get_urs_url,
-    user_in_group,
-    user_profile_2_jwt_payload
-)
-from rain_api_core.view_util import (
-    JWT_ALGO,
-    JWT_COOKIE_NAME,
-    TemplateManager,
-    get_cookie_vars,
-    get_jwt_keys,
-    make_set_cookie_headers_jwt
-)
+from rain_api_core.urs_util import do_login, get_new_token_and_profile, get_urs_creds, get_urs_url, user_in_group
+from rain_api_core.view_util import TemplateManager
 
 
 def with_trace(context=None):
@@ -55,6 +50,7 @@ def with_trace(context=None):
       This will cause the newly created span to create its own context that will be
       passed to subsequent child spans.
     """
+
     def tracefunc(func):
         if trace is None:
             return func
@@ -67,6 +63,7 @@ def with_trace(context=None):
                 return func(*args, **kwargs)
 
         return wrapper
+
     return tracefunc
 
 
@@ -84,6 +81,25 @@ get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 
+JWT_COOKIE_NAME = 'asf-urs'
+JWT_KEYS = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
+
+JWT_MANAGER = JwtManager(
+    algorithm=os.getenv('JWT_ALGO', 'RS256'),
+    public_key=base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
+    private_key=base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
+    cookie_name=os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)
+)
+
+
+@ttl_cache(maxsize=2, ttl=10*60, timer=time.time)
+def get_black_list():
+    endpoint = os.getenv('BLACKLIST_ENDPOINT', '')
+    if endpoint:
+        response = urllib.request.urlopen(endpoint).read().decode('utf-8')
+        return json.loads(response)['blacklist']
+    return {}
+
 
 class TeaChalice(Chalice):
     def __init__(self, *args, **kwargs):
@@ -92,13 +108,15 @@ class TeaChalice(Chalice):
         self.template_manager = TemplateManager(conf_bucket, template_dir)
 
     def __call__(self, event, context):
+        JWT_MANAGER.black_list = get_black_list()
         resource_path = event.get('requestContext', {}).get('resourcePath')
         origin_request_id = event.get('headers', {}).get('x-origin-request-id')
         log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
-        # get_jwt_field() below generates log messages, so the above log_context() sets the
+        # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
         # vars for it to use while it's doing the username lookup
-        userid = get_jwt_field(get_cookie_vars(event.get('headers', {}) or {}), 'urs-user-id')
-        log_context(user_id=userid)
+        user_profile = JWT_MANAGER.get_profile_from_headers(event.get('headers'))
+        if user_profile is not None:
+            log_context(user_id=user_profile.user_id)
 
         resp = super().__call__(event, context)
 
@@ -384,14 +402,9 @@ def get_user_ip():
 def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
     timer = Timer()
     timer.mark()
-
-    # Attempt to pull userid from profile
     user_id = None
-    if isinstance(user_profile, dict):
-        if 'urs-user-id' in user_profile:
-            user_id = user_profile['urs-user-id']
-        elif 'uid' in user_profile:
-            user_id = user_profile['uid']
+    if user_profile is not None:
+        user_id = user_profile.user_id
     log.info("User Id for download is {0}".format(user_id))
     log_context(user_id=user_id)
 
@@ -498,20 +511,12 @@ def get_jwt_field(cookievar: dict, fieldname: str):
 @app.route('/')
 @with_trace(context={})
 def root():
-    user_profile = False
     template_vars = {'title': 'Welcome'}
-
-    cookievars = get_cookie_vars(app.current_request.headers)
-    if cookievars:
-        if JWT_COOKIE_NAME in cookievars:
-            # We have a JWT cookie
-            user_profile = cookievars[JWT_COOKIE_NAME]
-
-    if user_profile:
-        if 'urs-user-id' in user_profile:
-            log_context(user_id=user_profile['urs-user-id'])
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    if user_profile is not None:
+        log_context(user_id=user_profile.user_id)
         if os.getenv('MATURITY') == 'DEV':
-            template_vars['profile'] = user_profile
+            template_vars['profile'] = user_profile.to_jwt_payload()
     else:
         template_vars['URS_URL'] = get_urs_url(app.current_request.context)
     headers = {'Content-Type': 'text/html'}
@@ -521,10 +526,10 @@ def root():
 @app.route('/logout')
 @with_trace(context={})
 def logout():
-    cookievars = get_cookie_vars(app.current_request.headers)
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
     template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
 
-    if JWT_COOKIE_NAME in cookievars:
+    if user_profile is not None:
         template_vars['contentstring'] = 'You are logged out.'
     else:
         template_vars['contentstring'] = 'No active login found.'
@@ -533,7 +538,7 @@ def logout():
         'Content-Type': 'text/html',
     }
 
-    headers.update(make_set_cookie_headers_jwt({}, 'Thu, 01 Jan 1970 00:00:00 GMT', os.getenv('COOKIE_DOMAIN', '')))
+    headers.update(JWT_MANAGER.get_header_to_set_auth_cookie(None, os.getenv('COOKIE_DOMAIN', '')))
     return make_html_response(template_vars, headers, 200, 'root.html')
 
 
@@ -546,6 +551,7 @@ def login():
         status_code, template_vars, headers = do_login(
             app.current_request.query_params,
             app.current_request.context,
+            JWT_MANAGER,
             os.getenv('COOKIE_DOMAIN', ''),
             aux_headers=aux_headers
         )
@@ -638,7 +644,10 @@ def get_bc_config_client(user_id):
 
 @with_trace()
 def get_data_dl_s3_client():
-    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_id = ''
+    if user_profile is not None:
+        user_id = user_profile.user_id
     return get_bc_config_client(user_id)
 
 
@@ -674,8 +683,10 @@ def try_download_head(bucket, filename):
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     # Try Redirecting to HEAD. There should be a better way.
-    user_id = get_jwt_field(get_cookie_vars(app.current_request.headers), 'urs-user-id')
-    log_context(user_id=user_id)
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_id = ''
+    if user_profile is not None:
+        user_id = user_profile.user_id
 
     # Generate URL
     timer.mark("get_role_creds()")
@@ -686,7 +697,8 @@ def try_download_head(bucket, filename):
     timer.mark("get_bucket_region()")
     bucket_region = get_bucket_region(session, bucket)
     timer.mark("get_presigned_url()")
-    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id, 'HEAD')
+    presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, url_lifespan, user_id,
+                                      'HEAD')
     timer.mark()
 
     s3_host = urlparse(presigned_url).netloc
@@ -814,16 +826,7 @@ def dynamic_url():
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     custom_headers = dict(entry.headers)
-    cookievars = get_cookie_vars(app.current_request.headers)
-    user_profile = None
-    if cookievars:
-        log.debug('cookievars: {}'.format(cookievars))
-        if JWT_COOKIE_NAME in cookievars:
-            # this means our cookie is a jwt and we don't need to go digging in the session db
-            user_profile = cookievars[JWT_COOKIE_NAME]
-        else:
-            log.warning('jwt cookie not found')
-            # Not kicking user out just yet. We might be dealing with a public bucket
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
     timer.mark("get_required_groups()")
     # It's only necessary to be in one of these groups
     required_groups = entry.get_required_groups()
@@ -832,7 +835,7 @@ def dynamic_url():
     timer.mark("possible auth header handling")
     if required_groups is None:
         log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
-    elif not user_profile:
+    elif user_profile is None:
         authorization = app.current_request.headers.get('Authorization')
         if not authorization:
             return do_auth_and_return(app.current_request.context)
@@ -843,37 +846,31 @@ def dynamic_url():
         if method == "bearer":
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug('we got an Authorization header. {}'.format(authorization))
-            action, data = handle_auth_bearer_header(token)
+            action, user_profile = handle_auth_bearer_header(token)
 
             if action == 'return':
                 # Not a successful event.
-                return data
+                return user_profile
 
-            user_profile = data
-            user_id = user_profile['uid']
-            log_context(user_id=user_id)
-            log.debug(f'User {user_id} has user profile: {user_profile}')
-            jwt_payload = user_profile_2_jwt_payload(user_id, token, user_profile)
-            log.debug(f"Encoding JWT_PAYLOAD: {jwt_payload}")
-            custom_headers.update(make_set_cookie_headers_jwt(jwt_payload, '', os.getenv('COOKIE_DOMAIN', '')))
-            cookievars[JWT_COOKIE_NAME] = jwt_payload
+            log_context(user_id=user_profile.user_id)
+            log.debug('User %s has user profile: %s', user_profile.user_id, user_profile.to_jwt_payload())
+            custom_headers.update(
+                JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', ''))
+            )
         else:
             return do_auth_and_return(app.current_request.context)
 
     timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(required_groups, cookievars, False, aux_headers=aux_headers)
+    u_in_g, new_user_profile = user_in_group(required_groups, user_profile, False, aux_headers=aux_headers)
     timer.mark()
 
     new_jwt_cookie_headers = {}
     if new_user_profile:
         log.debug(f"We got new profile from user_in_group() {new_user_profile}")
         user_profile = new_user_profile
-        jwt_cookie_payload = user_profile_2_jwt_payload(get_jwt_field(cookievars, 'urs-user-id'),
-                                                        get_jwt_field(cookievars, 'urs-access-token'),
-                                                        user_profile)
         new_jwt_cookie_headers.update(
-            make_set_cookie_headers_jwt(jwt_cookie_payload, '', os.getenv('COOKIE_DOMAIN', '')))
+            JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', '')))
 
     log.debug('user_in_group: {}'.format(u_in_g))
 
@@ -907,8 +904,8 @@ def profile():
 @with_trace(context={})
 def pubkey():
     thebody = json.dumps({
-        'rsa_pub_key': str(get_jwt_keys()['rsa_pub_key'].decode()),
-        'algorithm': JWT_ALGO
+        'rsa_pub_key': JWT_MANAGER.public_key,
+        'algorithm': JWT_MANAGER.algorithm
     })
     return Response(body=thebody,
                     status_code=200,

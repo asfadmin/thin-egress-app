@@ -2,5 +2,5 @@ cachetools
 cfnresponse
 chalice
 flatdict
-git+https://github.com/asfadmin/rain-api-core.git@8523a4a6b4e7a492015910f2224755fd91126d22
+git+https://github.com/asfadmin/rain-api-core.git@a6ec7f50899a83d663752266d63340a54245bec9
 netaddr

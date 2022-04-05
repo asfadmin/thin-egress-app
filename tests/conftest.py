@@ -1,6 +1,5 @@
 import importlib
 import logging
-import os
 import pathlib
 import sys
 from typing import IO, Any
@@ -26,22 +25,19 @@ root_logger.setLevel(logging.DEBUG)
 RESOURCES_PATH = pathlib.Path(__file__).parent.joinpath("resources/").absolute()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def aws_config():
+@pytest.fixture(autouse=True)
+def aws_config(monkeypatch):
     """Set up aws cli/boto configuration
 
     This makes sure we don't accidentally touch real resources.
     """
-    # NOTE: This will persist beyond the pytest session,
-    # however, the process should terminate immediately afterwards.
-    os.environ["AWS_ACCESS_KEY_ID"] = "TEST_ACCESS_KEY_ID"
-    os.environ["AWS_SECRET_ACCESS_KEY"] = "TEST_SECRET_ACCESS_KEY"
-    os.environ["AWS_SECURITY_TOKEN"] = "TEST_SECURITY_TOKEN"
-    os.environ["AWS_SESSION_TOKEN"] = "TEST_SESSION_TOKEN"
-    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "TEST_ACCESS_KEY_ID")
+    monkeypatch.setenv("AWS_SECURITY_TOKEN", "TEST_SECURITY_TOKEN")
+    monkeypatch.setenv("AWS_SESSION_TOKEN", "TEST_SESSION_TOKEN")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
 
 
-class Resources():
+class Resources:
     """Helper for getting test resources"""
     def open(self, file, *args, **kwargs) -> IO[Any]:
         return (RESOURCES_PATH / file).open(*args, **kwargs)

@@ -39,8 +39,7 @@ from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import duration, get_log, log_context, return_timing_object
 from rain_api_core.timer import Timer
 from rain_api_core.urs_util import do_login, get_new_token_and_profile, get_urs_creds, get_urs_url, user_in_group
-from rain_api_core.view_util import get_html_body
-
+from rain_api_core.view_util import TemplateManager
 
 
 def with_trace(context=None):

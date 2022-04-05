@@ -50,6 +50,10 @@ Makefile.config:
 
 include Makefile.config
 
+ifdef DOCKER_COMMAND
+DOCKER_LAMBDA_CI = $(DOCKER_COMMAND) lambci/lambda:build-python3.8
+DOCKER_DEPENDENCY_BUILDER = $(DOCKER_COMMAND) tea-dependency-builder
+endif
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -91,7 +95,7 @@ clean:
 $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
-	$(DOCKER_COMMAND) lambci/lambda:build-python3.8 build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
+	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_RESOURCES)
 $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
@@ -249,15 +253,16 @@ cleandeploy:
 # Development #
 ###############
 
-$(EMPTY)/.lambda-docker-image: build/lambda-ci.Dockerfile
+.PHONY: tea-dependency-builder
+tea-dependency-builder: build/lambda-ci.Dockerfile
 	$(DOCKER) build -f build/lambda-ci.Dockerfile -t tea-dependency-builder ./build
 	@mkdir -p $(EMPTY)
 	@touch $@
 
 requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
 
-requirements/%.txt: requirements/%.in | $(EMPTY)/.lambda-docker-image
-	$(DOCKER_COMMAND) tea-dependency-builder pip-compile -q --cache-dir /var/task/$(DIR)/.pip-cache/ $< 
+requirements/%.txt: requirements/%.in
+	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ $<
 
 .PHONY: lock
 lock: $(REQUIREMENTS_TXT)

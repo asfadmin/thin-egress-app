@@ -42,6 +42,7 @@ from rain_api_core.urs_util import do_login, get_new_token_and_profile, get_urs_
 from rain_api_core.view_util import get_html_body
 
 
+
 def with_trace(context=None):
     """Decorator for adding Open Telemetry tracing.
 
@@ -68,7 +69,9 @@ def with_trace(context=None):
 
 
 log = get_log()
-conf_bucket = os.getenv('CONFIG_BUCKET', "rain-t-config")
+
+conf_bucket = os.getenv('CONFIG_BUCKET', 'rain-t-config')
+template_dir = os.getenv('HTML_TEMPLATE_DIR')
 
 # Here's a lifetime-of lambda cache of these values:
 bucket_map_file = os.getenv('BUCKET_MAP_FILE', 'bucket_map.yaml')
@@ -100,6 +103,11 @@ def get_black_list():
 
 
 class TeaChalice(Chalice):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.template_manager = TemplateManager(conf_bucket, template_dir)
+
     def __call__(self, event, context):
         JWT_MANAGER.black_list = get_black_list()
         resource_path = event.get('requestContext', {}).get('resourcePath')
@@ -320,14 +328,21 @@ def make_redirect(to_url, headers=None, status_code=301):
 
 
 @with_trace()
-def make_html_response(t_vars: dict, hdrs: dict, status_code: int = 200, template_file: str = 'root.html'):
-    template_vars = {'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None, 'status_code': status_code}
-    template_vars.update(t_vars)
+def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, template_file: str = 'root.html'):
+    template_vars = {
+        'STAGE': STAGE if not os.getenv('DOMAIN_NAME') else None,
+        'status_code': status_code,
+        **t_vars
+    }
 
-    headers = {'Content-Type': 'text/html'}
-    headers.update(hdrs)
-
-    return Response(body=get_html_body(template_vars, template_file), status_code=status_code, headers=headers)
+    return Response(
+        body=app.template_manager.render(template_file, template_vars),
+        status_code=status_code,
+        headers={
+            **headers,
+            'Content-Type': 'text/html'
+        }
+    )
 
 
 @with_trace()

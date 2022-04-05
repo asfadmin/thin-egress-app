@@ -270,23 +270,23 @@ def test_make_redirect(current_request):
     assert response.status_code == 301
 
 
-@mock.patch(f"{MODULE}.get_html_body", autospec=True)
-def test_make_html_response(mock_get_html_body, monkeypatch):
-    mock_get_html_body.return_value = "<html></html>"
+def test_make_html_response(monkeypatch):
+    mock_render = mock.Mock(return_value="<html></html>")
+    monkeypatch.setattr("lambda.app.app.template_manager.render", mock_render)
 
     response = app.make_html_response({"foo": "bar"}, {"baz": "qux"})
     assert response.body == "<html></html>"
     assert response.status_code == 200
     assert response.headers == {"Content-Type": "text/html", "baz": "qux"}
-    mock_get_html_body.assert_called_once_with({"STAGE": "DEV", "status_code": 200, "foo": "bar"}, "root.html")
-    mock_get_html_body.reset_mock()
+    mock_render.assert_called_once_with("root.html", {"STAGE": "DEV", "status_code": 200, "foo": "bar"})
+    mock_render.reset_mock()
 
     monkeypatch.setenv("DOMAIN_NAME", "example.com")
     response = app.make_html_response({}, {}, 301, "redirect.html")
     assert response.body == "<html></html>"
     assert response.status_code == 301
     assert response.headers == {"Content-Type": "text/html"}
-    mock_get_html_body.assert_called_once_with({"STAGE": None, "status_code": 301}, "redirect.html")
+    mock_render.assert_called_once_with("redirect.html", {"STAGE": None, "status_code": 301})
 
 
 def test_get_bcconfig(monkeypatch):

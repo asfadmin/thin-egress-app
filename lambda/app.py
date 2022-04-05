@@ -86,7 +86,7 @@ JWT_MANAGER = JwtManager(
     algorithm=os.getenv('JWT_ALGO', 'RS256'),
     public_key=base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
     private_key=base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
-    cookie_name=os.getenv('JWT_COOKIENAME', '')
+    cookie_name=os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)
 )
 
 

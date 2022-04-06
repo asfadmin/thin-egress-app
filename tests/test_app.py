@@ -69,7 +69,10 @@ def mock_make_html_response():
     with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
         m.side_effect = lambda _1, headers, status_code, _4: chalice.Response(
             body="Mock response",
-            headers=headers,
+            headers={
+                **headers,
+                "Content-Type": "text/html"
+            },
             status_code=status_code
         )
         yield m
@@ -272,7 +275,7 @@ def test_make_redirect(current_request):
 
 def test_make_html_response(monkeypatch):
     mock_render = mock.Mock(return_value="<html></html>")
-    monkeypatch.setattr("lambda.app.app.template_manager.render", mock_render)
+    monkeypatch.setattr("lambda.app.TEMPLATE_MANAGER.render", mock_render)
 
     response = app.make_html_response({"foo": "bar"}, {"baz": "qux"})
     assert response.body == "<html></html>"
@@ -859,7 +862,7 @@ def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -935,7 +938,7 @@ def test_handle_auth_bearer_header_eula_error_browser(
     )
     assert action == "return"
     assert response.status_code == 403
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
@@ -1217,7 +1220,7 @@ def test_dynamic_url_bad_bucket(mock_get_yaml_file, mock_make_html_response, res
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1252,7 +1255,7 @@ def test_dynamic_url_directory(
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)

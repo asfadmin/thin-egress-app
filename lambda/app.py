@@ -15,7 +15,8 @@ from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
 from cachetools.keys import hashkey
-from chalice import Chalice, Response
+from flask import Flask, Response
+from flask import request as flask_request
 
 try:
     from opentelemetry import trace
@@ -101,36 +102,40 @@ def get_black_list():
     return {}
 
 
-class TeaChalice(Chalice):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+app = Flask(__name__)
+app.template_manager = TemplateManager(conf_bucket, template_dir)
+app.url_map.strict_slashes = False
 
-        self.template_manager = TemplateManager(conf_bucket, template_dir)
+def make_response(body, status_code, headers={}):
+    resp = Response(body.encode(), status_code)
+    origin_request_id = flask_request.context.get('aws_request_id')
+    if origin_request_id:
+        # If we were passed in an x-origin-request-id header, pass it out too
+        resp.headers['x-origin-request-id'] = origin_request_id
 
-    def __call__(self, event, context):
-        JWT_MANAGER.black_list = get_black_list()
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        origin_request_id = event.get('headers', {}).get('x-origin-request-id')
-        log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
-        # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
-        # vars for it to use while it's doing the username lookup
-        user_profile = JWT_MANAGER.get_profile_from_headers(event.get('headers'))
-        if user_profile is not None:
-            log_context(user_id=user_profile.user_id)
-
-        resp = super().__call__(event, context)
-
-        resp['headers']['x-request-id'] = context.aws_request_id
-        if origin_request_id:
-            # If we were passed in an x-origin-request-id header, pass it out too
-            resp['headers']['x-origin-request-id'] = origin_request_id
-
-        log_context(user_id=None, route=None, request_id=None)
-
-        return resp
+    log_context(user_id=None, route=None, request_id=None)
+    resp.headers.update(headers)
+    return resp
 
 
-app = TeaChalice(app_name='egress-lambda')
+@app.before_request
+def setup_request():
+    JWT_MANAGER.black_list = get_black_list()
+    flask_request.event = flask_request.environ.get('serverless.event', {})
+    flask_request.context = flask_request.environ.get('serverless.context', {})
+    if not flask_request.context.get('apiId'):
+        flask_request.context['apiId'] = 'local'
+        flask_request.context['stage'] = ''
+
+
+    resource_path = flask_request.event.get('requestContext', {}).get('resourcePath')
+    origin_request_id = flask_request.event.get('headers', {}).get('x-origin-request-id')
+    log_context(route=resource_path, request_id=flask_request.context.get('aws_request_id'), origin_request_id=origin_request_id)
+    # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
+    # vars for it to use while it's doing the username lookup
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
+    if user_profile is not None:
+        log_context(user_id=user_profile.user_id)
 
 
 class TeaException(Exception):
@@ -144,16 +149,16 @@ class EulaException(TeaException):
 
 @with_trace()
 def get_request_id() -> str:
-    assert app.lambda_context is not None
+    assert flask_request.context is not None
 
-    return app.lambda_context.aws_request_id
+    return flask_request.context.get('aws_request_id', '')
 
 
 @with_trace()
 def get_origin_request_id() -> Optional[str]:
-    assert app.current_request is not None
+    assert flask_request is not None
 
-    return app.current_request.headers.get("x-origin-request-id")
+    return flask_request.headers.get("x-origin-request-id")
 
 
 @with_trace()
@@ -284,7 +289,7 @@ def restore_bucket_vars():
 @with_trace()
 def do_auth_and_return(ctxt):
     log.debug('context: {}'.format(ctxt))
-    here = ctxt['path']
+    here = flask_request.path
     if os.getenv('DOMAIN_NAME'):
         # Pop STAGE value off the request if we have a custom domain
         # TODO(reweeden): python3.9 use `str.removeprefix`
@@ -296,15 +301,15 @@ def do_auth_and_return(ctxt):
     redirect_here = quote_plus(here)
     urs_url = get_urs_url(ctxt, redirect_here)
     log.info("Redirecting for auth: {0}".format(urs_url))
-    return Response(body='', status_code=302, headers={'Location': urs_url})
+    resp = make_response('', 302)
+    resp.headers = {'Location': urs_url}
+    return resp
 
 
 @with_trace()
 def add_cors_headers(headers):
-    assert app.current_request is not None
-
     # send CORS headers if we're configured to use them
-    origin_header = app.current_request.headers.get('origin')
+    origin_header = flask_request.headers.get('origin')
     if origin_header is not None:
         cors_origin = os.getenv("CORS_ORIGIN")
         if cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == 'null'):
@@ -323,7 +328,9 @@ def make_redirect(to_url, headers=None, status_code=301):
     log.info(f'Redirect created. to_url: {to_url}')
     cumulus_log_message('success', status_code, 'GET', {'redirect': 'yes', 'redirect_URL': to_url})
     log.debug(f'headers for redirect: {headers}')
-    return Response(body='', headers=headers, status_code=status_code)
+    resp = make_response('', status_code)
+    resp.headers = headers
+    return resp
 
 
 @with_trace()
@@ -334,14 +341,12 @@ def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, temp
         **t_vars
     }
 
-    return Response(
-        body=app.template_manager.render(template_file, template_vars),
-        status_code=status_code,
-        headers={
+    resp = make_response(app.template_manager.render(template_file, template_vars), status_code)
+    resp.headers = {
             **headers,
             'Content-Type': 'text/html'
         }
-    )
+    return resp
 
 
 @with_trace()
@@ -385,15 +390,13 @@ def get_bucket_region(session, bucketname) -> str:
 
 @with_trace()
 def get_user_ip():
-    assert app.current_request is not None
-
-    x_forwarded_for = app.current_request.headers.get('x-forwarded-for')
+    x_forwarded_for = flask_request.headers.get('x-forwarded-for')
     if x_forwarded_for:
         ip = x_forwarded_for.replace(' ', '').split(',')[0]
         log.debug(f"x-fowarded-for: {x_forwarded_for}")
         log.info(f"Assuming {ip} is the users IP")
         return ip
-    ip = app.current_request.context['identity']['sourceIp']
+    ip = flask_request.remote_addr
     log.debug(f"NO x_fowarded_for, using sourceIp: {ip} instead")
     return ip
 
@@ -490,8 +493,8 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             cumulus_log_message('failure', 416, 'GET', {'reason': 'Invalid Range',
                                                         's3': f'{bucket}/{filename}',
                                                         'range': get_range_header_val()})
-            return Response(body='Invalid Range', status_code=416, headers={})
-
+            resp = make_response('Invalid Range', 416)
+            return resp
         # cumulus uses this log message for metrics purposes.
         log.warning("Could not download s3://{0}/{1}: {2}".format(bucket, filename, e))
         template_vars = {'contentstring': 'Could not find requested data.',
@@ -512,13 +515,13 @@ def get_jwt_field(cookievar: dict, fieldname: str):
 @with_trace(context={})
 def root():
     template_vars = {'title': 'Welcome'}
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
     if user_profile is not None:
         log_context(user_id=user_profile.user_id)
         if os.getenv('MATURITY') == 'DEV':
             template_vars['profile'] = user_profile.to_jwt_payload()
     else:
-        template_vars['URS_URL'] = get_urs_url(app.current_request.context)
+        template_vars['URS_URL'] = get_urs_url(flask_request.context)
     headers = {'Content-Type': 'text/html'}
     return make_html_response(template_vars, headers, 200, 'root.html')
 
@@ -526,8 +529,8 @@ def root():
 @app.route('/logout')
 @with_trace(context={})
 def logout():
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
-    template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(app.current_request.context)}
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
+    template_vars = {'title': 'Logged Out', 'URS_URL': get_urs_url(flask_request.context)}
 
     if user_profile is not None:
         template_vars['contentstring'] = 'You are logged out.'
@@ -545,12 +548,12 @@ def logout():
 @app.route('/login')
 @with_trace(context={})
 def login():
+    headers = {}
     try:
-        headers = {}
         aux_headers = get_aux_request_headers()
         status_code, template_vars, headers = do_login(
-            app.current_request.query_params,
-            app.current_request.context,
+            flask_request.args,
+            flask_request.context,
             JWT_MANAGER,
             os.getenv('COOKIE_DOMAIN', ''),
             aux_headers=aux_headers
@@ -563,7 +566,9 @@ def login():
             'title': 'Client Error',
         }
     if status_code == 301:
-        return Response(body='', status_code=status_code, headers=headers)
+        resp = make_response('', status_code)
+        resp.headers = headers
+        return resp
 
     template_vars['requestid'] = get_request_id()
     return make_html_response(template_vars, headers, status_code, 'error.html')
@@ -585,22 +590,22 @@ def version():
 @app.route('/locate')
 @with_trace(context={})
 def locate():
-    query_params = app.current_request.query_params
+    query_params = flask_request.args
     if query_params is None or query_params.get('bucket_name') is None:
-        return Response(body='Required "bucket_name" query paramater not specified',
-                        status_code=400,
-                        headers={'Content-Type': 'text/plain'})
+        resp = make_response('Required "bucket_name" query paramater not specified', 400)
+        resp.headers = {'Content-Type': 'text/plain'}
+        return resp
     bucket_name = query_params.get('bucket_name')
     bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file)['MAP'])
     search_map = flatdict.FlatDict(bucket_map, delimiter='/')
     matching_paths = [key for key, value in search_map.items() if value == bucket_name]
     if (len(matching_paths) > 0):
-        return Response(body=json.dumps(matching_paths),
-                        status_code=200,
-                        headers={'Content-Type': 'application/json'})
-    return Response(body=f'No route defined for {bucket_name}',
-                    status_code=404,
-                    headers={'Content-Type': 'text/plain'})
+        resp = make_response(json.dumps(matching_paths), 200)
+        resp.headers = {'Content-Type': 'application/json'}
+        return resp
+    resp = make_response(f'No route defined for {bucket_name}', 404,)
+    resp.headers ={'Content-Type': 'text/plain'}
+    return resp
 
 
 @with_trace()
@@ -616,10 +621,10 @@ def collapse_bucket_configuration(bucket_map):
 
 @with_trace()
 def get_range_header_val():
-    if 'Range' in app.current_request.headers:
-        return app.current_request.headers['Range']
-    if 'range' in app.current_request.headers:
-        return app.current_request.headers['range']
+    if 'Range' in flask_request.headers:
+        return flask_request.headers['Range']
+    if 'range' in flask_request.headers:
+        return flask_request.headers['range']
     return None
 
 
@@ -644,7 +649,7 @@ def get_bc_config_client(user_id):
 
 @with_trace()
 def get_data_dl_s3_client():
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
     user_id = ''
     if user_profile is not None:
         user_id = user_profile.user_id
@@ -683,7 +688,7 @@ def try_download_head(bucket, filename):
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     # Try Redirecting to HEAD. There should be a better way.
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
     user_id = ''
     if user_profile is not None:
         user_id = user_profile.user_id
@@ -713,20 +718,16 @@ def try_download_head(bucket, filename):
 
 
 # Attempt to validate HEAD request
-@app.route('/{proxy+}', methods=['HEAD'])
+@app.route('/<path:path>/', methods=['HEAD'])
 @with_trace(context={})
-def dynamic_url_head():
+def dynamic_url_head(path):
     timer = Timer()
     timer.mark("restore_bucket_vars()")
     log.debug('attempting to HEAD a thing')
     restore_bucket_vars()
     timer.mark("b_map.get()")
 
-    param = app.current_request.uri_params.get('proxy')
-    if param is None:
-        return Response(body='HEAD failed', headers={}, status_code=400)
-
-    entry = b_map.get(param)
+    entry = b_map.get(path)
     timer.mark()
 
     log.debug("entry: %s", entry)
@@ -761,7 +762,7 @@ def handle_auth_bearer_header(token):
 
         log.warning('user has not accepted EULA')
         # TODO(reweeden): changing the response based on user agent looks like a really bad idea...
-        if check_for_browser(app.current_request.headers):
+        if check_for_browser(flask_request.headers):
             template_vars = {
                 'title': e.payload['error_description'],
                 'status_code': 403,
@@ -773,7 +774,9 @@ def handle_auth_bearer_header(token):
             }
 
             return 'return', make_html_response(template_vars, {}, 403, 'error.html')
-        return 'return', Response(body=e.payload, status_code=403, headers={})
+        resp = make_response(e.payload, 403)
+
+        return 'return', resp
 
     if user_id:
         log_context(user_id=user_id)
@@ -782,12 +785,12 @@ def handle_auth_bearer_header(token):
         if user_profile:
             return 'user_profile', user_profile
 
-    return 'return', do_auth_and_return(app.current_request.context)
+    return 'return', do_auth_and_return(flask_request.context)
 
 
-@app.route('/{proxy+}', methods=['GET'])
+@app.route('/<path:path>/', methods=['GET'])
 @with_trace(context={})
-def dynamic_url():
+def dynamic_url(path):
     timer = Timer()
     timer.mark("restore_bucket_vars()")
 
@@ -796,12 +799,9 @@ def dynamic_url():
     log.debug(f'b_map: {b_map.bucket_map}')
     timer.mark()
 
-    log.info(app.current_request.headers)
+    log.info(flask_request.headers)
 
-    param = app.current_request.uri_params.get("proxy")
-    entry = None
-    if param is not None:
-        entry = b_map.get(param)
+    entry = b_map.get(path)
 
     log.debug('entry: %s', entry)
 
@@ -826,7 +826,7 @@ def dynamic_url():
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     custom_headers = dict(entry.headers)
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = JWT_MANAGER.get_profile_from_headers(flask_request.headers)
     timer.mark("get_required_groups()")
     # It's only necessary to be in one of these groups
     required_groups = entry.get_required_groups()
@@ -836,9 +836,9 @@ def dynamic_url():
     if required_groups is None:
         log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
     elif user_profile is None:
-        authorization = app.current_request.headers.get('Authorization')
+        authorization = flask_request.headers.get('Authorization')
         if not authorization:
-            return do_auth_and_return(app.current_request.context)
+            return do_auth_and_return(flask_request.context)
 
         method, token, *_ = authorization.split()
         method = method.lower()
@@ -858,7 +858,7 @@ def dynamic_url():
                 JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', ''))
             )
         else:
-            return do_auth_and_return(app.current_request.context)
+            return do_auth_and_return(flask_request.context)
 
     timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
@@ -896,8 +896,8 @@ def dynamic_url():
 @app.route('/profile')
 @with_trace(context={})
 def profile():
-    return Response(body='Profile not available.',
-                    status_code=200, headers={})
+    resp = make_response('Profile not available.', 200)
+    return resp
 
 
 @app.route('/pubkey', methods=['GET'])
@@ -907,6 +907,6 @@ def pubkey():
         'rsa_pub_key': JWT_MANAGER.public_key,
         'algorithm': JWT_MANAGER.algorithm
     })
-    return Response(body=thebody,
-                    status_code=200,
-                    headers={'content-type': 'application/json'})
+    resp = make_response(thebody, 200)
+    resp.headers={'content-type': 'application/json'}
+    return resp

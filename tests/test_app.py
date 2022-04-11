@@ -66,16 +66,12 @@ def mock_get_urs_creds():
 
 @pytest.fixture
 def mock_make_html_response():
-    with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
-        m.side_effect = lambda _1, headers, status_code, _4: chalice.Response(
-            body="Mock response",
-            headers={
-                **headers,
-                "Content-Type": "text/html"
-            },
-            status_code=status_code
-        )
-        yield m
+    with mock.patch(f"{MODULE}.TEMPLATE_MANAGER", autospec=True) as mgr:
+        original_make_html_response = app.make_html_response
+        with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
+            mgr.render.return_value = "Mock response"
+            m.side_effect = original_make_html_response
+            yield m
 
 
 @pytest.fixture

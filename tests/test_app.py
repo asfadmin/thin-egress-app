@@ -19,12 +19,12 @@ app = importlib.import_module(MODULE)
 @pytest.fixture
 def user_profile():
     return UserProfile(
-        user_id='test_user',
-        first_name='John',
-        last_name='Smith',
-        email='j.smith@email.com',
+        user_id="test_user",
+        first_name="John",
+        last_name="Smith",
+        email="j.smith@email.com",
         groups=[],
-        token='test_token',
+        token="test_token",
         iat=0,
         exp=0
     )
@@ -86,8 +86,8 @@ def mock_request():
 
 @mock.patch(f"{MODULE}.urllib.request", autospec=True)
 def test_update_blacklist(mock_request, monkeypatch):
-    endpoint = 'https://blacklist.com'
-    monkeypatch.setenv('BLACKLIST_ENDPOINT', endpoint)
+    endpoint = "https://blacklist.com"
+    monkeypatch.setenv("BLACKLIST_ENDPOINT", endpoint)
     mock_request.urlopen(endpoint).read.return_value = b'{"blacklist": {"foo": "bar"}}'
     assert app.get_black_list() == {"foo": "bar"}
 
@@ -553,14 +553,14 @@ def test_root_with_login(
         {
             "title": "Welcome",
             "profile": {
-                'urs-user-id': 'test_user',
-                'urs-access-token': 'test_token',
-                'urs-groups': [],
-                'first_name': 'John',
-                'last_name': 'Smith',
-                'email': 'j.smith@email.com',
-                'iat': 0,
-                'exp': 0
+                "urs-user-id": "test_user",
+                "urs-access-token": "test_token",
+                "urs-groups": [],
+                "first_name": "John",
+                "last_name": "Smith",
+                "email": "j.smith@email.com",
+                "iat": 0,
+                "exp": 0
             }
         },
         {"Content-Type": "text/html"},
@@ -1275,7 +1275,7 @@ def test_dynamic_url_bearer_auth(
     current_request
 ):
     mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    mock_handle_auth_bearer_header.return_value = 'user_profile', user_profile
+    mock_handle_auth_bearer_header.return_value = "user_profile", user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1308,8 +1308,8 @@ def test_profile(client):
 def test_pubkey(monkeypatch, client):
     monkeypatch.setattr(
         app,
-        'JWT_MANAGER',
-        JwtManager(algorithm='algo', public_key='pub-key', private_key='priv-key', cookie_name='foo')
+        "JWT_MANAGER",
+        JwtManager(algorithm="algo", public_key="pub-key", private_key="priv-key", cookie_name="foo")
     )
     response = client.http.get("/pubkey")
 

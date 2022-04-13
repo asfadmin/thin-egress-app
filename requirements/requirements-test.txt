@@ -1,5 +1,5 @@
 # Requirements for End-to-End tests
-boto3==1.20.54
+boto3==1.21.40
 pytest==7.0.1
 pyyaml==6.0
 requests==2.27.1

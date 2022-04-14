@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import importlib
 import io
@@ -9,7 +10,7 @@ import pytest
 import yaml
 from botocore.exceptions import ClientError
 from chalice.test import Client
-from rain_api_core.auth import JwtManager, UserProfile
+from rain_api_core.auth import UserProfile
 
 MODULE = "lambda.app"
 # Can't import normally because 'lambda' is a reserved word
@@ -1301,12 +1302,13 @@ def test_profile(client):
     assert response.status_code == 200
 
 
-def test_pubkey(monkeypatch, client):
-    monkeypatch.setattr(
-        app,
-        "JWT_MANAGER",
-        JwtManager(algorithm="algo", public_key="pub-key", private_key="priv-key", cookie_name="foo")
-    )
+@mock.patch(f"{MODULE}.retrieve_secret", autospec=True)
+def test_pubkey(mock_retrieve_secret, monkeypatch, client):
+    mock_retrieve_secret.return_value = {
+        "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
+        "rsa_priv_key": base64.b64encode(b"priv-key").decode()
+    }
+    monkeypatch.setattr(app.JWT_MANAGER, "algorithm", "algo")
     response = client.http.get("/pubkey")
 
     assert response.json_body == {"rsa_pub_key": "pub-key", "algorithm": "algo"}

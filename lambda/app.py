@@ -83,12 +83,11 @@ get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 
 JWT_COOKIE_NAME = 'asf-urs'
-JWT_KEYS = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
 
 JWT_MANAGER = JwtManager(
     algorithm=os.getenv('JWT_ALGO', 'RS256'),
-    public_key=base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
-    private_key=base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
+    public_key=None,
+    private_key=None,
     cookie_name=os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)
 )
 TEMPLATE_MANAGER = TemplateManager(conf_bucket, template_dir)
@@ -107,9 +106,17 @@ app = Chalice(app_name='egress-lambda')
 
 
 @app.middleware('http')
-def set_log_context(event: chalice.app.Request, get_response):
+def initialize(event, get_response):
     JWT_MANAGER.black_list = get_black_list()
+    jwt_keys = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
+    JWT_MANAGER.public_key = base64.b64decode(jwt_keys.get('rsa_pub_key', '')).decode()
+    JWT_MANAGER.private_key = base64.b64decode(jwt_keys.get('rsa_priv_key', '')).decode()
 
+    return get_response(event)
+
+
+@app.middleware('http')
+def set_log_context(event: chalice.app.Request, get_response):
     origin_request_id = event.headers.get('x-origin-request-id')
 
     log_context(

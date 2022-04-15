@@ -134,6 +134,7 @@ def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
     mock_request.urlopen.return_value = mock_response
 
     assert app.get_user_from_token("token") == "user_name"
+    mock_get_urs_creds.assert_called_once()
 
 
 def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, current_request):

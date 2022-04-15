@@ -209,13 +209,13 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					StageName=API \
 					Loglevel=DEBUG \
 					Logtype=$(LOG_TYPE) \
-					Maturity=DEV\
+					Maturity=DEV \
 					PrivateVPC= \
 					VPCSecurityGroupIDs= \
 					VPCSubnetIDs= \
 					EnableApiGatewayLogToCloudWatch="False" \
 					DomainName=$(DOMAIN_NAME-"") \
-					DomainCertArn=$(DOMAIN_CERT_ARN-"")  \
+					DomainCertArn=$(DOMAIN_CERT_ARN-"") \
 					CookieDomain=$(COOKIE_DOMAIN-"") \
 					LambdaTimeout=$(LAMBDA_TIMEOUT) \
 					LambdaMemory=$(LAMBDA_MEMORY) \

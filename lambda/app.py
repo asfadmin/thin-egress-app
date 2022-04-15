@@ -10,6 +10,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
 
 import cachetools
+import chalice
 import flatdict
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
@@ -82,17 +83,17 @@ get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 STAGE = os.getenv('STAGE_NAME', 'DEV')
 
 JWT_COOKIE_NAME = 'asf-urs'
-JWT_KEYS = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
 
 JWT_MANAGER = JwtManager(
     algorithm=os.getenv('JWT_ALGO', 'RS256'),
-    public_key=base64.b64decode(JWT_KEYS.get('rsa_pub_key', '')).decode(),
-    private_key=base64.b64decode(JWT_KEYS.get('rsa_priv_key', '')).decode(),
+    public_key=None,
+    private_key=None,
     cookie_name=os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME)
 )
+TEMPLATE_MANAGER = TemplateManager(conf_bucket, template_dir)
 
 
-@ttl_cache(maxsize=2, ttl=10*60, timer=time.time)
+@ttl_cache(maxsize=2, ttl=10 * 60, timer=time.time)
 def get_black_list():
     endpoint = os.getenv('BLACKLIST_ENDPOINT', '')
     if endpoint:
@@ -101,36 +102,52 @@ def get_black_list():
     return {}
 
 
-class TeaChalice(Chalice):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+app = Chalice(app_name='egress-lambda')
 
-        self.template_manager = TemplateManager(conf_bucket, template_dir)
 
-    def __call__(self, event, context):
-        JWT_MANAGER.black_list = get_black_list()
-        resource_path = event.get('requestContext', {}).get('resourcePath')
-        origin_request_id = event.get('headers', {}).get('x-origin-request-id')
-        log_context(route=resource_path, request_id=context.aws_request_id, origin_request_id=origin_request_id)
-        # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
-        # vars for it to use while it's doing the username lookup
-        user_profile = JWT_MANAGER.get_profile_from_headers(event.get('headers'))
-        if user_profile is not None:
-            log_context(user_id=user_profile.user_id)
+@app.middleware('http')
+def initialize(event, get_response):
+    JWT_MANAGER.black_list = get_black_list()
+    jwt_keys = retrieve_secret(os.getenv('JWT_KEY_SECRET_NAME'))
+    JWT_MANAGER.public_key = base64.b64decode(jwt_keys.get('rsa_pub_key', '')).decode()
+    JWT_MANAGER.private_key = base64.b64decode(jwt_keys.get('rsa_priv_key', '')).decode()
 
-        resp = super().__call__(event, context)
+    return get_response(event)
 
-        resp['headers']['x-request-id'] = context.aws_request_id
-        if origin_request_id:
-            # If we were passed in an x-origin-request-id header, pass it out too
-            resp['headers']['x-origin-request-id'] = origin_request_id
 
+@app.middleware('http')
+def set_log_context(event: chalice.app.Request, get_response):
+    origin_request_id = event.headers.get('x-origin-request-id')
+
+    log_context(
+        route=event.path,
+        request_id=event.lambda_context.aws_request_id,
+        origin_request_id=origin_request_id
+    )
+    # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
+    # vars for it to use while it's doing the username lookup
+    user_profile = JWT_MANAGER.get_profile_from_headers(event.headers)
+    if user_profile is not None:
+        log_context(user_id=user_profile.user_id)
+
+    try:
+        return get_response(event)
+    finally:
         log_context(user_id=None, route=None, request_id=None)
 
-        return resp
 
+@app.middleware('http')
+def forward_origin_request_id(event: chalice.app.Request, get_response):
+    response = get_response(event)
 
-app = TeaChalice(app_name='egress-lambda')
+    origin_request_id = event.headers.get('x-origin-request-id')
+
+    response.headers['x-request-id'] = event.lambda_context.aws_request_id
+    if origin_request_id:
+        # If we were passed in an x-origin-request-id header, pass it out too
+        response.headers['x-origin-request-id'] = origin_request_id
+
+    return response
 
 
 class TeaException(Exception):
@@ -335,7 +352,7 @@ def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, temp
     }
 
     return Response(
-        body=app.template_manager.render(template_file, template_vars),
+        body=TEMPLATE_MANAGER.render(template_file, template_vars),
         status_code=status_code,
         headers={
             **headers,

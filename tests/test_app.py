@@ -1,3 +1,4 @@
+import base64
 import contextlib
 import importlib
 import io
@@ -9,7 +10,7 @@ import pytest
 import yaml
 from botocore.exceptions import ClientError
 from chalice.test import Client
-from rain_api_core.auth import JwtManager, UserProfile
+from rain_api_core.auth import UserProfile
 
 MODULE = "lambda.app"
 # Can't import normally because 'lambda' is a reserved word
@@ -19,12 +20,12 @@ app = importlib.import_module(MODULE)
 @pytest.fixture
 def user_profile():
     return UserProfile(
-        user_id='test_user',
-        first_name='John',
-        last_name='Smith',
-        email='j.smith@email.com',
+        user_id="test_user",
+        first_name="John",
+        last_name="Smith",
+        email="j.smith@email.com",
         groups=[],
-        token='test_token',
+        token="test_token",
         iat=0,
         exp=0
     )
@@ -66,13 +67,12 @@ def mock_get_urs_creds():
 
 @pytest.fixture
 def mock_make_html_response():
-    with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
-        m.side_effect = lambda _1, headers, status_code, _4: chalice.Response(
-            body="Mock response",
-            headers=headers,
-            status_code=status_code
-        )
-        yield m
+    with mock.patch(f"{MODULE}.TEMPLATE_MANAGER", autospec=True) as mgr:
+        original_make_html_response = app.make_html_response
+        with mock.patch(f"{MODULE}.make_html_response", autospec=True) as m:
+            mgr.render.return_value = "Mock response"
+            m.side_effect = original_make_html_response
+            yield m
 
 
 @pytest.fixture
@@ -83,8 +83,8 @@ def mock_request():
 
 @mock.patch(f"{MODULE}.urllib.request", autospec=True)
 def test_update_blacklist(mock_request, monkeypatch):
-    endpoint = 'https://blacklist.com'
-    monkeypatch.setenv('BLACKLIST_ENDPOINT', endpoint)
+    endpoint = "https://blacklist.com"
+    monkeypatch.setenv("BLACKLIST_ENDPOINT", endpoint)
     mock_request.urlopen(endpoint).read.return_value = b'{"blacklist": {"foo": "bar"}}'
     assert app.get_black_list() == {"foo": "bar"}
 
@@ -134,6 +134,7 @@ def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
     mock_request.urlopen.return_value = mock_response
 
     assert app.get_user_from_token("token") == "user_name"
+    mock_get_urs_creds.assert_called_once()
 
 
 def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, current_request):
@@ -272,7 +273,7 @@ def test_make_redirect(current_request):
 
 def test_make_html_response(monkeypatch):
     mock_render = mock.Mock(return_value="<html></html>")
-    monkeypatch.setattr("lambda.app.app.template_manager.render", mock_render)
+    monkeypatch.setattr("lambda.app.TEMPLATE_MANAGER.render", mock_render)
 
     response = app.make_html_response({"foo": "bar"}, {"baz": "qux"})
     assert response.body == "<html></html>"
@@ -550,14 +551,14 @@ def test_root_with_login(
         {
             "title": "Welcome",
             "profile": {
-                'urs-user-id': 'test_user',
-                'urs-access-token': 'test_token',
-                'urs-groups': [],
-                'first_name': 'John',
-                'last_name': 'Smith',
-                'email': 'j.smith@email.com',
-                'iat': 0,
-                'exp': 0
+                "urs-user-id": "test_user",
+                "urs-access-token": "test_token",
+                "urs-groups": [],
+                "first_name": "John",
+                "last_name": "Smith",
+                "email": "j.smith@email.com",
+                "iat": 0,
+                "exp": 0
             }
         },
         {"Content-Type": "text/html"},
@@ -859,7 +860,7 @@ def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -935,7 +936,7 @@ def test_handle_auth_bearer_header_eula_error_browser(
     )
     assert action == "return"
     assert response.status_code == 403
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
@@ -1217,7 +1218,7 @@ def test_dynamic_url_bad_bucket(mock_get_yaml_file, mock_make_html_response, res
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1252,7 +1253,7 @@ def test_dynamic_url_directory(
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
-    assert response.headers == {}
+    assert response.headers == {"Content-Type": "text/html"}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1272,7 +1273,7 @@ def test_dynamic_url_bearer_auth(
     current_request
 ):
     mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    mock_handle_auth_bearer_header.return_value = 'user_profile', user_profile
+    mock_handle_auth_bearer_header.return_value = "user_profile", user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1302,12 +1303,13 @@ def test_profile(client):
     assert response.status_code == 200
 
 
-def test_pubkey(monkeypatch, client):
-    monkeypatch.setattr(
-        app,
-        'JWT_MANAGER',
-        JwtManager(algorithm='algo', public_key='pub-key', private_key='priv-key', cookie_name='foo')
-    )
+@mock.patch(f"{MODULE}.retrieve_secret", autospec=True)
+def test_pubkey(mock_retrieve_secret, monkeypatch, client):
+    mock_retrieve_secret.return_value = {
+        "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
+        "rsa_priv_key": base64.b64encode(b"priv-key").decode()
+    }
+    monkeypatch.setattr(app.JWT_MANAGER, "algorithm", "algo")
     response = client.http.get("/pubkey")
 
     assert response.json_body == {"rsa_pub_key": "pub-key", "algorithm": "algo"}

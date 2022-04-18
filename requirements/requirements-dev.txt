@@ -30,7 +30,7 @@ jmespath==0.10.0
     #   -c requirements/requirements.txt
     #   boto3
     #   botocore
-opentelemetry-api==1.10.0
+opentelemetry-api==1.11.0
     # via opentelemetry-instrumentation
 opentelemetry-instrumentation==0.29b0
     # via -r requirements/requirements-dev.in

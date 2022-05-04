@@ -32,7 +32,7 @@ jmespath==0.10.0
     #   botocore
 opentelemetry-api==1.10.0
     # via opentelemetry-instrumentation
-opentelemetry-instrumentation==0.29b0
+opentelemetry-instrumentation==0.30b1
     # via -r requirements/requirements-dev.in
 packaging==21.3
     # via pytest

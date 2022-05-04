@@ -22,7 +22,7 @@ chalice==1.26.6
     # via -r requirements/requirements.in
 click==8.1.2
     # via chalice
-cryptography==36.0.2
+cryptography==37.0.2
     # via pyjwt
 flatdict==4.0.1
     # via -r requirements/requirements.in

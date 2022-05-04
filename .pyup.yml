@@ -1,2 +1,5 @@
+# Only update dependencies when CVE's are found
+update: insecure
+
 # PyUp should us the devel branch for scanning.
 branch: devel

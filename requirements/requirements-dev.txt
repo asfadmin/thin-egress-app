@@ -79,7 +79,7 @@ wheel==0.37.1
     # via
     #   -c requirements/requirements.txt
     #   pip-tools
-wrapt==1.14.0
+wrapt==1.14.1
     # via
     #   deprecated
     #   opentelemetry-instrumentation

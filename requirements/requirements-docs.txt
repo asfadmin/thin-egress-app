@@ -40,7 +40,7 @@ packaging==21.3
     # via mkdocs
 pygments==2.11.2
     # via mkdocs-material
-pymdown-extensions==9.3
+pymdown-extensions==9.4
     # via mkdocs-material
 pyparsing==3.0.7
     # via packaging

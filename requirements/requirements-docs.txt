@@ -32,7 +32,7 @@ mkdocs-asf-theme==0.2.4
     # via -r requirements/requirements-docs.in
 mkdocs-include-markdown-plugin==3.3.0
     # via -r requirements/requirements-docs.in
-mkdocs-material==6.2.8
+mkdocs-material==8.2.14
     # via mkdocs-asf-theme
 mkdocs-material-extensions==1.0.3
     # via mkdocs-material

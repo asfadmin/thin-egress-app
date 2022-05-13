@@ -1,0 +1,5 @@
+# Requirements for End-to-End tests
+boto3
+pytest
+pyyaml
+requests

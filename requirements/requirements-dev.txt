@@ -19,7 +19,7 @@ click==8.1.2
     # via
     #   -c requirements/requirements.txt
     #   pip-tools
-coverage[toml]==6.3.2
+coverage[toml]==6.3.3
     # via pytest-cov
 deprecated==1.2.13
     # via opentelemetry-api

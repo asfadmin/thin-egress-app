@@ -1007,6 +1007,8 @@ Resources:
 
   BumperLambda:
     Type: AWS::Lambda::Function
+    DependsOn:
+      - EgressLambdaDependencyLayer
     Properties:
       Description: Invoke this lambda to force reload of the egress lambda's config, including bucket map.
       Code:
@@ -1031,6 +1033,8 @@ Resources:
           MATURITY: !Ref Maturity
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'
+      Layers:
+        - !Ref EgressLambdaDependencyLayer
 
   BumperLambdaIamRole:
     Type: AWS::IAM::Role

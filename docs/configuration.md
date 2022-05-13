@@ -155,11 +155,12 @@ Child template that displays profile info. Only used for debugging in dev.
 
 ## Shared Token Support
 
-TEA can accept a shared EDL Token as an Authorization (Bearer Token) method. To
-enable this behavior, EDL Apps (Service + TEA) must belong to a shared EDL App
-Group. Processing a shared token is temporally expensive. After the initial
-request, subsequent Service->TEA data requests should reuse cookies. EULA
-enforcement is preserved with shared tokens.
+TEA can accept a shared [EDL Token](https://urs.earthdata.nasa.gov/documentation/for_users/user_token) 
+as an Authorization (Bearer Token) method. To enable this behavior, EDL Apps 
+(Service + TEA) must belong to a shared EDL App Group. Processing a 
+shared token is temporally expensive. After the initial request, subsequent 
+Service->TEA data requests should reuse cookies. EULA enforcement is 
+preserved with shared tokens.
 
 ![TEA](images/harmony-chain.png)
 

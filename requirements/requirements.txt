@@ -10,7 +10,7 @@ blessed==1.19.1
     # via inquirer
 botocore==1.26.0
     # via chalice
-cachetools==5.0.0
+cachetools==5.1.0
     # via
     #   -r requirements/requirements.in
     #   rain-api-core

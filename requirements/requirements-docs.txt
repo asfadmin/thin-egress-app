@@ -52,7 +52,7 @@ pyyaml-env-tag==0.1
     # via mkdocs
 six==1.16.0
     # via python-dateutil
-watchdog==2.1.7
+watchdog==2.1.8
     # via mkdocs
 zipp==3.8.0
     # via importlib-metadata

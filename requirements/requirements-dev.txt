@@ -10,7 +10,7 @@ attrs==21.4.0
     #   pytest
 boto3==1.23.0
     # via -r requirements/requirements-dev.in
-botocore==1.26.0
+botocore==1.26.1
     # via
     #   -c requirements/requirements.txt
     #   boto3

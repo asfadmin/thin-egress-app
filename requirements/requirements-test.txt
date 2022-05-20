@@ -8,7 +8,7 @@ attrs==21.4.0
     # via pytest
 boto3==1.23.0
     # via -r requirements/requirements-test.in
-botocore==1.26.0
+botocore==1.26.5
     # via
     #   boto3
     #   s3transfer

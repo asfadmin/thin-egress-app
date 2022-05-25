@@ -1,10 +1,14 @@
 SOURCES := \
+	lambda/var/otel-config/collector.yaml \
 	lambda/app.py \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
 RESOURCES := $(wildcard lambda/templates/*)
 TERRAFORM := $(wildcard terraform/*)
+
+REQUIREMENTS_IN := $(wildcard requirements/*.in)
+REQUIREMENTS_TXT := $(REQUIREMENTS_IN:.in=.txt)
 
 # Output directory
 DIR := dist
@@ -24,7 +28,7 @@ DOCKER := docker
 # On Linux we need to do a bit of userid finagling so that the output files
 # end up being owned by us and not by root. On Mac this works out of the box.
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
-DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS) lambci/lambda:build-python3.8
+DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS)
 
 #####################
 # Deployment Config #
@@ -46,6 +50,10 @@ Makefile.config:
 
 include Makefile.config
 
+ifdef DOCKER_COMMAND
+DOCKER_LAMBDA_CI = $(DOCKER_COMMAND) lambci/lambda:build-python3.8
+DOCKER_DEPENDENCY_BUILDER = $(DOCKER_COMMAND) tea-dependency-builder
+endif
 
 .DEFAULT_GOAL := all
 .PHONY: all
@@ -78,16 +86,16 @@ yaml: $(DIR)/thin-egress-app.yaml
 
 .PHONY: terraform
 terraform: $(DIR)/thin-egress-app-terraform.zip
-	@echo "Build Terraform zip file for version ${BUILD_ID}"
+	@echo "Built Terraform zip file for version ${BUILD_ID}"
 
 .PHONY: clean
 clean:
 	rm -rf $(DIR)
 
-$(DIR)/thin-egress-app-dependencies.zip: requirements.txt $(REQUIREMENTS_DEPS)
+$(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
-	$(DOCKER_COMMAND) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
+	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_RESOURCES)
 $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
@@ -152,7 +160,7 @@ $(EMPTY)/.deploy-dependencies: $(DIR)/thin-egress-app-dependencies.zip
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)dependencies-$(S3_ARTIFACT_TAG).zip
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-dependencies
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 	@echo "Deploying code"
@@ -161,7 +169,7 @@ $(EMPTY)/.deploy-code: $(DIR)/thin-egress-app-code.zip
 		s3://$(CODE_BUCKET)/$(CODE_PREFIX)code-$(S3_ARTIFACT_TAG).zip
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-code
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 $(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 	@echo "Deploying bucket map"
@@ -169,7 +177,7 @@ $(EMPTY)/.deploy-bucket-map: $(DIR)/bucket-map.yaml
 		s3://$(CONFIG_BUCKET)/$(CONFIG_PREFIX)bucket-map-$(S3_ARTIFACT_TAG).yaml
 
 	@mkdir -p $(EMPTY)
-	@echo $(S3_ARTIFACT_TAG) > $(EMPTY)/.deploy-bucket-map
+	@echo $(S3_ARTIFACT_TAG) > $@
 
 # Optionally upload a bucket map if the user hasn't specified one
 BUCKET_MAP_REQUIREMENT :=
@@ -201,13 +209,13 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					StageName=API \
 					Loglevel=DEBUG \
 					Logtype=$(LOG_TYPE) \
-					Maturity=DEV\
+					Maturity=DEV \
 					PrivateVPC= \
 					VPCSecurityGroupIDs= \
 					VPCSubnetIDs= \
 					EnableApiGatewayLogToCloudWatch="False" \
 					DomainName=$(DOMAIN_NAME-"") \
-					DomainCertArn=$(DOMAIN_CERT_ARN-"")  \
+					DomainCertArn=$(DOMAIN_CERT_ARN-"") \
 					CookieDomain=$(COOKIE_DOMAIN-"") \
 					LambdaTimeout=$(LAMBDA_TIMEOUT) \
 					LambdaMemory=$(LAMBDA_MEMORY) \
@@ -217,7 +225,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					UseCorsCookieDomain="False"
 
 	@mkdir -p $(EMPTY)
-	@touch $(EMPTY)/.deploy-stack
+	@touch $@
 
 # Deploy everything
 .PHONY: deploy
@@ -244,6 +252,20 @@ cleandeploy:
 ###############
 # Development #
 ###############
+
+.PHONY: tea-dependency-builder
+tea-dependency-builder: build/lambda-ci.Dockerfile
+	$(DOCKER) build -f build/lambda-ci.Dockerfile -t tea-dependency-builder ./build
+	@mkdir -p $(EMPTY)
+	@touch $@
+
+requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
+
+requirements/%.txt: requirements/%.in
+	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ $<
+
+.PHONY: lock
+lock: $(REQUIREMENTS_TXT)
 
 .PHONY: test
 test:

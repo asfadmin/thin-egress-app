@@ -1,0 +1,7 @@
+-c requirements.txt
+boto3
+opentelemetry-instrumentation
+pip-tools
+pytest
+pytest-cov
+pyyaml

@@ -58,6 +58,13 @@ def test_404_on_bad_request(urls, method):
     assert r.status_code == 404
 
 
+def test_404_on_request_directory(urls):
+    url = urls.join("SA", "BROWSE/")
+    r = requests.get(url)
+
+    assert r.status_code == 404
+
+
 def test_bad_cookie_value_cause_URS_redirect(urls):
     url = urls.join(urls.METADATA_FILE)
     cookies = {
@@ -73,8 +80,9 @@ def test_bad_cookie_value_cause_URS_redirect(urls):
 
 
 def test_head_private_data(urls):
-    # All files are publically headable!
+    # All files are publicly headable!
     # TODO(reweeden): Is this desired?
+    # - Used by disambiguator to find the right hostname for a file
     url = urls.join("PRIVATE", "ACCESS", "testfile")
 
     r = requests.head(url, allow_redirects=True)

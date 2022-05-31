@@ -71,10 +71,10 @@ jobs:
         env:
           S3_PATH_PREFIX: s3://${{ env.CODE_BUCKET }}/${{ env.CODE_PREFIX }}
         run: |
-          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.dependency-zip }}
-          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.code-zip }}
-          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ needs.build.outputs.cloudformation-yaml }}
-          aws s3 cp ./terraform/thin-egress-app-terraform.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.terraform-zip }}
+          aws s3 cp ./dependency-layer/thin-egress-app-dependencies.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.dependency-zip }}  --acl bucket-owner-full-control --acl public-read
+          aws s3 cp ./code/thin-egress-app-code.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.code-zip }} --acl bucket-owner-full-control --acl public-read
+          aws s3 cp ./cloudformation/thin-egress-app.yaml ${S3_PATH_PREFIX}${{ needs.build.outputs.cloudformation-yaml }} --acl bucket-owner-full-control --acl public-read
+          aws s3 cp ./terraform/thin-egress-app-terraform.zip ${S3_PATH_PREFIX}${{ needs.build.outputs.terraform-zip }} --acl bucket-owner-full-control --acl public-read
 
           echo '{"schemaVersion": 1, "label": "Last Release", "message": "'$GITHUB_REF_NAME'", "color": "success"}'  > lastrelease.json
           aws s3 cp lastrelease.json s3://${CODE_BUCKET}/thin-egress-app/ \
@@ -82,7 +82,7 @@ jobs:
               --cache-control no-cache \
               --expires '2016-06-14T00:00:00Z' \
               --content-type 'application/json' \
-              --acl public-read
+              --acl bucket-owner-full-control --acl public-read
 
 
   release-assets:

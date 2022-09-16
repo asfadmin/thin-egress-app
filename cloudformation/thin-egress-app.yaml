@@ -527,6 +527,14 @@ Resources:
         - !Ref EgressLambdaDependencyLayer
       #MemorySize: 128
 
+  UpdatePolicyLambdaPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+          FunctionName: !GetAtt UpdatePolicyLambda.Arn
+          Action: lambda:InvokeFunction
+          Principal: sns.amazonaws.com
+          SourceArn: "arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged"
+
   RegionUpdateSnsSubscription:
       Type: 'AWS::SNS::Subscription'
       Condition: CreateDownloadRole
@@ -535,7 +543,6 @@ Resources:
         Endpoint: !GetAtt UpdatePolicyLambda.Arn
         Protocol: lambda
         Region: !Sub 'us-east-1'
-
 
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion

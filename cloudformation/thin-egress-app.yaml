@@ -696,6 +696,15 @@ Resources:
       PathPart: '{proxy+}'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceS3Credentials:
+    Type: AWS::ApiGateway::Resource
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 's3credentials'
+      RestApiId: !Ref EgressApiGateway
+
   EgressApiResourceProfile:
     Type: AWS::ApiGateway::Resource
     DependsOn:
@@ -881,6 +890,27 @@ Resources:
         'method.request.header.Cookie': true
         'method.request.header.X-urs-access-token': true
       ResourceId: !Ref EgressApiResourceDynamicUrl
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodS3Credentials:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 401
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 's3credentials view'
+      RequestParameters:
+        'method.request.header.Cookie': true
+        'method.request.header.X-urs-access-token': true
+        'method.request.header.X-urs-app-name': false
+      ResourceId: !Ref EgressApiResourceS3Credentials
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIMethodProfile:

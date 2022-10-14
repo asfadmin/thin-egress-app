@@ -54,7 +54,7 @@ pyyaml==6.0
     # via
     #   chalice
     #   rain-api-core
-rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@5c8ff9c3102b5835c4bf0bb0f653e59ea4c191ea
+rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@6acd2cb943cb552c525bc5320297f62b812a33ba
     # via -r requirements/requirements.in
 readchar==3.0.5
     # via inquirer

@@ -1296,6 +1296,60 @@ def test_dynamic_url_bearer_auth(
     assert response.headers == {}
 
 
+@mock.patch(f"{MODULE}.get_s3_credentials", autospec=True)
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_s3credentials(
+    mock_get_profile,
+    mock_get_yaml_file,
+    mock_get_s3_credentials,
+    resources,
+    user_profile,
+    client
+):
+    mock_get_s3_credentials.return_value = {
+        "AccessKeyId": "access_key",
+        "SecretAccessKey": "secret_access_key",
+        "SessionToken": "session_token",
+        "Expiration": "expiration"
+    }
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+    mock_get_profile.return_value = user_profile
+
+    response = client.http.get("/s3credentials")
+
+    assert response.json_body == {
+        "AccessKeyId": "access_key",
+        "SecretAccessKey": "secret_access_key",
+        "SessionToken": "session_token",
+        "Expiration": "expiration"
+    }
+    assert response.status_code == 200
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_s3credentials_unauthenticated(
+    mock_get_profile,
+    mock_get_yaml_file,
+    mock_make_html_response,
+    resources,
+    client
+):
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+    mock_get_profile.return_value = None
+
+    response = client.http.get("/s3credentials")
+
+    mock_make_html_response.assert_called_once()
+    assert response.body == b"Mock response"
+    assert response.status_code == 401
+
+
 def test_profile(client):
     response = client.http.get("/profile")
 

@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import time
 import urllib.request
 from functools import wraps
@@ -9,6 +10,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
 
+import boto3
 import cachetools
 import chalice
 import flatdict
@@ -908,6 +910,71 @@ def dynamic_url():
     timer.log_all(log)
 
     return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers)
+
+
+@app.route('/s3credentials', methods=['GET'])
+@with_trace(context={})
+def s3credentials():
+    timer = Timer()
+
+    timer.mark("restore_bucket_vars()")
+    restore_bucket_vars()
+    timer.mark()
+
+    log.debug("b_map: %s", b_map.bucket_map)
+    log.info("headers: %s", app.current_request.headers)
+
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    if user_profile is None:
+        template_vars = {
+            "contentstring": "You must log in first",
+            "title": "Unauthorized",
+            "requestid": get_request_id(),
+        }
+        headers = {}
+        return make_html_response(template_vars, headers, 401, "error.html")
+    log_context(user_id=user_profile.user_id)
+
+    policy = b_map.to_iam_policy(user_profile.groups)
+    log.debug("policy: %s", policy)
+
+    app_name = app.current_request.headers.get("app-name", "")
+    role_session_name = get_role_session_name(user_profile.user_id, app_name)
+
+    timer.mark("get_s3_credentials()")
+    creds = get_s3_credentials(user_profile.user_id, role_session_name, policy)
+    timer.mark()
+
+    log.debug("timing for s3credentials()")
+    timer.log_all(log)
+
+    return Response(
+        body=json.dumps(creds, default=str),
+        status_code=200,
+    )
+
+
+@with_trace()
+def get_role_session_name(user_id: str, app_name: str):
+    # https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html#API_AssumeRole_RequestParameters
+    if not re.match(r"[\w+,.=@-]*", app_name):
+        app_name = ""
+
+    return f"{user_id}@{app_name}"[:64]
+
+
+@with_trace()
+def get_s3_credentials(user_id: str, role_session_name: str, policy: dict):
+    client = boto3.client("sts")
+    arn = os.getenv("EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN")
+    response = client.assume_role(
+        RoleArn=arn,
+        RoleSessionName=role_session_name,
+        ExternalId=user_id,
+        DurationSeconds=3600,
+        Policy=json.dumps(policy)
+    )
+    return response["Credentials"]
 
 
 @app.route('/profile')

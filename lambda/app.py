@@ -808,14 +808,14 @@ def dynamic_url():
     timer = Timer()
     timer.mark("restore_bucket_vars()")
 
-    log.debug('attempting to GET a thing')
+    param = app.current_request.uri_params.get("proxy")
+    log.debug('attempting to GET: %s', param)
     restore_bucket_vars()
     log.debug(f'b_map: {b_map.bucket_map}')
     timer.mark()
 
     log.info(app.current_request.headers)
 
-    param = app.current_request.uri_params.get("proxy")
     entry = None
     if param is not None:
         entry = b_map.get(param)

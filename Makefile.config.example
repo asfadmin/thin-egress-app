@@ -42,6 +42,16 @@ URS_URL := https://uat.urs.earthdata.nasa.gov
 # Logging style, either `flat` for human readable or `json` for machine readable
 LOG_TYPE := flat
 
+########################
+# For NGAP Deployments #
+########################
+# In an NGAP environment you must uncomment the following line or the deployment will fail
+# PERMISSION_BOUNDARY_NAME := NGAPShRoleBoundary
+
+PRIVATE_VPC :=
+VPC_SECURITY_GROUP_IDS :=
+VPC_SUBNET_IDS :=
+
 ####################################
 # CloudFormation Template Defaults #
 ####################################

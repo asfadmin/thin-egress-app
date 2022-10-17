@@ -201,7 +201,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					AuthBaseUrl=$(URS_URL) \
 					ConfigBucket=$(CONFIG_BUCKET) \
 					LambdaCodeS3Bucket=$(CODE_BUCKET) \
-					PermissionsBoundaryName= \
+					PermissionsBoundaryName=$(PERMISSION_BOUNDARY_NAME) \
 					BucketnamePrefix=$(BUCKETNAME_PREFIX) \
 					DownloadRoleArn="" \
 					DownloadRoleInRegionArn="" \
@@ -210,9 +210,9 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					Loglevel=DEBUG \
 					Logtype=$(LOG_TYPE) \
 					Maturity=DEV \
-					PrivateVPC= \
-					VPCSecurityGroupIDs= \
-					VPCSubnetIDs= \
+					PrivateVPC=$(PRIVATE_VPC) \
+					VPCSecurityGroupIDs=$(VPC_SECURITY_GROUP_IDS) \
+					VPCSubnetIDs=$(VPC_SUBNET_IDS) \
 					EnableApiGatewayLogToCloudWatch="False" \
 					DomainName=$(DOMAIN_NAME-"") \
 					DomainCertArn=$(DOMAIN_CERT_ARN-"") \

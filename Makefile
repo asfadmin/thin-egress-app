@@ -214,6 +214,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					VPCSecurityGroupIDs=$(VPC_SECURITY_GROUP_IDS) \
 					VPCSubnetIDs=$(VPC_SUBNET_IDS) \
 					EnableApiGatewayLogToCloudWatch="False" \
+					EnableS3CredentialsEndpoint="True" \
 					DomainName=$(DOMAIN_NAME-"") \
 					DomainCertArn=$(DOMAIN_CERT_ARN-"") \
 					CookieDomain=$(COOKIE_DOMAIN-"") \

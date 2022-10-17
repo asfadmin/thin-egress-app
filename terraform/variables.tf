@@ -104,6 +104,12 @@ variable "log_api_gateway_to_cloudwatch" {
   description = "Switch that will enable logging of api gateway request/response to cloudwatch."
 }
 
+variable "s3credentials_endpoint" {
+  type        = bool
+  default     = false
+  description = "Switch that will enable deployment of the /s3credentials endpoint for s3 direct access."
+}
+
 variable "suppress_head_check" {
   type        = bool
   default     = false

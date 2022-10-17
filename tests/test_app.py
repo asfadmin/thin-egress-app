@@ -1350,6 +1350,22 @@ def test_s3credentials_unauthenticated(
     assert response.status_code == 401
 
 
+@mock.patch(f"{MODULE}.boto3")
+def test_get_s3_credentials(mock_boto3, monkeypatch):
+    monkeypatch.setenv("EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN", "aws:role:arn")
+    client = mock_boto3.client("sts")
+
+    app.get_s3_credentials("user", "role-session-name", policy={})
+
+    client.assume_role.assert_called_once_with(
+        RoleArn="aws:role:arn",
+        RoleSessionName="role-session-name",
+        ExternalId="user",
+        DurationSeconds=3600,
+        Policy="{}"
+    )
+
+
 def test_profile(client):
     response = client.http.get("/profile")
 

@@ -16,6 +16,7 @@ Metadata:
           - HtmlTemplateDir
           - StageName
           - EnableApiGatewayLogToCloudWatch
+          - EnableS3CredentialsEndpoint
       -
         Label:
           default: Domain Settings
@@ -260,6 +261,14 @@ Parameters:
       - "True"
     Description: 'Optional flag to enable (True) Api Gateway logging to CloudWatch. If "True", you must add an ARN for a role with write access to CloudWatch Logs in your account here: https://console.aws.amazon.com/apigateway/home?region=[REGION]#/settings'
 
+  EnableS3CredentialsEndpoint:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Optional flag to enable (True) the /s3credentials endpoint for handing out S3 direct access credentials.'
+
   # Open Telemetry settings:::
 
   OtLambdaExecWrapper:
@@ -300,6 +309,7 @@ Parameters:
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
   ApiGatewayLogToCloudWatchIsSet: !Equals [ !Ref EnableApiGatewayLogToCloudWatch, "True" ]
+  S3CredentialsEndpointIsSet: !Equals [ !Ref EnableS3CredentialsEndpoint, "True" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
@@ -698,6 +708,7 @@ Resources:
 
   EgressApiResourceS3Credentials:
     Type: AWS::ApiGateway::Resource
+    Condition: S3CredentialsEndpointIsSet
     DependsOn:
       - EgressApiGateway
     Properties:
@@ -894,6 +905,7 @@ Resources:
 
   EgressAPIMethodS3Credentials:
     Type: AWS::ApiGateway::Method
+    Condition: S3CredentialsEndpointIsSet
     Properties:
       ApiKeyRequired: false
       AuthorizationType: 'NONE'

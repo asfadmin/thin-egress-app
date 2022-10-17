@@ -63,6 +63,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     DownloadRoleArn                 = var.download_role_arn
     DownloadRoleInRegionArn         = var.download_role_in_region_arn
     EnableApiGatewayLogToCloudWatch = var.log_api_gateway_to_cloudwatch ? "True" : "False"
+    EnableS3CredentialsEndpoint     = var.s3credentials_endpoint ? "True" : "False"
     HtmlTemplateDir                 = var.html_template_dir
     JwtAlgo                         = var.jwt_algo
     JwtKeySecretName                = var.jwt_secret_name

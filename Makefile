@@ -125,6 +125,7 @@ endif
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<CODE_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_CODE_ARCHIVE_KEY}"
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<BUILD_ID>" "${CF_BUILD_VERSION}"
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "^Description:.*" 'Description: "${CF_DESCRIPTION}"'
+	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "EgressAPIdeployment" "EgressAPIdeployment`python3 -c 'import random; print(random.randint(0, 2**20))'`"
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %

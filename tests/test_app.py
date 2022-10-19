@@ -44,15 +44,19 @@ def client():
 
 @pytest.fixture
 def lambda_context():
-    with mock.patch(f"{MODULE}.app.lambda_context") as ctx:
-        yield ctx
+    ctx = mock.Mock()
+    app.app.lambda_context = ctx
+    yield ctx
+    del app.app.lambda_context
 
 
 @pytest.fixture
 def current_request(lambda_context):
     lambda_context.aws_request_id = "request_1234"
-    with mock.patch(f"{MODULE}.app.current_request") as req:
-        yield req
+    req = mock.MagicMock()
+    app.app.current_request = req
+    yield req
+    del app.app.current_request
 
 
 @pytest.fixture
@@ -920,7 +924,7 @@ def test_get_bc_config_client_cached(mock_get_new_session_client):
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
-def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_profile, user_profile):
+def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_profile, user_profile, current_request):
     mock_get_profile.return_value = user_profile
     user_profile.user_id = "username"
 

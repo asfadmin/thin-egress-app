@@ -18,5 +18,6 @@ nav:
   - Vision: vision.md
   - Deploying: deploying.md
   - Configuration: configuration.md
+  - S3 Access: s3access.md
   - Technical: technical.md
   - Trouble Shooting: troubleshooting.md

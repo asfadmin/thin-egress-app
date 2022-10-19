@@ -102,10 +102,10 @@ MAP:
    data-path: data-bucket
 
 PUBLIC_BUCKETS:
-   data-bucket/browse: "Browse image"
+   data-bucket/browse/: "Browse image"
 
 PRIVATE_BUCKETS:
-   data-bucket/pre-commission-data:
+   data-bucket/pre-commission-data/:
      - internal_users
      - external_team
 ```
@@ -113,6 +113,36 @@ PRIVATE_BUCKETS:
 In the above example, while access to data in `data-bucket` requires simple auth,
 accessing an object with the prefix `browse/` will require NO auth, and
 `pre-commission-data/` will require EDL App group access as specified.
+
+#### S3 Direct Access
+*NOTE: Support for S3 direct access is currently experimental*
+
+TEA can be deployed with an `/s3credentials` endpoint (See
+[Enabling S3 direct access](deploying.md#enabling-s3-direct-access)) for
+facilitating S3 direct access. Credentials handed out over this endpoint will
+have both `s3:ListBucket` and `s3:GetObject` permissions for in-region requests
+to prefixes configured in the bucket map.
+
+For example:
+
+```yaml
+MAP:
+   data-path: data-bucket
+
+PUBLIC_BUCKETS:
+   data-bucket/browse/: "Browse image"
+
+PRIVATE_BUCKETS:
+   data-bucket/pre-commission-data/:
+     - internal_users
+     - external_team
+```
+
+Using this bucket map, the `/s3credentials` endpoint would return credentials
+allowing in-region access to any objects in `data-bucket` EXCEPT objects that
+have the `pre-commission-data/` prefix to any logged in user. Any user in the
+`internal_users` or `external_team` groups would be able to use their
+credentials to access all data in the bucket.
 
 ## Custom Templating
 
@@ -155,11 +185,11 @@ Child template that displays profile info. Only used for debugging in dev.
 
 ## Shared Token Support
 
-TEA can accept a shared [EDL Token](https://urs.earthdata.nasa.gov/documentation/for_users/user_token) 
-as an Authorization (Bearer Token) method. To enable this behavior, EDL Apps 
-(Service + TEA) must belong to a shared EDL App Group. Processing a 
-shared token is temporally expensive. After the initial request, subsequent 
-Service->TEA data requests should reuse cookies. EULA enforcement is 
+TEA can accept a shared [EDL Token](https://urs.earthdata.nasa.gov/documentation/for_users/user_token)
+as an Authorization (Bearer Token) method. To enable this behavior, EDL Apps
+(Service + TEA) must belong to a shared EDL App Group. Processing a
+shared token is temporally expensive. After the initial request, subsequent
+Service->TEA data requests should reuse cookies. EULA enforcement is
 preserved with shared tokens.
 
 ![TEA](images/harmony-chain.png)

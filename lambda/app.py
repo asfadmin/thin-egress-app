@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import time
 import urllib.request
 from functools import wraps
@@ -9,6 +10,7 @@ from urllib import request
 from urllib.error import HTTPError
 from urllib.parse import quote_plus, urlencode, urlparse
 
+import boto3
 import cachetools
 import chalice
 import flatdict
@@ -27,7 +29,7 @@ except ImportError:
     def inject(obj):
         return obj
 
-from rain_api_core.auth import JwtManager
+from rain_api_core.auth import JwtManager, UserProfile
 from rain_api_core.aws_util import (
     check_in_region_request,
     get_role_creds,
@@ -157,6 +159,98 @@ class TeaException(Exception):
 class EulaException(TeaException):
     def __init__(self, payload: dict):
         self.payload = payload
+
+
+class RequestAuthorizer:
+    def __init__(self):
+        self._response = None
+        self._headers = {}
+
+    @with_trace()
+    def get_profile(self) -> Optional[UserProfile]:
+        user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+        if user_profile is not None:
+            return user_profile
+
+        authorization = app.current_request.headers.get("Authorization")
+        if not authorization:
+            self._response = do_auth_and_return(app.current_request.context)
+            return None
+
+        method, token, *_ = authorization.split()
+        method = method.lower()
+
+        if method == "bearer":
+            # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
+            log.debug("we got an Authorization header. %s", authorization)
+            user_profile = self._handle_auth_bearer_header(token)
+
+            if user_profile is None:
+                # Not a successful event.
+                return None
+
+            log_context(user_id=user_profile.user_id)
+            log.debug("User %s has user profile: %s", user_profile.user_id, user_profile.to_jwt_payload())
+            self._headers = JWT_MANAGER.get_header_to_set_auth_cookie(
+                user_profile,
+                os.getenv("COOKIE_DOMAIN", "")
+            )
+            return user_profile
+
+        self._response = do_auth_and_return(app.current_request.context)
+        return None
+
+    @with_trace()
+    def _handle_auth_bearer_header(self, token) -> Optional[UserProfile]:
+        """
+        Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
+        returns it. If user_id is not determined returns data to be returned
+
+        :param token:
+        :return: action, data
+        """
+        try:
+            user_id = get_user_from_token(token)
+        except EulaException as e:
+            log.warning("user has not accepted EULA")
+            # TODO(reweeden): changing the response based on user agent looks like a really bad idea...
+            if check_for_browser(app.current_request.headers):
+                template_vars = {
+                    "title": e.payload["error_description"],
+                    "status_code": 403,
+                    "contentstring": (
+                        f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: '
+                        f'<a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                    ),
+                    "requestid": get_request_id(),
+                }
+
+                self._response = make_html_response(template_vars, {}, 403, "error.html")
+            else:
+                self._response = Response(body=e.payload, status_code=403, headers={})
+            return None
+
+        if user_id:
+            log_context(user_id=user_id)
+            aux_headers = get_aux_request_headers()
+            user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
+            if user_profile:
+                return user_profile
+
+        self._response = do_auth_and_return(app.current_request.context)
+        return None
+
+    def get_error_response(self) -> Optional[Response]:
+        """Get the response to return if the user was not authenticated. This
+        may be an error response or a redirect.
+        """
+        return self._response
+
+    def get_success_response_headers(self) -> dict:
+        """Get the headers to include in successful responses in case a new
+        profile was fetched and needs to be returned in the Set-Cookie header.
+        """
+        return self._headers
 
 
 @with_trace()
@@ -763,59 +857,20 @@ def dynamic_url_head():
     return try_download_head(entry.bucket, entry.object_key)
 
 
-@with_trace()
-def handle_auth_bearer_header(token):
-    """
-    Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
-    returns it. If user_id is not determined returns data to be returned
-
-    :param token:
-    :return: action, data
-    """
-    try:
-        user_id = get_user_from_token(token)
-    except EulaException as e:
-
-        log.warning('user has not accepted EULA')
-        # TODO(reweeden): changing the response based on user agent looks like a really bad idea...
-        if check_for_browser(app.current_request.headers):
-            template_vars = {
-                'title': e.payload['error_description'],
-                'status_code': 403,
-                'contentstring': (
-                    f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: '
-                    f'<a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
-                ),
-                'requestid': get_request_id(),
-            }
-
-            return 'return', make_html_response(template_vars, {}, 403, 'error.html')
-        return 'return', Response(body=e.payload, status_code=403, headers={})
-
-    if user_id:
-        log_context(user_id=user_id)
-        aux_headers = get_aux_request_headers()
-        user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
-        if user_profile:
-            return 'user_profile', user_profile
-
-    return 'return', do_auth_and_return(app.current_request.context)
-
-
 @app.route('/{proxy+}', methods=['GET'])
 @with_trace(context={})
 def dynamic_url():
     timer = Timer()
     timer.mark("restore_bucket_vars()")
 
-    log.debug('attempting to GET a thing')
+    param = app.current_request.uri_params.get("proxy")
+    log.debug('attempting to GET: %s', param)
     restore_bucket_vars()
     log.debug(f'b_map: {b_map.bucket_map}')
     timer.mark()
 
     log.info(app.current_request.headers)
 
-    param = app.current_request.uri_params.get("proxy")
     entry = None
     if param is not None:
         entry = b_map.get(param)
@@ -843,39 +898,22 @@ def dynamic_url():
         return make_html_response(template_vars, headers, 404, 'error.html')
 
     custom_headers = dict(entry.headers)
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
     timer.mark("get_required_groups()")
     # It's only necessary to be in one of these groups
     required_groups = entry.get_required_groups()
     log.debug('required_groups: %s', required_groups)
     # Check for public bucket
     timer.mark("possible auth header handling")
+    user_profile = None
     if required_groups is None:
         log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
-    elif user_profile is None:
-        authorization = app.current_request.headers.get('Authorization')
-        if not authorization:
-            return do_auth_and_return(app.current_request.context)
+    else:
+        authorizer = RequestAuthorizer()
+        user_profile = authorizer.get_profile()
+        if user_profile is None:
+            return authorizer.get_error_response()
 
-        method, token, *_ = authorization.split()
-        method = method.lower()
-
-        if method == "bearer":
-            # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
-            log.debug('we got an Authorization header. {}'.format(authorization))
-            action, user_profile = handle_auth_bearer_header(token)
-
-            if action == 'return':
-                # Not a successful event.
-                return user_profile
-
-            log_context(user_id=user_profile.user_id)
-            log.debug('User %s has user profile: %s', user_profile.user_id, user_profile.to_jwt_payload())
-            custom_headers.update(
-                JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv('COOKIE_DOMAIN', ''))
-            )
-        else:
-            return do_auth_and_return(app.current_request.context)
+        custom_headers.update(authorizer.get_success_response_headers())
 
     timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
@@ -908,6 +946,74 @@ def dynamic_url():
     timer.log_all(log)
 
     return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers)
+
+
+@app.route('/s3credentials', methods=['GET'])
+@with_trace(context={})
+def s3credentials():
+    timer = Timer()
+
+    timer.mark("restore_bucket_vars()")
+    restore_bucket_vars()
+    timer.mark()
+
+    log.debug("b_map: %s", b_map.bucket_map)
+    log.info("headers: %s", app.current_request.headers)
+
+    authorizer = RequestAuthorizer()
+    user_profile = authorizer.get_profile()
+    if user_profile is None:
+        return authorizer.get_error_response()
+
+    log.debug("user_profile: %s", user_profile)
+    client_id = get_urs_creds()["UrsId"]
+    groups = {
+        group["name"]
+        for group in user_profile.groups
+        if group["client_id"] == client_id
+    }
+    log.debug("groups: %s", groups)
+    policy = b_map.to_iam_policy(groups)
+    log.debug("policy: %s", policy)
+
+    app_name = app.current_request.headers.get("app-name", "")
+    role_session_name = get_role_session_name(user_profile.user_id, app_name)
+
+    timer.mark("get_s3_credentials()")
+    creds = get_s3_credentials(user_profile.user_id, role_session_name, policy)
+    timer.mark()
+
+    log.debug("timing for s3credentials()")
+    timer.log_all(log)
+
+    return Response(
+        body=json.dumps(creds, default=str),
+        status_code=200,
+        headers=authorizer.get_success_response_headers()
+    )
+
+
+@with_trace()
+def get_role_session_name(user_id: str, app_name: str):
+    # https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html#API_AssumeRole_RequestParameters
+    if not re.match(r"[\w+,.=@-]*", app_name):
+        app_name = ""
+
+    return f"{user_id}@{app_name}"[:64]
+
+
+@with_trace()
+def get_s3_credentials(user_id: str, role_session_name: str, policy: dict):
+    client = boto3.client("sts")
+    arn = os.getenv("EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN")
+    response = client.assume_role(
+        RoleArn=arn,
+        RoleSessionName=role_session_name,
+        ExternalId=user_id,
+        DurationSeconds=3600,
+        Policy=json.dumps(policy)
+    )
+    return response["Credentials"]
 
 
 @app.route('/profile')

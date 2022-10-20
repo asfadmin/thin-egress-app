@@ -153,6 +153,7 @@ jobs:
                   DomainCertArn="$DOMAIN_CERT_ARN" \
                   DomainName="$DOMAIN_NAME" \
                   EnableApiGatewayLogToCloudWatch="False" \
+                  EnableS3CredentialsEndpoint="True" \
                   JwtAlgo="RS256" \
                   JwtKeySecretName="$JWT_KEY_SECRET_NAME" \
                   LambdaCodeDependencyArchive="${CODE_PREFIX}${DEPENDENCY_NAME}" \

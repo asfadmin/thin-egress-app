@@ -16,6 +16,7 @@ Metadata:
           - HtmlTemplateDir
           - StageName
           - EnableApiGatewayLogToCloudWatch
+          - EnableS3CredentialsEndpoint
       -
         Label:
           default: Domain Settings
@@ -260,6 +261,14 @@ Parameters:
       - "True"
     Description: 'Optional flag to enable (True) Api Gateway logging to CloudWatch. If "True", you must add an ARN for a role with write access to CloudWatch Logs in your account here: https://console.aws.amazon.com/apigateway/home?region=[REGION]#/settings'
 
+  EnableS3CredentialsEndpoint:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Optional flag to enable (True) the /s3credentials endpoint for handing out S3 direct access credentials.'
+
   # Open Telemetry settings:::
 
   OtLambdaExecWrapper:
@@ -300,6 +309,7 @@ Parameters:
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
   ApiGatewayLogToCloudWatchIsSet: !Equals [ !Ref EnableApiGatewayLogToCloudWatch, "True" ]
+  S3CredentialsEndpointIsSet: !Equals [ !Ref EnableS3CredentialsEndpoint, "True" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
@@ -696,6 +706,16 @@ Resources:
       PathPart: '{proxy+}'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceS3Credentials:
+    Type: AWS::ApiGateway::Resource
+    Condition: S3CredentialsEndpointIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 's3credentials'
+      RestApiId: !Ref EgressApiGateway
+
   EgressApiResourceProfile:
     Type: AWS::ApiGateway::Resource
     DependsOn:
@@ -881,6 +901,28 @@ Resources:
         'method.request.header.Cookie': true
         'method.request.header.X-urs-access-token': true
       ResourceId: !Ref EgressApiResourceDynamicUrl
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodS3Credentials:
+    Type: AWS::ApiGateway::Method
+    Condition: S3CredentialsEndpointIsSet
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 401
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 's3credentials view'
+      RequestParameters:
+        'method.request.header.Cookie': true
+        'method.request.header.X-urs-access-token': true
+        'method.request.header.X-urs-app-name': false
+      ResourceId: !Ref EgressApiResourceS3Credentials
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIMethodProfile:

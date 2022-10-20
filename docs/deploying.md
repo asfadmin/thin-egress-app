@@ -126,6 +126,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `HtmlTemplateDir` - (OPTIONAL) Subdirectory of `ConfigBucket` where templates can be found
    * `StageName` - API Gateway Stage value
    * `EnableApiGatewayLogToCloudWatch` - Whether or not API Gateway logs should be dumped
+   * `EnableS3CredentialsEndpoint` - Whether or not to deploy the /s3credentials endpoint for s3 direct access.
 * **Domain Settings**:
    * `DomainName` - (OPTIONAL) domain name as a user will access it (ie CloudFront, CNAME, etc)
    * `CookieDomain` - (OPTIONAL) domain name value for minting cookies
@@ -236,6 +237,23 @@ a write up for this, I'd love to include it.
 Please see the
 [Cumulus documentation](https://nasa.github.io/cumulus/docs/deployment/thin_egress_app)
 for current TEA deployment and configuration procedures.
+
+### Enabling S3 direct access
+*NOTE: Support for S3 direct access is currently experimental*
+
+TEA supports handing out s3 direct access credentials over the optional
+`/s3credentials` endpoint. This endpoint can be deployed by setting the
+parameter `EnableS3CredentialsEndpoint="True"` in CloudFormation or by setting
+the parameter `s3credentials_endpoint=true` in Terraform.
+
+*NOTE: Once you've deployed the CloudFormation template, you will need to
+manually update the API Gateway deployment if you ever want to change the value
+of `EnableS3CredentialsEndpoint`. This can also be forced in CloudFormation by
+adding a random number to the name of the ApiGateway Deployment resource before
+redeploying the stack.*
+
+See [S3 Direct Access](configuration.md#s3-direct-access) for a details on how
+the endpoint configuration works.
 
 ## Post deployment procedures
 

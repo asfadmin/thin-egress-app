@@ -24,7 +24,17 @@ def user_profile():
         first_name="John",
         last_name="Smith",
         email="j.smith@email.com",
-        groups=[],
+        groups=[
+            {
+                "group_id": "group_uuid",
+                "name": "restricted",
+                "tag": None,
+                "shared_user_group": False,
+                "created_by": "egress_download_app",
+                "app_uid": "egress_download_app",
+                "client_id": "client_id"
+            }
+        ],
         token="test_token",
         iat=0,
         exp=0
@@ -44,15 +54,19 @@ def client():
 
 @pytest.fixture
 def lambda_context():
-    with mock.patch(f"{MODULE}.app.lambda_context") as ctx:
-        yield ctx
+    ctx = mock.Mock()
+    app.app.lambda_context = ctx
+    yield ctx
+    del app.app.lambda_context
 
 
 @pytest.fixture
 def current_request(lambda_context):
     lambda_context.aws_request_id = "request_1234"
-    with mock.patch(f"{MODULE}.app.current_request") as req:
-        yield req
+    req = mock.MagicMock()
+    app.app.current_request = req
+    yield req
+    del app.app.current_request
 
 
 @pytest.fixture
@@ -62,6 +76,13 @@ def mock_get_urs_creds():
             "UrsId": "stringofseeminglyrandomcharacters",
             "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
         }
+        yield m
+
+
+@pytest.fixture
+def mock_get_urs_url():
+    with mock.patch(f"{MODULE}.get_urs_url", autospec=True) as m:
+        m.return_value = "https://urs.example.domain?redirect=oururl"
         yield m
 
 
@@ -87,6 +108,166 @@ def test_update_blacklist(mock_request, monkeypatch):
     monkeypatch.setenv("BLACKLIST_ENDPOINT", endpoint)
     mock_request.urlopen(endpoint).read.return_value = b'{"blacklist": {"foo": "bar"}}'
     assert app.get_black_list() == {"foo": "bar"}
+
+
+def test_request_authorizer_no_headers(current_request, mock_get_urs_url):
+    current_request.headers = {}
+    current_request.context = {"path": "/foo"}
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    response = authorizer.get_error_response()
+    assert response is not None
+    assert response.body == ""
+    assert response.status_code == 302
+    assert authorizer.get_success_response_headers() == {}
+
+
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+def test_request_authorizer_bearer_header(mock_get_new_token_and_profile, mock_get_user_from_token, current_request):
+    current_request.headers = {
+        "Authorization": "Bearer token",
+        "x-origin-request-id": "origin_request_id"
+    }
+    mock_user_profile = mock.Mock()
+    mock_get_new_token_and_profile.return_value = mock_user_profile
+    mock_get_user_from_token.return_value = "user_name"
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() == mock_user_profile
+    mock_get_new_token_and_profile.assert_called_once_with(
+        "user_name",
+        True,
+        aux_headers={
+            "x-request-id": "request_1234",
+            "x-origin-request-id": "origin_request_id"
+        }
+    )
+
+
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
+def test_request_authorizer_basic_header(mock_do_auth_and_return, current_request):
+    current_request.headers = {
+        "Authorization": "Basic token",
+        "x-origin-request-id": "origin_request_id"
+    }
+    mock_response = mock.Mock()
+    mock_do_auth_and_return.return_value = mock_response
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    assert authorizer.get_error_response() == mock_response
+
+
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+def test_request_authorizer_bearer_header_eula_error(mock_get_user_from_token, current_request):
+    current_request.headers = {"Authorization": "Bearer token"}
+    mock_get_user_from_token.side_effect = app.EulaException({})
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+
+    response = authorizer.get_error_response()
+    assert response.status_code == 403
+    assert response.headers == {}
+
+
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+def test_request_authorizer_bearer_header_eula_error_browser(
+    mock_get_user_from_token,
+    mock_make_html_response,
+    current_request
+):
+    current_request.headers = {
+        "Authorization": "Bearer token",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+    mock_get_user_from_token.side_effect = app.EulaException({
+        "status_code": 403,
+        "error_description": "EULA Acceptance Failure",
+        "resolution_url": "http://resolution_url"
+    })
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+
+    response = authorizer.get_error_response()
+    mock_make_html_response.assert_called_once_with(
+        {
+            "title": "EULA Acceptance Failure",
+            "status_code": 403,
+            "contentstring": (
+                'Could not fetch data because "EULA Acceptance Failure". Please accept EULA here: '
+                '<a href="http://resolution_url">http://resolution_url</a> and try again.'
+            ),
+            "requestid": "request_1234",
+        },
+        {},
+        403,
+        "error.html"
+    )
+    assert response.status_code == 403
+    assert response.headers == {"Content-Type": "text/html"}
+
+
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
+def test_request_authorizer_bearer_header_no_profile(
+    mock_do_auth_and_return,
+    mock_get_new_token_and_profile,
+    mock_get_user_from_token,
+    current_request
+):
+    current_request.headers = {
+        "Authorization": "Bearer token",
+        "x-origin-request-id": "origin_request_id"
+    }
+    mock_response = mock.Mock()
+    mock_do_auth_and_return.return_value = mock_response
+    mock_get_new_token_and_profile.return_value = False
+    mock_get_user_from_token.return_value = "user_name"
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    assert authorizer.get_error_response() == mock_response
+    mock_get_new_token_and_profile.assert_called_once_with(
+        "user_name",
+        True,
+        aux_headers={
+            "x-request-id": "request_1234",
+            "x-origin-request-id": "origin_request_id"
+        }
+    )
+    mock_do_auth_and_return.assert_called_once_with(current_request.context)
+
+
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
+def test_request_authorizer_bearer_header_no_user_id(
+    mock_do_auth_and_return,
+    mock_get_user_from_token,
+    current_request
+):
+    current_request.headers = {
+        "Authorization": "Bearer token",
+        "x-origin-request-id": "origin_request_id"
+    }
+    mock_response = mock.Mock()
+    mock_do_auth_and_return.return_value = mock_response
+    mock_get_user_from_token.return_value = None
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    assert authorizer.get_error_response() == mock_response
+    mock_do_auth_and_return.assert_called_once_with(current_request.context)
 
 
 def test_get_request_id(lambda_context):
@@ -553,7 +734,17 @@ def test_root_with_login(
             "profile": {
                 "urs-user-id": "test_user",
                 "urs-access-token": "test_token",
-                "urs-groups": [],
+                "urs-groups": [
+                    {
+                        "group_id": "group_uuid",
+                        "name": "restricted",
+                        "tag": None,
+                        "shared_user_group": False,
+                        "created_by": "egress_download_app",
+                        "app_uid": "egress_download_app",
+                        "client_id": "client_id"
+                    }
+                ],
                 "first_name": "John",
                 "last_name": "Smith",
                 "email": "j.smith@email.com",
@@ -753,7 +944,7 @@ def test_get_bc_config_client_cached(mock_get_new_session_client):
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
-def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_profile, user_profile):
+def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_profile, user_profile, current_request):
     mock_get_profile.return_value = user_profile
     user_profile.user_id = "username"
 
@@ -874,112 +1065,6 @@ def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
 
     assert response.body == "HEAD failed"
     assert response.status_code == 400
-
-
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
-def test_handle_auth_bearer_header(mock_get_new_token_and_profile, mock_get_user_from_token, current_request):
-    current_request.headers = {"x-origin-request-id": "origin_request_id"}
-    mock_user_profile = mock.Mock()
-    mock_get_new_token_and_profile.return_value = mock_user_profile
-    mock_get_user_from_token.return_value = "user_name"
-
-    assert app.handle_auth_bearer_header(mock.Mock()) == ("user_profile", mock_user_profile)
-    mock_get_new_token_and_profile.assert_called_once_with(
-        "user_name",
-        True,
-        aux_headers={
-            "x-request-id": "request_1234",
-            "x-origin-request-id": "origin_request_id"
-        }
-    )
-
-
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-def test_handle_auth_bearer_header_eula_error(mock_get_user_from_token, current_request):
-    current_request.headers = {"x-origin-request-id": "origin_request_id"}
-    mock_get_user_from_token.side_effect = app.EulaException({})
-
-    action, response = app.handle_auth_bearer_header(mock.Mock())
-    assert action == "return"
-    assert response.status_code == 403
-    assert response.headers == {}
-
-
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-def test_handle_auth_bearer_header_eula_error_browser(
-    mock_get_user_from_token,
-    mock_make_html_response,
-    current_request
-):
-    current_request.headers = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    mock_get_user_from_token.side_effect = app.EulaException({
-        "status_code": 403,
-        "error_description": "EULA Acceptance Failure",
-        "resolution_url": "http://resolution_url"
-    })
-
-    action, response = app.handle_auth_bearer_header(mock.Mock())
-    mock_make_html_response.assert_called_once_with(
-        {
-            "title": "EULA Acceptance Failure",
-            "status_code": 403,
-            "contentstring": (
-                'Could not fetch data because "EULA Acceptance Failure". Please accept EULA here: '
-                '<a href="http://resolution_url">http://resolution_url</a> and try again.'
-            ),
-            "requestid": "request_1234",
-        },
-        {},
-        403,
-        "error.html"
-    )
-    assert action == "return"
-    assert response.status_code == 403
-    assert response.headers == {"Content-Type": "text/html"}
-
-
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
-@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
-def test_handle_auth_bearer_header_no_profile(
-    mock_do_auth_and_return,
-    mock_get_new_token_and_profile,
-    mock_get_user_from_token,
-    current_request
-):
-    current_request.headers = {"x-origin-request-id": "origin_request_id"}
-    mock_response = mock.Mock()
-    mock_do_auth_and_return.return_value = mock_response
-    mock_get_new_token_and_profile.return_value = False
-    mock_get_user_from_token.return_value = "user_name"
-
-    assert app.handle_auth_bearer_header(mock.Mock()) == ("return", mock_response)
-    mock_get_new_token_and_profile.assert_called_once_with(
-        "user_name",
-        True,
-        aux_headers={
-            "x-request-id": "request_1234",
-            "x-origin-request-id": "origin_request_id"
-        }
-    )
-    mock_do_auth_and_return.assert_called_once_with(current_request.context)
-
-
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
-def test_handle_auth_bearer_header_no_user_id(
-    mock_do_auth_and_return,
-    mock_get_user_from_token,
-    current_request
-):
-    current_request.headers = {"x-origin-request-id": "origin_request_id"}
-    mock_response = mock.Mock()
-    mock_do_auth_and_return.return_value = mock_response
-    mock_get_user_from_token.return_value = None
-
-    assert app.handle_auth_bearer_header(mock.Mock()) == ("return", mock_response)
-    mock_do_auth_and_return.assert_called_once_with(current_request.context)
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
@@ -1259,7 +1344,7 @@ def test_dynamic_url_directory(
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
-@mock.patch(f"{MODULE}.handle_auth_bearer_header", autospec=True)
+@mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_dynamic_url_bearer_auth(
@@ -1273,7 +1358,7 @@ def test_dynamic_url_bearer_auth(
     current_request
 ):
     mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    mock_handle_auth_bearer_header.return_value = "user_profile", user_profile
+    mock_handle_auth_bearer_header.return_value = user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     with resources.open("bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1294,6 +1379,82 @@ def test_dynamic_url_bearer_auth(
     assert response.body == "Mock response"
     assert response.status_code == 200
     assert response.headers == {}
+
+
+@mock.patch(f"{MODULE}.get_s3_credentials", autospec=True)
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_s3credentials(
+    mock_get_profile,
+    mock_get_yaml_file,
+    mock_get_s3_credentials,
+    mock_get_urs_creds,
+    resources,
+    user_profile,
+    client
+):
+    mock_get_s3_credentials.return_value = {
+        "AccessKeyId": "access_key",
+        "SecretAccessKey": "secret_access_key",
+        "SessionToken": "session_token",
+        "Expiration": "expiration"
+    }
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+    mock_get_profile.return_value = user_profile
+
+    response = client.http.get("/s3credentials")
+
+    assert response.json_body == {
+        "AccessKeyId": "access_key",
+        "SecretAccessKey": "secret_access_key",
+        "SessionToken": "session_token",
+        "Expiration": "expiration"
+    }
+    assert response.status_code == 200
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_s3credentials_unauthenticated(
+    mock_do_auth_and_return,
+    mock_get_profile,
+    mock_handle_auth_bearer_header,
+    mock_get_yaml_file,
+    resources,
+    client
+):
+    mock_handle_auth_bearer_header.return_value = None
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+    mock_get_profile.return_value = None
+    mock_response = chalice.Response(body="Mock response", headers={}, status_code=301)
+    mock_do_auth_and_return.return_value = mock_response
+
+    response = client.http.get("/s3credentials")
+
+    assert response.body == b"Mock response"
+    assert response.status_code == 301
+
+
+@mock.patch(f"{MODULE}.boto3")
+def test_get_s3_credentials(mock_boto3, monkeypatch):
+    monkeypatch.setenv("EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN", "aws:role:arn")
+    client = mock_boto3.client("sts")
+
+    app.get_s3_credentials("user", "role-session-name", policy={})
+
+    client.assume_role.assert_called_once_with(
+        RoleArn="aws:role:arn",
+        RoleSessionName="role-session-name",
+        ExternalId="user",
+        DurationSeconds=3600,
+        Policy="{}"
+    )
 
 
 def test_profile(client):

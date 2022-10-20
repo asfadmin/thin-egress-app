@@ -125,6 +125,7 @@ endif
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<CODE_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_CODE_ARCHIVE_KEY}"
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<BUILD_ID>" "${CF_BUILD_VERSION}"
 	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "^Description:.*" 'Description: "${CF_DESCRIPTION}"'
+	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "EgressAPIdeployment" "EgressAPIdeployment`python3 -c 'import random; print(random.randint(0, 2**20))'`"
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %
@@ -201,7 +202,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					AuthBaseUrl=$(URS_URL) \
 					ConfigBucket=$(CONFIG_BUCKET) \
 					LambdaCodeS3Bucket=$(CODE_BUCKET) \
-					PermissionsBoundaryName= \
+					PermissionsBoundaryName=$(PERMISSION_BOUNDARY_NAME) \
 					BucketnamePrefix=$(BUCKETNAME_PREFIX) \
 					DownloadRoleArn="" \
 					DownloadRoleInRegionArn="" \
@@ -210,10 +211,11 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					Loglevel=DEBUG \
 					Logtype=$(LOG_TYPE) \
 					Maturity=DEV \
-					PrivateVPC= \
-					VPCSecurityGroupIDs= \
-					VPCSubnetIDs= \
+					PrivateVPC=$(PRIVATE_VPC) \
+					VPCSecurityGroupIDs=$(VPC_SECURITY_GROUP_IDS) \
+					VPCSubnetIDs=$(VPC_SUBNET_IDS) \
 					EnableApiGatewayLogToCloudWatch="False" \
+					EnableS3CredentialsEndpoint="True" \
 					DomainName=$(DOMAIN_NAME-"") \
 					DomainCertArn=$(DOMAIN_CERT_ARN-"") \
 					CookieDomain=$(COOKIE_DOMAIN-"") \

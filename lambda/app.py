@@ -976,6 +976,19 @@ def s3credentials():
     policy = b_map.to_iam_policy(groups)
     log.debug("policy: %s", policy)
 
+    if policy is None:
+        template_vars = {
+            "contentstring": "You do not have permission to access any data.",
+            "title": "Could not access data",
+            "requestid": get_request_id()
+        }
+        return make_html_response(
+            template_vars,
+            authorizer.get_success_response_headers(),
+            403,
+            "error.html"
+        )
+
     app_name = app.current_request.headers.get("app-name", "")
     role_session_name = get_role_session_name(user_profile.user_id, app_name)
 

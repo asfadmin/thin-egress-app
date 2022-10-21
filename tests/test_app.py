@@ -1441,6 +1441,34 @@ def test_s3credentials_unauthenticated(
     assert response.status_code == 301
 
 
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_s3credentials_no_permissions(
+    mock_get_profile,
+    mock_get_yaml_file,
+    mock_get_urs_creds,
+    mock_make_html_response,
+    user_profile,
+    client
+):
+    mock_get_yaml_file.return_value = {}
+    mock_get_profile.return_value = user_profile
+
+    client.http.get("/s3credentials")
+
+    mock_make_html_response.assert_called_once_with(
+        {
+            "contentstring": "You do not have permission to access any data.",
+            "title": "Could not access data",
+            "requestid": app.app.lambda_context.aws_request_id
+        },
+        {},
+        403,
+        "error.html"
+    )
+
+
 @mock.patch(f"{MODULE}.boto3")
 def test_get_s3_credentials(mock_boto3, monkeypatch):
     monkeypatch.setenv("EGRESS_APP_DOWNLOAD_ROLE_INREGION_ARN", "aws:role:arn")

@@ -1011,7 +1011,10 @@ def get_s3_credentials(user_id: str, role_session_name: str, policy: dict):
         RoleSessionName=role_session_name,
         ExternalId=user_id,
         DurationSeconds=3600,
-        Policy=json.dumps(policy)
+        # NOTE: Policy max size is 2048 characters which is quite limiting.
+        # TODO(reweeden): We'll need to figure out how to accomodate large
+        # bucket maps that will push us over this limit.
+        Policy=json.dumps(policy, separators=(",", ":"))
     )
     return response["Credentials"]
 

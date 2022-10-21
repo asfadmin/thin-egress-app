@@ -30,6 +30,9 @@ DOCKER := docker
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
 DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS)
 
+PYTHON := python3
+BUILD_VENV := $(DIR)/.venv
+
 #####################
 # Deployment Config #
 #####################
@@ -92,6 +95,11 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -rf $(DIR)
 
+$(BUILD_VENV): requirements/requirements-make.txt
+	rm -rf $(BUILD_VENV)
+	$(PYTHON) -m venv $(BUILD_VENV)
+	$(BUILD_VENV)/bin/pip --cache-dir $(DIR)/.pip-cache/ install -r requirements/requirements-make.txt
+
 $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
@@ -106,7 +114,7 @@ $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
 $(DIST_SOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
-	python3 scripts/sed.py -i $@ "<BUILD_ID>" "${BUILD_ID}"
+	$(PYTHON) scripts/sed.py -i $@ "<BUILD_ID>" "${BUILD_ID}"
 
 $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code
@@ -115,17 +123,16 @@ $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 $(DIR)/bucket-map.yaml:
 	cp config/bucket-map-template.yaml $@
 
-$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
+$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml.j2 $(BUILD_VENV)
 	@mkdir -p $(DIR)
-	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
-ifdef CF_DEFAULT_CODE_BUCKET
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "asf.public.code" "${CF_DEFAULT_CODE_BUCKET}"
-endif
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<DEPENDENCY_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<CODE_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_CODE_ARCHIVE_KEY}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<BUILD_ID>" "${CF_BUILD_VERSION}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "^Description:.*" 'Description: "${CF_DESCRIPTION}"'
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "EgressAPIdeployment" "EgressAPIdeployment`python3 -c 'import random; print(random.randint(0, 2**20))'`"
+	$(BUILD_VENV)/bin/python scripts/render_cf.py \
+		cloudformation/thin-egress-app.yaml.j2 \
+		--output $(DIR)/thin-egress-app.yaml \
+		--code-bucket "$(CF_DEFAULT_CODE_BUCKET)" \
+		--dependency-archive-key "$(CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY)" \
+		--code-archive-key "$(CF_DEFAULT_CODE_ARCHIVE_KEY)" \
+		--build-version "$(CF_BUILD_VERSION)" \
+		--description "$(CF_DESCRIPTION)"
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %

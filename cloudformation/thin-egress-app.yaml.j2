@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: "A 'thinner' egress app using lambda."
+Description: "{{ description or "A 'thinner' egress app using lambda."}}"
 
 Metadata:
   "AWS::CloudFormation::Interface":
@@ -106,17 +106,17 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: "<CODE_ARCHIVE_PATH_FILENAME>"
+    Default: "{{ code_archive_key }}"
     Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
-    Default: "asf.public.code"
+    Default: "{{ code_bucket or "asf.public.code"}}"
     Description: "S3 Bucket of packaged lambda egress code."
 
   LambdaCodeDependencyArchive:
     Type: String
-    Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
+    Default: "{{ dependency_archive_key }}"
     Description: "S3 Key of packaged lambda urs code dependencies."
 
   LambdaMemory:
@@ -606,7 +606,7 @@ Resources:
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
           LOGTYPE: !Ref Logtype
-          BUILD_VERSION: "<BUILD_ID>"
+          BUILD_VERSION: "{{ build_version }}"
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix
@@ -986,7 +986,7 @@ Resources:
       ResourceId: !Ref EgressApiResourcePubkey
       RestApiId: !Ref EgressApiGateway
 
-  EgressAPIdeployment:
+  EgressAPIdeployment{{ range(1, 999999) | random }}:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - EgressApiGateway
@@ -1078,7 +1078,7 @@ Resources:
           TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
           LOGLEVEL: !Ref Loglevel
           LOGTYPE: !Ref Logtype
-          BUILD_VERSION: "<BUILD_ID>"
+          BUILD_VERSION: "{{ build_version }}"
           MATURITY: !Ref Maturity
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'

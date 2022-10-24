@@ -986,7 +986,8 @@ Resources:
       ResourceId: !Ref EgressApiResourcePubkey
       RestApiId: !Ref EgressApiGateway
 
-  EgressAPIdeployment{{ range(1, 999999) | random }}:
+  {% set random_id = range(1, 999999) | random %}
+  EgressAPIdeployment{{ random_id }}:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - EgressApiGateway
@@ -1011,11 +1012,11 @@ Resources:
     Type: AWS::ApiGateway::Stage
     DependsOn:
       - EgressApiGateway
-      - EgressAPIdeployment
+      - EgressAPIdeployment{{ random_id }}
     Properties:
       StageName: !Ref StageName
       RestApiId: !Ref EgressApiGateway
-      DeploymentId: !Ref EgressAPIdeployment
+      DeploymentId: !Ref EgressAPIdeployment{{ random_id }}
       AccessLogSetting:
         !If
           - ApiGatewayLogToCloudWatchIsSet

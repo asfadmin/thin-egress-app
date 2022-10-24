@@ -716,6 +716,16 @@ Resources:
       PathPart: 's3credentials'
       RestApiId: !Ref EgressApiGateway
 
+  EgressApiResourceS3CredentialsREADME:
+    Type: AWS::ApiGateway::Resource
+    Condition: S3CredentialsEndpointIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 's3credentialsREADME'
+      RestApiId: !Ref EgressApiGateway
+
   EgressApiResourceProfile:
     Type: AWS::ApiGateway::Resource
     DependsOn:
@@ -923,6 +933,23 @@ Resources:
         'method.request.header.X-urs-access-token': true
         'method.request.header.X-urs-app-name': false
       ResourceId: !Ref EgressApiResourceS3Credentials
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodS3CredentialsREADME:
+    Type: AWS::ApiGateway::Method
+    Condition: S3CredentialsEndpointIsSet
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 's3credentialsREADME view'
+      ResourceId: !Ref EgressApiResourceS3CredentialsREADME
       RestApiId: !Ref EgressApiGateway
 
   EgressAPIMethodProfile:

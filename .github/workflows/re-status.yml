@@ -38,7 +38,7 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
@@ -70,7 +70,7 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV

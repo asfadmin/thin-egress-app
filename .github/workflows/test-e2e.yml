@@ -23,7 +23,7 @@ jobs:
         env:
           RUN_TESTS: ${{ secrets.RUN_TESTS }}
         if: "${{ env.RUN_TESTS == 'true' }}"
-        run: echo "::set-output name=val::yes"
+        run: echo "val=yes" >> $GITHUB_OUTPUT
 
   test-e2e:
     needs:

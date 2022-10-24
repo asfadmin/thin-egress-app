@@ -36,11 +36,11 @@ jobs:
       - id: step1
         run: |
           VERSION=${GITHUB_REF_NAME#*.}
-          echo "::set-output name=version::$VERSION"
-          echo "::set-output name=code-zip::tea-code-build.$VERSION.zip"
-          echo "::set-output name=dependency-zip::tea-dependencylayer-build.$VERSION.zip"
-          echo "::set-output name=cloudformation-yaml::tea-cloudformation-build.$VERSION.yaml"
-          echo "::set-output name=terraform-zip::tea-terraform-build.$VERSION.zip"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "code-zip=tea-code-build.$VERSION.zip" >> $GITHUB_OUTPUT
+          echo "dependency-zip=tea-dependencylayer-build.$VERSION.zip" >> $GITHUB_OUTPUT
+          echo "cloudformation-yaml=tea-cloudformation-build.$VERSION.yaml" >> $GITHUB_OUTPUT
+          echo "terraform-zip=tea-terraform-build.$VERSION.zip" >> $GITHUB_OUTPUT
 
   # Build everything
   build-all:
@@ -49,7 +49,7 @@ jobs:
     needs: variables
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
@@ -72,25 +72,25 @@ jobs:
         run: make build
 
       - name: Save dependency layer zip
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dependency-layer
           path: dist/thin-egress-app-dependencies.zip
 
       - name: Save Lambda code
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: code
           path: dist/thin-egress-app-code.zip
 
       - name: Save CloudFormation yaml
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: cloudformation
           path: dist/thin-egress-app.yaml
 
       - name: Save Terraform zip
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: terraform
           path: dist/thin-egress-app-terraform.zip

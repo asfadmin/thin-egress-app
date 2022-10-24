@@ -72,25 +72,25 @@ jobs:
         run: make build
 
       - name: Save dependency layer zip
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: dependency-layer
           path: dist/thin-egress-app-dependencies.zip
 
       - name: Save Lambda code
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: code
           path: dist/thin-egress-app-code.zip
 
       - name: Save CloudFormation yaml
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: cloudformation
           path: dist/thin-egress-app.yaml
 
       - name: Save Terraform zip
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: terraform
           path: dist/thin-egress-app-terraform.zip

@@ -65,7 +65,7 @@ jobs:
       - name: Load environment defaults
         run: cat .github/workflows/config-public/prod.env >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - name: Upload to public code bucket
         env:
@@ -92,7 +92,7 @@ jobs:
       - test-e2e
     if: success() || needs.test-e2e.result == 'skipped'
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - uses: actions/upload-release-asset@v1
         env:

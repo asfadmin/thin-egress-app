@@ -1,1 +1,4 @@
 jinja2
+markdown
+pygments
+pymdown-extensions

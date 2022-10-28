@@ -1,83 +1,130 @@
-## S3 Direct Access
+# S3 Direct Access
+
 *NOTE: Support for S3 direct access is currently experimental*
 
 You can retrieve temporary S3 credentials at the `/s3credentials` endpoint when
-authenticated via earthdata login. These credentials will be valid for 1 hour
+authenticated via Earthdata Login. These credentials will only be valid for
+**1 hour** due to
+[role chaining](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html)
 and can be used make in-region `s3:ListBucket` and `s3:GetObject` requests.
+Your code must handle expired tokens and request new ones as needed
+for sessions that exceed this 1 hour limit.
 
-### Request
-Credentials are retrieved through a `GET` request to the `/s3credentials`
-endpoint. An optional header `app-name` can be provided to include in the
-generated role session name which will show up in EMS logs.
+## Request
 
-**Params:**
-None.
+Credentials are retrieved through an HTTP `GET` request to the `/s3credentials`
+endpoint. The request must be authenticated with either a JWT token for TEA or
+by using
+[EDL Bearer Tokens](https://urs.earthdata.nasa.gov/documentation/for_users/user_token).
+Unauthenticated requests will be redirected to EDL.
 
 **Headers:**
-  - `app-name`: A string to include in the generated role session name for
-  metric reporting purposes. It is recommended to include this header when
-  making requests on users behalf from another cloud service. The generated
-  role session name is `username@app-name`.
+
+* (optional) `app-name`: An arbitrary string to include in the generated role
+  session name for metric reporting purposes. It can only contain characters
+  that are valid in a `RoleSessionName` see the
+  [AssumeRole documentation](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html#API_AssumeRole_RequestParameters).
+  It is recommended to include this header when making requests on users behalf
+  from another cloud service. The generated role session name is
+  `username@app-name`.
 
 **Example:**
 ```python
 import requests
 
-requests.get(
+resp = requests.get(
     "https://your-tea-host/s3credentials",
     headers={"app-name": "my-application"},
     cookies={"asf-urs": "<your jwt token>"}
 )
+print(resp.json())
 ```
 
-### Response
-The response is your temporary credentials as returned by Amazon STS.
-[See the AWS Credentials reference](https://docs.aws.amazon.com/STS/latest/APIReference/API_Credentials.html")
+## Response
+
+The response is your temporary credentials as returned by Amazon STS. See the
+[AWS Credentials reference](https://docs.aws.amazon.com/STS/latest/APIReference/API_Credentials.html) for more details.
 
 **Example:**
 ```json
 {
-  "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-  "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-  "SessionToken": "LONGSTRINGOFCHARACTERS.../HJLgV91QJFCMlmY8slIEOjrOChLQYmzAqrb5U1ekoQAK6f86HKJFTT2dONzPgmJN9ZvW5DBwt6XUxC9HAQ0LDPEYEwbjGVKkzSNQh/",
-  "Expiration": "2021-01-27 00:50:09+00:00"
+    "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
+    "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "SessionToken": "LONGSTRINGOFCHARACTERS.../HJLgV91QJFCMlmY8slIEOjrOChLQYmzAqrb5U1ekoQAK6f86HKJFTT2dONzPgmJN9ZvW5DBwt6XUxC9HAQ0LDPEYEwbjGVKkzSNQh/",
+    "Expiration": "2021-01-27 00:50:09+00:00"
 }
 ```
 
-### Using Temporary Credentials
-To use the credentials you must configure your AWS client with the returned
-access key, secret and token. Note that the credentials will only work in-
-region, so you will get 403 errors if you try to use them with the AWS cli.
+## Using Temporary Credentials
+
+To use the credentials you must configure your AWS SDK library with the
+returned access key, secret and token. Note that the credentials are only valid
+for in-region requests, so using them with your AWS CLI will not work! You must
+make your requests from an AWS service such as Lambda or EC2 in the same region
+as the source bucket you are pulling from. See
+[Using temporary credentials with AWS resources](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html)
+for more information on how to use your temporary credentials.
 
 **Example:**
+
+This example lambda function uses
+[EDL Bearer Tokens](https://urs.earthdata.nasa.gov/documentation/for_users/user_token)
+to obtain s3 credentials and stream an object from one bucket to another. The
+lambda execution role will need `s3:PutObject` permissions on the destination
+bucket.
+
+
 ```python
 import boto3
-import requests
+import json
+import urllib.request
 
-def get_client():
-  resp = requests.get(
-      "https://your-tea-host/s3credentials",
-      headers={"app-name": "my-application"},
-      cookies={"asf-urs": "<your jwt token>"}
-  )
-  resp.raise_for_status()
-  creds = resp.json()
 
-  return boto3.client(
-      "s3",
-      aws_access_key_id=creds["AccessKeyId"],
-      aws_secret_access_key=creds["SecretAccessKey"],
-      aws_session_token=creds["SessionToken"]
-  )
+def lambda_handler(event, context):
+    # Get temporary download credentials
+    tea_url = event["CredentialsEndpoint"]
+    bearer_token = event["BearerToken"]
+    req = urllib.request.Request(
+        url=tea_url,
+        headers={"Authorization": f"Bearer {bearer_token}"}
+    )
+    with urllib.request.urlopen(req) as f:
+        creds = json.loads(f.read().decode())
 
+    # Set up separate boto3 clients for download and upload
+    download_client = boto3.client(
+        "s3",
+        aws_access_key_id=creds["AccessKeyId"],
+        aws_secret_access_key=creds["SecretAccessKey"],
+        aws_session_token=creds["SessionToken"]
+    )
+    # Lambda needs to have permission to upload to destination bucket
+    upload_client = boto3.client("s3")
+
+    # Stream from the source bucket to the destination bucket
+    resp = download_client.get_object(
+        Bucket=event["Source"]["Bucket"],
+        Key=event["Source"]["Key"],
+    )
+    upload_client.upload_fileobj(
+        resp["Body"],
+        event["Dest"]["Bucket"],
+        event["Dest"].get("Key") or event["Source"]["Key"],
+    )
 ```
 
-### Limits
+The example can be invoked with an event payload as follows:
 
-The credentials dispensed from the `/s3credentials` endpoint are valid for
-**1 hour**. Your code must handle expired tokens and request new ones as needed
-for sessions that exceed this 1 hour limit. This is an AWS Limit is due to
-[role chaining](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html)
-
-These credentials will have `s3:GetObject` and `s3:ListBucket` permissions on
-the configured resources.
+```json
+{
+    "CredentialsEndpoint": "https://your-tea-host/s3credentials",
+    "BearerToken": "your bearer token",
+    "Source": {
+        "Bucket": "S3 bucket name from CMR link",
+        "Key": "S3 key from CMR link"
+    },
+    "Dest": {
+        "Bucket": "S3 bucket name to copy to"
+    }
+}
+```

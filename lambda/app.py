@@ -1032,6 +1032,12 @@ def get_s3_credentials(user_id: str, role_session_name: str, policy: dict):
     return response["Credentials"]
 
 
+@app.route('/s3credentialsREADME', methods=['GET'])
+@with_trace(context={})
+def s3credentials_readme():
+    return make_html_response({}, {}, 200, "s3credentials_readme.html")
+
+
 @app.route('/profile')
 @with_trace(context={})
 def profile():

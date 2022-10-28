@@ -4,7 +4,8 @@ SOURCES := \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
-RESOURCES := $(wildcard lambda/templates/*)
+HTML_TEMPLATES := $(wildcard lambda/templates/*.html)
+MD_TEMPLATES := $(wildcard lambda/templates/*.md)
 TERRAFORM := $(wildcard terraform/*)
 
 REQUIREMENTS_IN := $(wildcard requirements/*.in)
@@ -15,7 +16,9 @@ DIR := dist
 EMPTY := $(DIR)/empty
 # Temporary artifacts
 DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
-DIST_RESOURCES := $(RESOURCES:lambda/%=$(DIR)/code/%)
+DIST_MD_RESOURCES := $(MD_TEMPLATES:lambda/%.md=$(DIR)/code/%.html)
+DIST_HTML_RESOURCES := $(HTML_TEMPLATES:lambda/%=$(DIR)/code/%)
+DIST_RESOURCES := $(DIST_HTML_RESOURCES) $(DIST_MD_RESOURCES)
 DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
 BUCKET_MAP_OBJECT_KEY := DEFAULT
@@ -105,8 +108,13 @@ $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIRE
 	@mkdir -p $(DIR)/python
 	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
+.SECONDARY: $(DIST_MD_RESOURCES)
+$(DIST_MD_RESOURCES): $(DIR)/code/%.html: lambda/%.md $(BUILD_VENV)
+	@mkdir -p $(@D)
+	$(BUILD_VENV)/bin/python scripts/render_md.py $< --output $@
+
 .SECONDARY: $(DIST_RESOURCES)
-$(DIST_RESOURCES): $(DIR)/code/%: lambda/%
+$(DIST_HTML_RESOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
 

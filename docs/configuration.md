@@ -1,3 +1,5 @@
+# Configuration
+
 ## Bucket Mapping
 
 At the heart of TEA is the concept of the Bucket Map. This YAML file tells TEA how to

@@ -1,3 +1,5 @@
+# Vision
+
 We the **TEA**m strive to create the simplest, most reliable, most feature-rich S3
 distribution app. Our intent is not to provide EVERY feature imaginable, but to maintain the
 **THIN** core of broadly applicable features. We want to continue to engage the user

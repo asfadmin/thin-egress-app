@@ -578,6 +578,7 @@ def test_try_download_from_bucket(
     client = mock_get_role_session().client()
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
+    app.b_map = None
 
     response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
     client.head_object.assert_called_once()

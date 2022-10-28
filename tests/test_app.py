@@ -384,6 +384,28 @@ def test_restore_bucket_vars(mock_get_yaml_file, resources):
     assert app.b_map.bucket_map == buckets
 
 
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+def test_restore_bucket_vars_iam_compatibility_error(
+    mock_get_yaml_file,
+    monkeypatch
+):
+    mock_get_yaml_file.return_value = {
+        "PATH": "bucket",
+        "PRIVATE_BUCKETS": {
+            "bucket/prefix/": ["group"]
+        }
+    }
+
+    app.b_map = None
+    monkeypatch.setenv("ENABLE_S3_CREDENTIALS_ENDPOINT", "False")
+    app.restore_bucket_vars()
+
+    app.b_map = None
+    monkeypatch.setenv("ENABLE_S3_CREDENTIALS_ENDPOINT", "True")
+    with pytest.raises(ValueError, match="Invalid prefix permissions"):
+        app.restore_bucket_vars()
+
+
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 def test_do_auth_and_return(mock_get_urs_url, monkeypatch):
     mock_get_urs_url.side_effect = lambda _ctx, redirect: redirect

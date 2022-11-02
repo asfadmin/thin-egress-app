@@ -381,13 +381,25 @@ def restore_bucket_vars():
 
         b_map_dict = get_yaml_file(conf_bucket, bucket_map_file)
         reverse = os.getenv('USE_REVERSE_BUCKET_MAP', 'FALSE').lower() == 'true'
+        iam_compatible = os.getenv('ENABLE_S3_CREDENTIALS_ENDPOINT', 'FALSE').lower() == 'true'
 
         log.debug('bucket map: %s', b_map_dict)
-        b_map = BucketMap(
-            b_map_dict,
-            bucket_name_prefix=get_bucket_name_prefix(),
-            reverse=reverse
-        )
+        try:
+            b_map = BucketMap(
+                b_map_dict,
+                bucket_name_prefix=get_bucket_name_prefix(),
+                reverse=reverse,
+                iam_compatible=iam_compatible
+            )
+        except ValueError:
+            log.error('Invalid bucket map, please consult the TEA documentation')
+            if iam_compatible:
+                log.info(
+                    'Your bucket map permissions are configured in such a way '
+                    'that they cannot be converted to an IAM policy. Either '
+                    'fix your bucket map, or disable S3 credentials.'
+                )
+            raise
     else:
         log.info('reusing old bucket configs')
 

@@ -101,22 +101,96 @@ object prefixing to control access:
 
 ```yaml
 MAP:
-   data-path: data-bucket
+    data-path: data-bucket
 
 PUBLIC_BUCKETS:
-   data-bucket/browse/: "Browse image"
+    data-bucket/browse/: "Browse image"
 
 PRIVATE_BUCKETS:
-   data-bucket/pre-commission-data/:
-     - internal_users
-     - external_team
+    data-bucket/:
+      - internal_users
+      - external_team
 ```
 
-In the above example, while access to data in `data-bucket` requires simple auth,
-accessing an object with the prefix `browse/` will require NO auth, and
-`pre-commission-data/` will require EDL App group access as specified.
+In the above example, while access to data in `data-bucket` requires EDL App
+group access to one of the specified groups, accessing an object with the
+prefix `browse/` will not require any auth.
+
+TEA will always check the rules from most deeply nested to most shallow. So
+for example, in this bucket map:
+
+```yaml
+MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/external/public/: "Browse image"
+
+PRIVATE_BUCKETS:
+    data-bucket/:
+      - internal_users
+    data-bucket/external/:
+      - internal_users
+      - external_team
+```
+
+Any data in the prefix `external/public/` will be public, data in the prefix
+`external/` but not in the prefix `external/public/` will be available to users
+in either of the defined EDL App groups, and everything else in the bucket will
+be available to users in the `internal_users` group only.
+
+##### S3 direct access compatibility
+
+Note that there are some access configurations supported by the standard HTTP
+access method, that are not allowed when S3 direct access is enabled (see
+[S3 direct access](#s3-direct-access)). This is due to a limitation with how
+IAM policies work. In particular, in IAM compatibility mode prefixes must
+always become more open as they become more nested. All of the bucket maps
+shown above are compatible with s3 direct access, however, long time users of
+TEA might recognize the following configuration example from previous versions
+which will be rejected when S3 direct access is enabled.
+
+Bad Example:
+```yaml
+MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/browse/: "Browse image"
+
+PRIVATE_BUCKETS:
+    # Since no permission is specified for `data-bucket/`, the default is used
+    # which allows access to any authenticated user. Therefore, adding a
+    # prefix `pre-commission-data/` that is more restrictive will break IAM
+    # compatibility.
+    data-bucket/pre-commission-data/:
+      - internal_users
+      - external_team
+```
+
+To fix this, the bucket map could modified as follows:
+
+Good Example:
+```yaml
+MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/browse/: "Browse image"
+
+PRIVATE_BUCKETS:
+    data-bucket/:
+      - internal_users
+      - external_team
+    # The following rule is redundant, but might not be in the presence of
+    # other rules.
+    data-bucket/pre-commission-data/:
+      - internal_users
+      - external_team
+```
 
 #### S3 Direct Access
+
 *NOTE: Support for S3 direct access is currently experimental*
 
 TEA can be deployed with an `/s3credentials` endpoint (See

@@ -1,4 +1,5 @@
 # Thin Egress App
+
 ## Purpose of TEA
 
 TEA is a fully Earthdata Cloud (EDC) compliant application to enable

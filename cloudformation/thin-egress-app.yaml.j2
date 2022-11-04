@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: "A 'thinner' egress app using lambda."
+Description: "{{ description or "A 'thinner' egress app using lambda."}}"
 
 Metadata:
   "AWS::CloudFormation::Interface":
@@ -16,6 +16,7 @@ Metadata:
           - HtmlTemplateDir
           - StageName
           - EnableApiGatewayLogToCloudWatch
+          - EnableS3CredentialsEndpoint
       -
         Label:
           default: Domain Settings
@@ -105,17 +106,17 @@ Parameters:
 
   LambdaCodeS3Key:
     Type: String
-    Default: "<CODE_ARCHIVE_PATH_FILENAME>"
+    Default: "{{ code_archive_key }}"
     Description: "S3 Key of packaged lambda egress code."
 
   LambdaCodeS3Bucket:
     Type: String
-    Default: "asf.public.code"
+    Default: "{{ code_bucket or "asf.public.code"}}"
     Description: "S3 Bucket of packaged lambda egress code."
 
   LambdaCodeDependencyArchive:
     Type: String
-    Default: "<DEPENDENCY_ARCHIVE_PATH_FILENAME>"
+    Default: "{{ dependency_archive_key }}"
     Description: "S3 Key of packaged lambda urs code dependencies."
 
   LambdaMemory:
@@ -260,6 +261,14 @@ Parameters:
       - "True"
     Description: 'Optional flag to enable (True) Api Gateway logging to CloudWatch. If "True", you must add an ARN for a role with write access to CloudWatch Logs in your account here: https://console.aws.amazon.com/apigateway/home?region=[REGION]#/settings'
 
+  EnableS3CredentialsEndpoint:
+    Type: String
+    Default: "False"
+    AllowedValues:
+      - "False"
+      - "True"
+    Description: 'Optional flag to enable (True) the /s3credentials endpoint for handing out S3 direct access credentials.'
+
   # Open Telemetry settings:::
 
   OtLambdaExecWrapper:
@@ -300,6 +309,7 @@ Parameters:
 Conditions:
   DomainNameIsSet: !Not [ !Equals [ !Ref DomainName, "" ] ]
   ApiGatewayLogToCloudWatchIsSet: !Equals [ !Ref EnableApiGatewayLogToCloudWatch, "True" ]
+  S3CredentialsEndpointIsSet: !Equals [ !Ref EnableS3CredentialsEndpoint, "True" ]
   CreateDownloadRole: !Equals [ !Ref DownloadRoleArn, "" ]
   UsePermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundaryName, "" ] ]
   UsePrivateVPC: !Not [ !Equals [ !Ref PrivateVPC, "" ] ]
@@ -596,7 +606,7 @@ Resources:
           AUTH_BASE_URL: !Ref AuthBaseUrl
           LOGLEVEL: !Ref Loglevel
           LOGTYPE: !Ref Logtype
-          BUILD_VERSION: "<BUILD_ID>"
+          BUILD_VERSION: "{{ build_version }}"
           MATURITY: !Ref Maturity
           S3_SIGNATURE_VERSION: 's3v4'
           BUCKETNAME_PREFIX: !Ref BucketnamePrefix
@@ -694,6 +704,26 @@ Resources:
     Properties:
       ParentId: !GetAtt EgressApiGateway.RootResourceId
       PathPart: '{proxy+}'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressApiResourceS3Credentials:
+    Type: AWS::ApiGateway::Resource
+    Condition: S3CredentialsEndpointIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 's3credentials'
+      RestApiId: !Ref EgressApiGateway
+
+  EgressApiResourceS3CredentialsREADME:
+    Type: AWS::ApiGateway::Resource
+    Condition: S3CredentialsEndpointIsSet
+    DependsOn:
+      - EgressApiGateway
+    Properties:
+      ParentId: !GetAtt EgressApiGateway.RootResourceId
+      PathPart: 's3credentialsREADME'
       RestApiId: !Ref EgressApiGateway
 
   EgressApiResourceProfile:
@@ -883,6 +913,45 @@ Resources:
       ResourceId: !Ref EgressApiResourceDynamicUrl
       RestApiId: !Ref EgressApiGateway
 
+  EgressAPIMethodS3Credentials:
+    Type: AWS::ApiGateway::Method
+    Condition: S3CredentialsEndpointIsSet
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+          - StatusCode: 401
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 's3credentials view'
+      RequestParameters:
+        'method.request.header.Cookie': true
+        'method.request.header.X-urs-access-token': true
+        'method.request.header.X-urs-app-name': false
+      ResourceId: !Ref EgressApiResourceS3Credentials
+      RestApiId: !Ref EgressApiGateway
+
+  EgressAPIMethodS3CredentialsREADME:
+    Type: AWS::ApiGateway::Method
+    Condition: S3CredentialsEndpointIsSet
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        IntegrationHttpMethod: 'POST'
+        IntegrationResponses:
+          - StatusCode: 200
+        Type: 'AWS_PROXY'
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EgressLambda.Arn}/invocations"
+      OperationName: 's3credentialsREADME view'
+      ResourceId: !Ref EgressApiResourceS3CredentialsREADME
+      RestApiId: !Ref EgressApiGateway
+
   EgressAPIMethodProfile:
     Type: AWS::ApiGateway::Method
     Properties:
@@ -944,7 +1013,8 @@ Resources:
       ResourceId: !Ref EgressApiResourcePubkey
       RestApiId: !Ref EgressApiGateway
 
-  EgressAPIdeployment:
+  {% set random_id = range(1, 999999) | random %}
+  EgressAPIdeployment{{ random_id }}:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - EgressApiGateway
@@ -969,11 +1039,11 @@ Resources:
     Type: AWS::ApiGateway::Stage
     DependsOn:
       - EgressApiGateway
-      - EgressAPIdeployment
+      - EgressAPIdeployment{{ random_id }}
     Properties:
       StageName: !Ref StageName
       RestApiId: !Ref EgressApiGateway
-      DeploymentId: !Ref EgressAPIdeployment
+      DeploymentId: !Ref EgressAPIdeployment{{ random_id }}
       AccessLogSetting:
         !If
           - ApiGatewayLogToCloudWatchIsSet
@@ -1036,7 +1106,7 @@ Resources:
           TEA_LAMBDA_NAME: !Sub "${AWS::StackName}-EgressLambda"
           LOGLEVEL: !Ref Loglevel
           LOGTYPE: !Ref Logtype
-          BUILD_VERSION: "<BUILD_ID>"
+          BUILD_VERSION: "{{ build_version }}"
           MATURITY: !Ref Maturity
       Handler: tea_bumper.lambda_handler
       Runtime: 'python3.8'

@@ -25,7 +25,7 @@ jobs:
         env:
           RUN_TESTS: ${{ secrets.RUN_TESTS }}
         if: "${{ env.RUN_TESTS == 'true' }}"
-        run: echo "::set-output name=val::yes"
+        run: echo "val=yes" >> $GITHUB_OUTPUT
 
   test-e2e:
     needs:
@@ -60,12 +60,12 @@ jobs:
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/prod.env >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - name: Upload to public code bucket
         env:
@@ -92,7 +92,7 @@ jobs:
       - test-e2e
     if: success() || needs.test-e2e.result == 'skipped'
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - uses: actions/upload-release-asset@v1
         env:

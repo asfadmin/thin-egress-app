@@ -1,3 +1,5 @@
+# Technical
+
 ## System Architecture
 
 TEA is a [Python Chalice](https://github.com/aws/chalice)

@@ -1,3 +1,5 @@
+# Troubleshooting
+
 ## When things go wrong
 
 There is a lot that _can_ go wrong, but we hope that if you followed this

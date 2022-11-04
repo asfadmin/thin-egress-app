@@ -4,7 +4,8 @@ SOURCES := \
 	lambda/tea_bumper.py \
 	lambda/update_lambda.py
 
-RESOURCES := $(wildcard lambda/templates/*)
+HTML_TEMPLATES := $(wildcard lambda/templates/*.html)
+MD_TEMPLATES := $(wildcard lambda/templates/*.md)
 TERRAFORM := $(wildcard terraform/*)
 
 REQUIREMENTS_IN := $(wildcard requirements/*.in)
@@ -15,7 +16,9 @@ DIR := dist
 EMPTY := $(DIR)/empty
 # Temporary artifacts
 DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
-DIST_RESOURCES := $(RESOURCES:lambda/%=$(DIR)/code/%)
+DIST_MD_RESOURCES := $(MD_TEMPLATES:lambda/%.md=$(DIR)/code/%.html)
+DIST_HTML_RESOURCES := $(HTML_TEMPLATES:lambda/%=$(DIR)/code/%)
+DIST_RESOURCES := $(DIST_HTML_RESOURCES) $(DIST_MD_RESOURCES)
 DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
 BUCKET_MAP_OBJECT_KEY := DEFAULT
@@ -29,6 +32,9 @@ DOCKER := docker
 # end up being owned by us and not by root. On Mac this works out of the box.
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
 DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS)
+
+PYTHON := python3
+BUILD_VENV := $(DIR)/.venv
 
 #####################
 # Deployment Config #
@@ -92,13 +98,23 @@ terraform: $(DIR)/thin-egress-app-terraform.zip
 clean:
 	rm -rf $(DIR)
 
+$(BUILD_VENV): requirements/requirements-make.txt
+	rm -rf $(BUILD_VENV)
+	$(PYTHON) -m venv $(BUILD_VENV)
+	$(BUILD_VENV)/bin/pip --cache-dir $(DIR)/.pip-cache/ install -r requirements/requirements-make.txt
+
 $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
 	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
+.SECONDARY: $(DIST_MD_RESOURCES)
+$(DIST_MD_RESOURCES): $(DIR)/code/%.html: lambda/%.md $(BUILD_VENV)
+	@mkdir -p $(@D)
+	$(BUILD_VENV)/bin/python scripts/render_md.py $< --output $@
+
 .SECONDARY: $(DIST_RESOURCES)
-$(DIST_RESOURCES): $(DIR)/code/%: lambda/%
+$(DIST_HTML_RESOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
 
@@ -106,7 +122,7 @@ $(DIST_RESOURCES): $(DIR)/code/%: lambda/%
 $(DIST_SOURCES): $(DIR)/code/%: lambda/%
 	@mkdir -p $(@D)
 	cp $< $@
-	python3 scripts/sed.py -i $@ "<BUILD_ID>" "${BUILD_ID}"
+	$(PYTHON) scripts/sed.py -i $@ "<BUILD_ID>" "${BUILD_ID}"
 
 $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 	@mkdir -p $(DIR)/code
@@ -115,16 +131,16 @@ $(DIR)/thin-egress-app-code.zip: $(DIST_SOURCES) $(DIST_RESOURCES)
 $(DIR)/bucket-map.yaml:
 	cp config/bucket-map-template.yaml $@
 
-$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml
+$(DIR)/thin-egress-app.yaml: cloudformation/thin-egress-app.yaml.j2 $(BUILD_VENV)
 	@mkdir -p $(DIR)
-	cp cloudformation/thin-egress-app.yaml $(DIR)/thin-egress-app.yaml
-ifdef CF_DEFAULT_CODE_BUCKET
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "asf.public.code" "${CF_DEFAULT_CODE_BUCKET}"
-endif
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<DEPENDENCY_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<CODE_ARCHIVE_PATH_FILENAME>" "${CF_DEFAULT_CODE_ARCHIVE_KEY}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "<BUILD_ID>" "${CF_BUILD_VERSION}"
-	python3 scripts/sed.py -i $(DIR)/thin-egress-app.yaml "^Description:.*" 'Description: "${CF_DESCRIPTION}"'
+	$(BUILD_VENV)/bin/python scripts/render_cf.py \
+		cloudformation/thin-egress-app.yaml.j2 \
+		--output $(DIR)/thin-egress-app.yaml \
+		--code-bucket "$(CF_DEFAULT_CODE_BUCKET)" \
+		--dependency-archive-key "$(CF_DEFAULT_DEPENDENCY_ARCHIVE_KEY)" \
+		--code-archive-key "$(CF_DEFAULT_CODE_ARCHIVE_KEY)" \
+		--build-version "$(CF_BUILD_VERSION)" \
+		--description "$(CF_DESCRIPTION)"
 
 .SECONDARY: $(DIST_TERRAFORM)
 $(DIST_TERRAFORM): $(DIR)/%: %
@@ -201,7 +217,7 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					AuthBaseUrl=$(URS_URL) \
 					ConfigBucket=$(CONFIG_BUCKET) \
 					LambdaCodeS3Bucket=$(CODE_BUCKET) \
-					PermissionsBoundaryName= \
+					PermissionsBoundaryName=$(PERMISSION_BOUNDARY_NAME) \
 					BucketnamePrefix=$(BUCKETNAME_PREFIX) \
 					DownloadRoleArn="" \
 					DownloadRoleInRegionArn="" \
@@ -210,10 +226,11 @@ $(EMPTY)/.deploy-stack: $(DIR)/thin-egress-app.yaml $(EMPTY)/.deploy-dependencie
 					Loglevel=DEBUG \
 					Logtype=$(LOG_TYPE) \
 					Maturity=DEV \
-					PrivateVPC= \
-					VPCSecurityGroupIDs= \
-					VPCSubnetIDs= \
+					PrivateVPC=$(PRIVATE_VPC) \
+					VPCSecurityGroupIDs=$(VPC_SECURITY_GROUP_IDS) \
+					VPCSubnetIDs=$(VPC_SUBNET_IDS) \
 					EnableApiGatewayLogToCloudWatch="False" \
+					EnableS3CredentialsEndpoint="True" \
 					DomainName=$(DOMAIN_NAME-"") \
 					DomainCertArn=$(DOMAIN_CERT_ARN-"") \
 					CookieDomain=$(COOKIE_DOMAIN-"") \

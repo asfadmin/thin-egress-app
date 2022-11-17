@@ -139,16 +139,15 @@ Any data in the prefix `external/public/` will be public, data in the prefix
 in either of the defined EDL App groups, and everything else in the bucket will
 be available to users in the `internal_users` group only.
 
-##### S3 direct access compatibility
+##### S3 Direct Access Compatibility
 
-Note that there are some access configurations supported by the standard HTTP
-access method, that are not allowed when S3 direct access is enabled (see
-[S3 direct access](#s3-direct-access)). This is due to a limitation with how
-IAM policies work. In particular, in IAM compatibility mode prefixes must
-always become more open as they become more nested. All of the bucket maps
-shown above are compatible with s3 direct access, however, long time users of
-TEA might recognize the following configuration example from previous versions
-which will be rejected when S3 direct access is enabled.
+Some access configurations supported by the standard HTTP methods are not allowed when S3 direct access is enabled. Of note:
+
+1. The first prefix in the bucket map will need to be set to the most restrictive access level and subsequent prefixes must have access levels that become successively more open. This is due to a limitation with how IAM policies work (For more information, see [S3 direct access](#s3-direct-access)).
+2. Public buckets will require EDL authentication for S3 direct access. e.g. "Browse image"
+
+All of the bucket maps shown above are compatible with S3 direct access; however, long time users of
+TEA might recognize the following configuration example from previous versions which will be rejected when S3 direct access is enabled.
 
 Bad Example:
 ```yaml
@@ -168,7 +167,7 @@ PRIVATE_BUCKETS:
       - external_team
 ```
 
-To fix this, the bucket map could modified as follows:
+To fix this, the bucket map could be modified as follows:
 
 Good Example:
 ```yaml
@@ -191,7 +190,7 @@ PRIVATE_BUCKETS:
 
 #### S3 Direct Access
 
-*NOTE: Support for S3 direct access is currently experimental*
+*NOTE: S3 direct access is currently experimental*
 
 TEA can be deployed with an `/s3credentials` endpoint (See
 [Enabling S3 direct access](deploying.md#enabling-s3-direct-access)) for

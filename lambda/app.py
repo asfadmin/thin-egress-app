@@ -1008,6 +1008,13 @@ def s3credentials():
     creds = get_s3_credentials(user_profile.user_id, role_session_name, policy)
     timer.mark()
 
+    creds = {
+        "accessKeyId": creds["AccessKeyId"],
+        "secretAccessKey": creds["SecretAccessKey"],
+        "sessionToken": creds["SessionToken"],
+        "expiration": creds["Expiration"]
+    }
+
     log.debug("timing for s3credentials()")
     timer.log_all(log)
 

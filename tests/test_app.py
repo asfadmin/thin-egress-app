@@ -1430,10 +1430,10 @@ def test_s3credentials(
     response = client.http.get("/s3credentials")
 
     assert response.json_body == {
-        "AccessKeyId": "access_key",
-        "SecretAccessKey": "secret_access_key",
-        "SessionToken": "session_token",
-        "Expiration": "expiration"
+        "accessKeyId": "access_key",
+        "secretAccessKey": "secret_access_key",
+        "sessionToken": "session_token",
+        "expiration": "expiration"
     }
     assert response.status_code == 200
 

@@ -48,10 +48,10 @@ The response is your temporary credentials as returned by Amazon STS. See the
 **Example:**
 ```json
 {
-    "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
-    "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    "SessionToken": "LONGSTRINGOFCHARACTERS.../HJLgV91QJFCMlmY8slIEOjrOChLQYmzAqrb5U1ekoQAK6f86HKJFTT2dONzPgmJN9ZvW5DBwt6XUxC9HAQ0LDPEYEwbjGVKkzSNQh/",
-    "Expiration": "2021-01-27 00:50:09+00:00"
+    "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+    "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "sessionToken": "LONGSTRINGOFCHARACTERS.../HJLgV91QJFCMlmY8slIEOjrOChLQYmzAqrb5U1ekoQAK6f86HKJFTT2dONzPgmJN9ZvW5DBwt6XUxC9HAQ0LDPEYEwbjGVKkzSNQh/",
+    "expiration": "2021-01-27 00:50:09+00:00"
 }
 ```
 
@@ -94,9 +94,9 @@ def lambda_handler(event, context):
     # Set up separate boto3 clients for download and upload
     download_client = boto3.client(
         "s3",
-        aws_access_key_id=creds["AccessKeyId"],
-        aws_secret_access_key=creds["SecretAccessKey"],
-        aws_session_token=creds["SessionToken"]
+        aws_access_key_id=creds["accessKeyId"],
+        aws_secret_access_key=creds["secretAccessKey"],
+        aws_session_token=creds["sessionToken"]
     )
     # Lambda needs to have permission to upload to destination bucket
     upload_client = boto3.client("s3")

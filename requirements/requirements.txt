@@ -8,7 +8,7 @@ attrs==21.4.0
     # via chalice
 blessed==1.19.1
     # via inquirer
-botocore==1.27.94
+botocore==1.28.3
     # via chalice
 cachetools==5.0.0
     # via
@@ -42,7 +42,7 @@ netaddr==0.8.0
     #   rain-api-core
 pycparser==2.21
     # via cffi
-pyjwt[crypto]==2.5.0
+pyjwt[crypto]==2.6.0
     # via rain-api-core
 python-dateutil==2.8.2
     # via botocore
@@ -52,7 +52,7 @@ pyyaml==6.0
     # via
     #   chalice
     #   rain-api-core
-rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@e1638eec08353651ed42105840ba6a80a7141ac2
+rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@16329f3fa7326edd668e26c2d817cf430268faad
     # via -r requirements/requirements.in
 readchar==4.0.3
     # via inquirer
@@ -61,8 +61,6 @@ six==1.16.0
     #   blessed
     #   chalice
     #   python-dateutil
-types-cryptography==3.3.23.1
-    # via pyjwt
 typing-extensions==4.4.0
     # via chalice
 urllib3==1.26.12
@@ -71,7 +69,7 @@ urllib3==1.26.12
     #   cfnresponse
 wcwidth==0.2.5
     # via blessed
-wheel==0.37.1
+wheel==0.38.4
     # via chalice
 
 # The following packages are considered to be unsafe in a requirements file:

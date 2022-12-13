@@ -620,6 +620,7 @@ Resources:
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
           JWT_KEY_SECRET_NAME: !Ref JwtKeySecretName
           JWT_ALGO: !Ref JwtAlgo
+          ENABLE_S3_CREDENTIALS_ENDPOINT: !Ref EnableS3CredentialsEndpoint
           AWS_LAMBDA_EXEC_WRAPPER: !Ref OtLambdaExecWrapper
           OPENTELEMETRY_COLLECTOR_CONFIG_FILE: !Ref OtCollectorConfigFile
           OTEL_LOG_LEVEL: !Ref OtLogLevel

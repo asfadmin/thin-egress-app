@@ -384,6 +384,28 @@ def test_restore_bucket_vars(mock_get_yaml_file, resources):
     assert app.b_map.bucket_map == buckets
 
 
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+def test_restore_bucket_vars_iam_compatibility_error(
+    mock_get_yaml_file,
+    monkeypatch
+):
+    mock_get_yaml_file.return_value = {
+        "PATH": "bucket",
+        "PRIVATE_BUCKETS": {
+            "bucket/prefix/": ["group"]
+        }
+    }
+
+    app.b_map = None
+    monkeypatch.setenv("ENABLE_S3_CREDENTIALS_ENDPOINT", "False")
+    app.restore_bucket_vars()
+
+    app.b_map = None
+    monkeypatch.setenv("ENABLE_S3_CREDENTIALS_ENDPOINT", "True")
+    with pytest.raises(ValueError, match="Invalid prefix permissions"):
+        app.restore_bucket_vars()
+
+
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 def test_do_auth_and_return(mock_get_urs_url, monkeypatch):
     mock_get_urs_url.side_effect = lambda _ctx, redirect: redirect
@@ -556,6 +578,7 @@ def test_try_download_from_bucket(
     client = mock_get_role_session().client()
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
+    app.b_map = None
 
     response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
     client.head_object.assert_called_once()
@@ -1407,10 +1430,10 @@ def test_s3credentials(
     response = client.http.get("/s3credentials")
 
     assert response.json_body == {
-        "AccessKeyId": "access_key",
-        "SecretAccessKey": "secret_access_key",
-        "SessionToken": "session_token",
-        "Expiration": "expiration"
+        "accessKeyId": "access_key",
+        "secretAccessKey": "secret_access_key",
+        "sessionToken": "session_token",
+        "expiration": "expiration"
     }
     assert response.status_code == 200
 

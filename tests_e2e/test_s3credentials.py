@@ -17,8 +17,8 @@ def test_authenticated_user_can_get_creds(urls, auth_cookies):
 
     assert r.status_code == 200
     assert list(data.keys()) == [
-        "AccessKeyId",
-        "SecretAccessKey",
-        "SessionToken",
-        "Expiration"
+        "accessKeyId",
+        "secretAccessKey",
+        "sessionToken",
+        "expiration"
     ]

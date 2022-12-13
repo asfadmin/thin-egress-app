@@ -32,7 +32,8 @@ on:
 jobs:
   # Deploy to the test environment and run end to end tests
   test-end-to-end:
-    runs-on: ubuntu-latest
+    # Version of gdal installed depends on ubuntu version
+    runs-on: ubuntu-20.04
     environment: ${{ inputs.environment }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

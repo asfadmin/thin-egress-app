@@ -239,7 +239,7 @@ class RequestAuthorizer:
         return None
 
     @with_trace()
-    def _handle_auth_bearer_header(self, token) -> Optional[UserProfile]:
+    def _handle_auth_bearer_header(self, token: str) -> Optional[UserProfile]:
         """
         Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
         returns it. If user_id is not determined returns data to be returned
@@ -332,7 +332,7 @@ def get_aux_request_headers() -> dict:
 
 
 @with_trace()
-def check_for_browser(hdrs) -> bool:
+def check_for_browser(hdrs: dict) -> bool:
     """
     Return True if request is being sent by a browser
     """
@@ -340,7 +340,7 @@ def check_for_browser(hdrs) -> bool:
 
 
 @with_trace()
-def get_user_from_token(token) -> Optional[str]:
+def get_user_from_token(token: str) -> Optional[str]:
     """
     This may be moved to rain-api-core.urs_util.py once things stabilize.
     Will query URS for user ID of requesting user based on token sent with request
@@ -482,7 +482,7 @@ def do_auth_and_return(ctxt) -> Response:
 
 
 @with_trace()
-def add_cors_headers(headers):
+def add_cors_headers(headers: dict):
     """
     Add CORS headers to allow requests from all configured domains
     """
@@ -500,7 +500,7 @@ def add_cors_headers(headers):
 
 
 @with_trace()
-def make_redirect(to_url, headers=None, status_code=301) -> Response:
+def make_redirect(to_url: str, headers: Optional[dict] = None, status_code: str = 301) -> Response:
     """
     Return a HTTP Response redirecting users with appropriate headers
     """
@@ -556,7 +556,7 @@ def get_bcconfig(user_id: str) -> dict:
     # Cache by bucketname only
     key=lambda _, bucketname: hashkey(bucketname)
 )
-def get_bucket_region(session, bucketname) -> str:
+def get_bucket_region(session, bucketname: str) -> str:
     """
     Get the region of the given bucket
     """
@@ -596,7 +596,7 @@ def get_user_ip() -> str:
 
 
 @with_trace()
-def try_download_from_bucket(bucket, filename, user_profile, headers: dict) -> Response:
+def try_download_from_bucket(bucket: str, filename: str, user_profile: UserProfile, headers: dict) -> Response:
     """
     Attempt to redirect to given file from given bucket.
 
@@ -861,7 +861,7 @@ def get_data_dl_s3_client():
 
 
 @with_trace()
-def try_download_head(bucket, filename) -> Response:
+def try_download_head(bucket: str, filename: str) -> Response:
     """
     Try to handle a HEAD request for given filename in given bucket
 

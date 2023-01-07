@@ -1513,6 +1513,7 @@ def test_profile(client):
 
     assert response.body == b"Profile not available."
     assert response.status_code == 200
+    assert response.headers["Content-Type"] == "text/plain"
 
 
 @mock.patch(f"{MODULE}.retrieve_secret", autospec=True)

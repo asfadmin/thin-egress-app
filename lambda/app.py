@@ -1061,7 +1061,7 @@ def s3credentials_readme():
 @with_trace(context={})
 def profile():
     return Response(body='Profile not available.',
-                    status_code=200, headers={})
+                    status_code=200, headers={'Content-Type': 'text/plain'})
 
 
 @app.route('/pubkey', methods=['GET'])

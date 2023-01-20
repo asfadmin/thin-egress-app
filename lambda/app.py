@@ -515,7 +515,12 @@ def make_redirect(to_url: str, headers: Optional[dict] = None, status_code: str 
 
 
 @with_trace()
-def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, template_file: str = 'root.html') -> Response:
+def make_html_response(
+        t_vars: dict,
+        headers: dict,
+        status_code: int = 200,
+        template_file: str = 'root.html'
+) -> Response:
     """
     Return a HTTP response with rendered HTML from the given template
     """

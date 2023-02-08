@@ -4,7 +4,7 @@
 #
 #    pip-compile requirements/requirements-make.in
 #
-importlib-metadata==5.0.0
+importlib-metadata==6.0.0
     # via markdown
 jinja2==3.1.2
     # via -r requirements/requirements-make.in
@@ -12,11 +12,11 @@ markdown==3.4.1
     # via
     #   -r requirements/requirements-make.in
     #   pymdown-extensions
-markupsafe==2.1.1
+markupsafe==2.1.2
     # via jinja2
-pygments==2.13.0
+pygments==2.14.0
     # via -r requirements/requirements-make.in
-pymdown-extensions==9.7
+pymdown-extensions==9.9.2
     # via -r requirements/requirements-make.in
-zipp==3.10.0
+zipp==3.12.1
     # via importlib-metadata

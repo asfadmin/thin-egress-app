@@ -241,7 +241,6 @@ Please see the
 for current TEA deployment and configuration procedures.
 
 ### Enabling S3 direct access
-*NOTE: Support for S3 direct access is currently experimental*
 
 TEA supports handing out s3 direct access credentials over the optional
 `/s3credentials` endpoint. This endpoint can be deployed by setting the

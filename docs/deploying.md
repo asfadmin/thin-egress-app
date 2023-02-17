@@ -5,11 +5,11 @@
 You can either download [`deploy.sh`](https://github.com/asfadmin/thin-egress-app/blob/devel/build/deploy.sh)
 and run it, or, as show below, curl the output directly into bash.
 
-This bash script requires `curl`,
-[`awscli`](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html),
-[`Session Manager Plugin`](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html),
-and [`jq`](https://github.com/stedolan/jq/wiki/Installation) to be
-installed.
+This bash script requires the following executables to be installed and
+available on your PATH:
+* `curl`
+* [`awscli`](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-install.html) version 1 with [`Session Manager Plugin`](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html). *NOTE: Only version 1 of the AWS CLI is supported for this script!*
+* [`jq`](https://github.com/stedolan/jq/wiki/Installation)
 
 Run `deploy.sh` by replacing all `<VARIABLES>` with the appropriate
 values. `STACK-NAME` should be less than 20 characters, lower-case
@@ -241,7 +241,6 @@ Please see the
 for current TEA deployment and configuration procedures.
 
 ### Enabling S3 direct access
-*NOTE: Support for S3 direct access is currently experimental*
 
 TEA supports handing out s3 direct access credentials over the optional
 `/s3credentials` endpoint. This endpoint can be deployed by setting the

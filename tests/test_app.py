@@ -1129,7 +1129,7 @@ def test_dynamic_url(
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 @mock.patch(f"{MODULE}.b_map", None)
-def test_dynamic_url_public(
+def test_dynamic_url_public_unauthenticated(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
@@ -1148,6 +1148,34 @@ def test_dynamic_url_public(
     response = app.dynamic_url()
 
     mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {})
+    assert response is MOCK_RESPONSE
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_public_authenticated(
+    mock_get_profile,
+    mock_try_download_from_bucket,
+    mock_get_yaml_file,
+    resources,
+    user_profile,
+    current_request
+):
+    MOCK_RESPONSE = mock.Mock()
+    mock_try_download_from_bucket.return_value = MOCK_RESPONSE
+    with resources.open("bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    mock_get_profile.return_value = user_profile
+    current_request.uri_params = {"proxy": "BROWSE/PLATFORM-A/OBJECT_2"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url()
+
+    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", user_profile, {})
     assert response is MOCK_RESPONSE
 
 

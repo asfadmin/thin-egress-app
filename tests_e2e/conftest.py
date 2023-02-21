@@ -186,18 +186,46 @@ class UrlsConfig():
 
 
 @pytest.fixture(scope="module")
-def auth_cookies(urls, api_host, creds):
-    url = urls.join(urls.METADATA_FILE)
+def earthdata_auth_session():
     session = requests.session()
     # Disable automatic detection of .netrc.
     session.trust_env = False
+    return session
 
-    request = session.get(url)
-    url_earthdata = request.url
 
-    urs_username, urs_password = creds.get(url_earthdata)
-    session.get(url_earthdata, auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password)))
-    cookiejar = session.cookies
+@pytest.fixture(scope="module")
+def url_earthdata(urls, earthdata_auth_session):
+    url = urls.join(urls.METADATA_FILE)
+
+    request = earthdata_auth_session.get(url)
+    return request.url
+
+
+@pytest.fixture(scope="module")
+def urs_creds(url_earthdata, creds):
+
+    return creds.get(url_earthdata)
+
+
+@pytest.fixture(scope="module")
+def urs_username(urs_creds):
+    username, _ = urs_creds
+    return username
+
+
+@pytest.fixture(scope="module")
+def urs_password(urs_creds):
+    _, password = urs_creds
+    return password
+
+
+@pytest.fixture(scope="module")
+def auth_cookies(earthdata_auth_session, url_earthdata, api_host, urs_username, urs_password):
+    earthdata_auth_session.get(
+        url_earthdata,
+        auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password))
+    )
+    cookiejar = earthdata_auth_session.cookies
 
     # Copy .asf.alaska.edu cookies to match API Address
     for z in cookiejar:

@@ -916,7 +916,7 @@ def dynamic_url():
     log.debug('required_groups: %s', required_groups)
     # Check for public bucket
     timer.mark("possible auth header handling")
-    user_profile = None
+    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
     if required_groups is None:
         log.debug("Accessing public bucket %s => %s", entry.bucket_path, entry.bucket)
     else:

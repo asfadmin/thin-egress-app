@@ -1,4 +1,6 @@
 # Check that public files are returned without auth
+import urllib.parse
+
 import pytest
 import requests
 
@@ -40,6 +42,21 @@ def test_public_images(urls, method):
 
     assert r.status_code == 200
     assert r.headers["Content-Type"] == "image/jpeg"
+
+
+@pytest.mark.parametrize("method", ("get", "head"))
+def test_public_images_authenticated(urls, auth_cookies, urs_username, method):
+    url = urls.join(BROWSE_FILE)
+    r = requests.request(method, url, cookies=auth_cookies, allow_redirects=False)
+
+    assert r.status_code == 303
+    assert r.is_redirect is True
+    assert r.headers["Location"] is not None
+    query_params = urllib.parse.parse_qs(
+        urllib.parse.urlparse(r.headers["Location"]).query
+    )
+    assert query_params["A-userid"] == [urs_username]
+    assert "oauth/authorize" not in r.headers["Location"]
 
 
 @pytest.mark.parametrize("method", ("get", "head"))

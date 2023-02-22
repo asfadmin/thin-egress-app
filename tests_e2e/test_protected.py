@@ -1,5 +1,6 @@
 import base64
 import json
+import urllib.parse
 from uuid import uuid1
 
 import pytest
@@ -8,7 +9,7 @@ import requests
 LOCATE_BUCKET = "s1-ocn-1e29d408"
 
 
-def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies):
+def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies, urs_username):
     url = urls.join(urls.METADATA_FILE)
 
     r = requests.get(url, cookies=auth_cookies, allow_redirects=False)
@@ -16,6 +17,10 @@ def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies):
     assert r.status_code == 303
     assert r.is_redirect is True
     assert r.headers['Location'] is not None
+    query_params = urllib.parse.parse_qs(
+        urllib.parse.urlparse(r.headers['Location']).query
+    )
+    assert query_params['A-userid'] == [urs_username]
     assert 'oauth/authorize' not in r.headers['Location']
 
 

@@ -190,8 +190,6 @@ PRIVATE_BUCKETS:
 
 #### S3 Direct Access
 
-*NOTE: S3 direct access is currently experimental*
-
 TEA can be deployed with an `/s3credentials` endpoint (See
 [Enabling S3 direct access](deploying.md#enabling-s3-direct-access)) for
 facilitating S3 direct access. Credentials handed out over this endpoint will

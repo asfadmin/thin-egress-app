@@ -1,7 +1,5 @@
 # S3 Direct Access
 
-*NOTE: Support for S3 direct access is currently experimental*
-
 You can retrieve temporary S3 credentials at the `/s3credentials` endpoint when
 authenticated via Earthdata Login. These credentials will only be valid for
 **1 hour** due to

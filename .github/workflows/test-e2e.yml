@@ -12,24 +12,10 @@ jobs:
     with:
       environment: prod
 
-  # The secrets context is not supported on job level `if`. So we need to hack around it:
-  # https://github.com/actions/runner/issues/520#issuecomment-907427748
-  check-tests:
-    runs-on: ubuntu-latest
-    outputs:
-      run-tests: ${{ steps.eval.outputs.val }}
-    steps:
-      - id: eval
-        env:
-          RUN_TESTS: ${{ secrets.RUN_TESTS }}
-        if: "${{ env.RUN_TESTS == 'true' }}"
-        run: echo "val=yes" >> $GITHUB_OUTPUT
-
   test-e2e:
     needs:
       - build
-      - check-tests
-    if: needs.check-tests.outputs.run-tests == 'yes'
+    if: ${{ vars.RUN_TESTS }}
     uses: ./.github/workflows/re-test-e2e.yml
     with:
       environment: test

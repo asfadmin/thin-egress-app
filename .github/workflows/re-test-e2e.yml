@@ -20,8 +20,6 @@ on:
       # Optional
       AWS_ROLE_ARN:
         required: false
-      AWS_REGION:
-        required: false
       URS_CLIENT_ID:
         required: false
       EDL_APP_UID:
@@ -39,7 +37,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
       DEPENDENCY_NAME: tea-dependencylayer-run.${{ github.run_id }}.zip
       CODE_NAME: tea-code-run.${{ github.run_id }}.zip
       YAML_NAME: tea-cloudformation-run.${{ github.run_id }}.yaml

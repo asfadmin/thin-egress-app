@@ -19,19 +19,7 @@ jobs:
     uses: ./.github/workflows/re-test-e2e.yml
     with:
       environment: test
-    # Reusable workflows + Environments behave very strangely
-    # https://github.com/AllanOricil/workflow-template-bug/blob/fc8ae4264938adb560fa6928cb19c69d110d8bbd/.github/workflows/workflow-inplementation.yml#L46
-    # Yea, seriously hope this gets fixed!!!!!
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      URS_USERNAME: ${{ secrets.URS_USERNAME }}
-      URS_PASSWORD: ${{ secrets.URS_PASSWORD }}
-      URS_CLIENT_ID: ${{ secrets.URS_CLIENT_ID }}
-      EDL_APP_UID: ${{ secrets.EDL_APP_UID }}
-      EDL_APP_PASSWORD: ${{ secrets.EDL_APP_PASSWORD }}
+    secrets: inherit
 
   status:
     if: always()
@@ -43,8 +31,4 @@ jobs:
       environment: prod
       build_tag: ${{ needs.build.outputs.version }}
       success: ${{ needs.build.result != 'failure' && needs.test-e2e.result != 'failure' }}
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
+    secrets: inherit

@@ -11,11 +11,10 @@ jobs:
         with:
           python-version: 3.8
 
-      - run: pip install -r requirements/requirements.txt
-
       - uses: TrueBrain/actions-flake8@v2
         with:
-          plugins: flake8-isort
+          flake8_version: 6.0.0
+          plugins: flake8-isort~=6.0
 
   requirements:
     runs-on: ubuntu-latest

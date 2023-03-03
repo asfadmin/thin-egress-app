@@ -69,6 +69,16 @@ def current_request(lambda_context):
 
 
 @pytest.fixture
+def mock_retrieve_secret():
+    with mock.patch(f"{MODULE}.retrieve_secret", autospec=True) as m:
+        m.return_value = {
+            "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
+            "rsa_priv_key": base64.b64encode(b"priv-key").decode()
+        }
+        yield m
+
+
+@pytest.fixture
 def mock_get_urs_creds():
     with mock.patch(f"{MODULE}.get_urs_creds", autospec=True) as m:
         m.return_value = {
@@ -808,10 +818,13 @@ def test_logout(
     mock_get_profile,
     mock_get_header_to_set_auth_cookie,
     mock_get_urs_url,
+    mock_retrieve_secret,
     mock_make_html_response,
     user_profile,
     client
 ):
+    del mock_retrieve_secret
+
     mock_get_urs_url.return_value = "urs_url"
     mock_get_profile.return_value = user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"asf-cookie": {}}
@@ -831,7 +844,9 @@ def test_logout(
 
 
 @mock.patch(f"{MODULE}.do_login", autospec=True)
-def test_login(mock_do_login, client):
+def test_login(mock_do_login, mock_retrieve_secret, client):
+    del mock_retrieve_secret
+
     mock_do_login.return_value = (301, {"foo": "bar"}, {"baz": "qux"})
 
     response = client.http.get("/login")
@@ -845,7 +860,14 @@ def test_login(mock_do_login, client):
 
 
 @mock.patch(f"{MODULE}.do_login", autospec=True)
-def test_login_error(mock_do_login, mock_make_html_response, client):
+def test_login_error(
+    mock_do_login,
+    mock_retrieve_secret,
+    mock_make_html_response,
+    client
+):
+    del mock_retrieve_secret
+
     mock_do_login.side_effect = ClientError({}, "foo")
 
     response = client.http.get("/login")
@@ -863,7 +885,9 @@ def test_login_error(mock_do_login, mock_make_html_response, client):
     )
 
 
-def test_version(monkeypatch, client):
+def test_version(mock_retrieve_secret, monkeypatch, client):
+    del mock_retrieve_secret
+
     response = client.http.get("/version")
 
     assert response.json_body == {"version_id": "<BUILD_ID>"}
@@ -877,7 +901,9 @@ def test_version(monkeypatch, client):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_locate(mock_get_yaml_file, data_path, client):
+def test_locate(mock_get_yaml_file, mock_retrieve_secret, data_path, client):
+    del mock_retrieve_secret
+
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -891,7 +917,9 @@ def test_locate(mock_get_yaml_file, data_path, client):
 
 
 @pytest.mark.parametrize("req", ("/locate", "/locate?foo=bar"))
-def test_locate_missing_bucket(client, req):
+def test_locate_missing_bucket(mock_retrieve_secret, client, req):
+    del mock_retrieve_secret
+
     response = client.http.get(req)
     assert response.body == b'Required "bucket_name" query paramater not specified'
     assert response.status_code == 400
@@ -1459,11 +1487,15 @@ def test_s3credentials(
     mock_get_profile,
     mock_get_yaml_file,
     mock_get_s3_credentials,
+    mock_retrieve_secret,
     mock_get_urs_creds,
     data_path,
     user_profile,
     client
 ):
+    del mock_retrieve_secret
+    del mock_get_urs_creds
+
     mock_get_s3_credentials.return_value = {
         "AccessKeyId": "access_key",
         "SecretAccessKey": "secret_access_key",
@@ -1495,9 +1527,12 @@ def test_s3credentials_unauthenticated(
     mock_get_profile,
     mock_handle_auth_bearer_header,
     mock_get_yaml_file,
+    mock_retrieve_secret,
     data_path,
     client
 ):
+    del mock_retrieve_secret
+
     mock_handle_auth_bearer_header.return_value = None
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1517,11 +1552,15 @@ def test_s3credentials_unauthenticated(
 def test_s3credentials_no_permissions(
     mock_get_profile,
     mock_get_yaml_file,
+    mock_retrieve_secret,
     mock_get_urs_creds,
     mock_make_html_response,
     user_profile,
     client
 ):
+    del mock_retrieve_secret
+    del mock_get_urs_creds
+
     mock_get_yaml_file.return_value = {}
     mock_get_profile.return_value = user_profile
 
@@ -1555,7 +1594,9 @@ def test_get_s3_credentials(mock_boto3, monkeypatch):
     )
 
 
-def test_profile(client):
+def test_profile(mock_retrieve_secret, client):
+    del mock_retrieve_secret
+
     response = client.http.get("/profile")
 
     assert response.body == b"Profile not available."
@@ -1563,7 +1604,6 @@ def test_profile(client):
     assert response.headers["Content-Type"] == "text/plain"
 
 
-@mock.patch(f"{MODULE}.retrieve_secret", autospec=True)
 def test_pubkey(mock_retrieve_secret, monkeypatch, client):
     mock_retrieve_secret.return_value = {
         "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
@@ -1576,7 +1616,9 @@ def test_pubkey(mock_retrieve_secret, monkeypatch, client):
     assert response.status_code == 200
 
 
-def test_x_origin_request_id_forwarded(client):
+def test_x_origin_request_id_forwarded(mock_retrieve_secret, client):
+    del mock_retrieve_secret
+
     # Could be any endpoint, but profile is the simplest
     response = client.http.get("/profile", headers={"x-origin-request-id": "x_origin_request_1234"})
 

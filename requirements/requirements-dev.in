@@ -1,5 +1,6 @@
 -c requirements.txt
 boto3
+moto[awslambda]
 opentelemetry-instrumentation
 pip-tools
 pytest

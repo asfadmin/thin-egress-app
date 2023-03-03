@@ -6,7 +6,6 @@ from rain_api_core.general_util import get_log
 
 log = get_log()
 
-client = boto3.client('lambda')
 TEA_LAMBDA_NAME = os.getenv('TEA_LAMBDA_NAME')
 
 
@@ -15,9 +14,11 @@ def lambda_handler(event, context):
 
     log.info('teabumper!')
 
+    client = boto3.client('lambda')
+
     egress_env = client.get_function_configuration(
         FunctionName=TEA_LAMBDA_NAME,
-    )['Environment']
+    ).get('Environment') or {'Variables': {}}
 
     egress_env['Variables'].update({'BUMP': f'{str(datetime.utcnow())}, {context.aws_request_id}'})
 

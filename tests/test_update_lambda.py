@@ -1,12 +1,12 @@
-import importlib
 import io
 import json
 from unittest import mock
 
 import pytest
 
-MODULE = "lambda.update_lambda"
-update_lambda = importlib.import_module(MODULE)
+from thin_egress_app import update_lambda
+
+MODULE = "thin_egress_app.update_lambda"
 
 
 @pytest.fixture

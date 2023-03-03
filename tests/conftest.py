@@ -12,10 +12,9 @@ real_boto3 = importlib.import_module("boto3")
 mock_boto3 = mock.create_autospec(real_boto3)
 sys.modules["boto3"] = mock_boto3
 
-# Can't import normally because 'lambda' is a reserved word
 # Need to import these modules first because they will override the log level at import time
-_ = importlib.import_module("lambda.app")
-_ = importlib.import_module("lambda.tea_bumper")
+import thin_egress_app.app  # noqa: E402
+import thin_egress_app.tea_bumper  # noqa: F401,E402
 
 root_logger = logging.getLogger()
 for handler in root_logger.handlers:

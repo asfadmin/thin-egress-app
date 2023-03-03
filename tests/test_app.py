@@ -890,15 +890,15 @@ def test_locate(mock_get_yaml_file, data_path, client):
     assert response.status_code == 404
 
 
-def test_locate_missing_bucket(client):
-    for req in ("/locate", "/locate?foo=bar"):
-        response = client.http.get(req)
-        assert response.body == b'Required "bucket_name" query paramater not specified'
-        assert response.status_code == 400
-        assert response.headers == {
-            "x-request-id": app.app.lambda_context.aws_request_id,
-            "Content-Type": "text/plain"
-        }
+@pytest.mark.parametrize("req", ("/locate", "/locate?foo=bar"))
+def test_locate_missing_bucket(client, req):
+    response = client.http.get(req)
+    assert response.body == b'Required "bucket_name" query paramater not specified'
+    assert response.status_code == 400
+    assert response.headers == {
+        "x-request-id": app.app.lambda_context.aws_request_id,
+        "Content-Type": "text/plain"
+    }
 
 
 def test_collapse_bucket_configuration():

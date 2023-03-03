@@ -1,10 +1,10 @@
-import importlib
 from unittest import mock
 
 import pytest
 
-MODULE = "lambda.tea_bumper"
-tea_bumper = importlib.import_module(MODULE)
+from thin_egress_app import tea_bumper
+
+MODULE = "thin_egress_app.tea_bumper"
 
 
 @pytest.fixture

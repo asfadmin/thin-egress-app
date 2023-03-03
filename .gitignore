@@ -13,7 +13,7 @@
 /terraform/providers.tf
 terraform.tfstate*
 *.tfvars
-/lambda/.chalice
+/thin_egress_app/.chalice
 .coverage
 
 # Config

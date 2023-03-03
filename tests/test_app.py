@@ -1,6 +1,5 @@
 import base64
 import contextlib
-import importlib
 import io
 from unittest import mock
 from urllib.error import HTTPError
@@ -12,9 +11,9 @@ from botocore.exceptions import ClientError
 from chalice.test import Client
 from rain_api_core.auth import UserProfile
 
-MODULE = "lambda.app"
-# Can't import normally because 'lambda' is a reserved word
-app = importlib.import_module(MODULE)
+from thin_egress_app import app
+
+MODULE = "thin_egress_app.app"
 
 
 @pytest.fixture
@@ -476,7 +475,7 @@ def test_make_redirect(current_request):
 
 def test_make_html_response(monkeypatch):
     mock_render = mock.Mock(return_value="<html></html>")
-    monkeypatch.setattr("lambda.app.TEMPLATE_MANAGER.render", mock_render)
+    monkeypatch.setattr(f"{MODULE}.TEMPLATE_MANAGER.render", mock_render)
 
     response = app.make_html_response({"foo": "bar"}, {"baz": "qux"})
     assert response.body == "<html></html>"

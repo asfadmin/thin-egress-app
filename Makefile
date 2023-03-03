@@ -1,11 +1,11 @@
 SOURCES := \
-	lambda/var/otel-config/collector.yaml \
-	lambda/app.py \
-	lambda/tea_bumper.py \
-	lambda/update_lambda.py
+	thin_egress_app/var/otel-config/collector.yaml \
+	thin_egress_app/app.py \
+	thin_egress_app/tea_bumper.py \
+	thin_egress_app/update_lambda.py
 
-HTML_TEMPLATES := $(wildcard lambda/templates/*.html)
-MD_TEMPLATES := $(wildcard lambda/templates/*.md)
+HTML_TEMPLATES := $(wildcard templates/*.html)
+MD_TEMPLATES := $(wildcard templates/*.md)
 TERRAFORM := $(wildcard terraform/*)
 
 REQUIREMENTS_IN := $(wildcard requirements/*.in)
@@ -15,9 +15,9 @@ REQUIREMENTS_TXT := $(REQUIREMENTS_IN:.in=.txt)
 DIR := dist
 EMPTY := $(DIR)/empty
 # Temporary artifacts
-DIST_SOURCES := $(SOURCES:lambda/%=$(DIR)/code/%)
-DIST_MD_RESOURCES := $(MD_TEMPLATES:lambda/%.md=$(DIR)/code/%.html)
-DIST_HTML_RESOURCES := $(HTML_TEMPLATES:lambda/%=$(DIR)/code/%)
+DIST_SOURCES := $(SOURCES:thin_egress_app/%=$(DIR)/code/%)
+DIST_MD_RESOURCES := $(MD_TEMPLATES:%.md=$(DIR)/code/%.html)
+DIST_HTML_RESOURCES := $(HTML_TEMPLATES:%=$(DIR)/code/%)
 DIST_RESOURCES := $(DIST_HTML_RESOURCES) $(DIST_MD_RESOURCES)
 DIST_TERRAFORM := $(TERRAFORM:terraform/%=$(DIR)/terraform/%)
 
@@ -109,17 +109,17 @@ $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIRE
 	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_MD_RESOURCES)
-$(DIST_MD_RESOURCES): $(DIR)/code/%.html: lambda/%.md $(BUILD_VENV)
+$(DIST_MD_RESOURCES): $(DIR)/code/%.html: %.md $(BUILD_VENV)
 	@mkdir -p $(@D)
 	$(BUILD_VENV)/bin/python scripts/render_md.py $< --output $@
 
 .SECONDARY: $(DIST_RESOURCES)
-$(DIST_HTML_RESOURCES): $(DIR)/code/%: lambda/%
+$(DIST_HTML_RESOURCES): $(DIR)/code/%: %
 	@mkdir -p $(@D)
 	cp $< $@
 
 .SECONDARY: $(DIST_SOURCES)
-$(DIST_SOURCES): $(DIR)/code/%: lambda/%
+$(DIST_SOURCES): $(DIR)/code/%: thin_egress_app/%
 	@mkdir -p $(@D)
 	cp $< $@
 	$(PYTHON) scripts/sed.py -i $@ "<BUILD_ID>" "${BUILD_ID}"
@@ -286,4 +286,4 @@ lock: $(REQUIREMENTS_TXT)
 
 .PHONY: test
 test:
-	pytest --cov=lambda --cov-report=term-missing --cov-branch tests
+	pytest --cov=thin_egress_app --cov-report=term-missing --cov-branch tests

@@ -23,7 +23,7 @@ jobs:
 
     - run: pip install pytest-github-actions-annotate-failures
 
-    - run: pytest --cov=lambda --cov-report=term-missing --cov-report=xml --cov-branch tests
+    - run: pytest --cov=thin_egress_app --cov-report=term-missing --cov-report=xml --cov-branch tests
 
     - name: Report coverage
       uses: codecov/codecov-action@v2

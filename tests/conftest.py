@@ -1,8 +1,7 @@
 import importlib
 import logging
-import pathlib
 import sys
-from typing import IO, Any
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -21,8 +20,6 @@ for handler in root_logger.handlers:
     root_logger.removeHandler(handler)
 root_logger.setLevel(logging.DEBUG)
 
-RESOURCES_PATH = pathlib.Path(__file__).parent.joinpath("resources/").absolute()
-
 
 @pytest.fixture(autouse=True)
 def aws_config(monkeypatch):
@@ -36,15 +33,11 @@ def aws_config(monkeypatch):
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
 
 
-class Resources:
-    """Helper for getting test resources"""
-    def open(self, file, *args, **kwargs) -> IO[Any]:
-        return (RESOURCES_PATH / file).open(*args, **kwargs)
-
-
 @pytest.fixture(scope="session")
-def resources():
-    return Resources()
+def data_path():
+    return Path(__file__).parent.joinpath("data").resolve()
+
+
 
 
 @pytest.fixture

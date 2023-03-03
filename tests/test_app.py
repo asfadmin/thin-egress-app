@@ -371,8 +371,8 @@ def test_cumulus_log_message(current_request):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_restore_bucket_vars(mock_get_yaml_file, resources):
-    with resources.open("bucket_map_example.yaml") as f:
+def test_restore_bucket_vars(mock_get_yaml_file, data_path):
+    with open(data_path / "bucket_map_example.yaml") as f:
         buckets = yaml.full_load(f)
 
     mock_get_yaml_file.return_value = buckets
@@ -717,7 +717,9 @@ def test_get_jwt_field():
 
 
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
-def test_root(mock_get_urs_url, mock_make_html_response, client):
+def test_root(mock_get_urs_url, mock_retrieve_secret, mock_make_html_response, client):
+    del mock_retrieve_secret
+
     urs_url = "urs.example.com"
     mock_get_urs_url.return_value = urs_url
 
@@ -739,11 +741,14 @@ def test_root(mock_get_urs_url, mock_make_html_response, client):
 def test_root_with_login(
     mock_get_profile,
     mock_get_urs_url,
+    mock_retrieve_secret,
     mock_make_html_response,
     monkeypatch,
     client,
     user_profile
 ):
+    del mock_retrieve_secret
+
     monkeypatch.setenv("MATURITY", "DEV")
     mock_get_profile.return_value = user_profile
 
@@ -872,8 +877,8 @@ def test_version(monkeypatch, client):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_locate(mock_get_yaml_file, resources, client):
-    with resources.open("bucket_map_example.yaml") as f:
+def test_locate(mock_get_yaml_file, data_path, client):
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     response = client.http.get("/locate?bucket_name=pa-dt1")
@@ -1034,9 +1039,14 @@ def test_try_download_head_error(
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.try_download_head", autospec=True)
 @mock.patch(f"{MODULE}.b_map", None)
-def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources, current_request):
+def test_dynamic_url_head(
+    mock_try_download_head,
+    mock_get_yaml_file,
+    data_path,
+    current_request
+):
     mock_try_download_head.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
@@ -1052,8 +1062,13 @@ def test_dynamic_url_head(mock_try_download_head, mock_get_yaml_file, resources,
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.b_map", None)
-def test_dynamic_url_head_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
-    with resources.open("bucket_map_example.yaml") as f:
+def test_dynamic_url_head_bad_bucket(
+    mock_get_yaml_file,
+    mock_make_html_response,
+    data_path,
+    current_request
+):
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     current_request.uri_params = {"proxy": "DATA-TYPE-1/NONEXISTENT/OBJECT_1"}
@@ -1098,13 +1113,13 @@ def test_dynamic_url(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
@@ -1132,12 +1147,12 @@ def test_dynamic_url_public_unauthenticated(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     current_request
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
@@ -1159,13 +1174,13 @@ def test_dynamic_url_public_authenticated(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
@@ -1187,12 +1202,12 @@ def test_dynamic_url_public_custom_headers(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     current_request
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
@@ -1226,7 +1241,7 @@ def test_dynamic_url_private(
     mock_user_in_group,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
@@ -1234,7 +1249,7 @@ def test_dynamic_url_private(
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     mock_user_in_group.return_value = (True, user_profile)
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
@@ -1265,7 +1280,7 @@ def test_dynamic_url_private_custom_headers(
     mock_user_in_group,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
@@ -1274,7 +1289,7 @@ def test_dynamic_url_private_custom_headers(
 
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     mock_user_in_group.return_value = (True, user_profile)
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
@@ -1331,8 +1346,13 @@ def test_dynamic_url_public_within_private(
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_dynamic_url_bad_bucket(mock_get_yaml_file, mock_make_html_response, resources, current_request):
-    with resources.open("bucket_map_example.yaml") as f:
+def test_dynamic_url_bad_bucket(
+    mock_get_yaml_file,
+    mock_make_html_response,
+    data_path,
+    current_request
+):
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     current_request.uri_params = {"proxy": "DATA-TYPE-1/NONEXISTENT/OBJECT_1"}
@@ -1363,11 +1383,11 @@ def test_dynamic_url_directory(
     mock_get_profile,
     mock_get_yaml_file,
     mock_make_html_response,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
@@ -1403,14 +1423,14 @@ def test_dynamic_url_bearer_auth(
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_yaml_file,
-    resources,
+    data_path,
     user_profile,
     current_request
 ):
     mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
     mock_handle_auth_bearer_header.return_value = user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
@@ -1440,7 +1460,7 @@ def test_s3credentials(
     mock_get_yaml_file,
     mock_get_s3_credentials,
     mock_get_urs_creds,
-    resources,
+    data_path,
     user_profile,
     client
 ):
@@ -1450,7 +1470,7 @@ def test_s3credentials(
         "SessionToken": "session_token",
         "Expiration": "expiration"
     }
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
     mock_get_profile.return_value = user_profile
 
@@ -1475,11 +1495,11 @@ def test_s3credentials_unauthenticated(
     mock_get_profile,
     mock_handle_auth_bearer_header,
     mock_get_yaml_file,
-    resources,
+    data_path,
     client
 ):
     mock_handle_auth_bearer_header.return_value = None
-    with resources.open("bucket_map_example.yaml") as f:
+    with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
     mock_get_profile.return_value = None
     mock_response = chalice.Response(body="Mock response", headers={}, status_code=301)

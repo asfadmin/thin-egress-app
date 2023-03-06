@@ -24,10 +24,9 @@ def lambda_handler(event, context):
         # Clear out any pre-existing roles:
         RoleName = os.getenv('iam_role_name')
         response = client.list_role_policies(RoleName=RoleName)
-        if 'PolicyNames' in response:
-            for PolicyName in response['PolicyNames']:
-                print(f"Removing old Policy {PolicyName} from Role {RoleName}")
-                response = client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
+        for PolicyName in response.get('PolicyNames', ()):
+            print(f"Removing old Policy {PolicyName} from Role {RoleName}")
+            response = client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
 
         # Put the new policy
         response = client.put_role_policy(RoleName=RoleName, PolicyName=os.getenv('policy_name'),

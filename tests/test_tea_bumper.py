@@ -1,3 +1,6 @@
+import io
+import zipfile
+from base64 import b64encode
 from unittest import mock
 
 import pytest
@@ -12,27 +15,49 @@ def context():
     return mock.Mock(aws_request_id="request_1234")
 
 
-@mock.patch(f"{MODULE}.datetime")
-def test_lambda_handler(mock_datetime, boto3, context):
-    mock_datetime.utcnow.return_value = 0
+@pytest.fixture
+def test_lambda_code_zip():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(
+            "lambda_handler.py",
+            "lambda_handler = lambda event, context: None"
+        )
+    return buf.getvalue()
 
-    client = boto3.client("lambda")
-    client.get_function_configuration.return_value = {
-        "Environment": {
-            "Variables": {
-                "foo": "bar"
-            }
+
+@pytest.fixture
+def test_lambda(client_iam, client_lambda, test_lambda_code_zip):
+    role = client_iam.create_role(
+        RoleName="lambda-role",
+        AssumeRolePolicyDocument="{}"
+    )["Role"]
+
+    client_lambda.create_function(
+        FunctionName="test-lambda",
+        Runtime="python3.8",
+        Role=role["Arn"],
+        Code={
+            "ZipFile": b64encode(test_lambda_code_zip)
         }
-    }
+    )
+    print(client_lambda.list_functions())
+
+
+# @mock_lambda
+@mock.patch(f"{MODULE}.datetime")
+@mock.patch(f"{MODULE}.TEA_LAMBDA_NAME", "test-lambda")
+def test_lambda_handler(mock_datetime, client_lambda, test_lambda, context):
+    del test_lambda
+
+    mock_datetime.utcnow.return_value = 0
 
     tea_bumper.lambda_handler(None, context)
 
-    client.update_function_configuration.assert_called_once_with(
-        FunctionName=None,
-        Environment={
-            "Variables": {
-                "foo": "bar",
-                "BUMP": "0, request_1234"
-            }
+    assert client_lambda.get_function_configuration(
+        FunctionName="test-lambda"
+    )["Environment"] == {
+        "Variables": {
+            "BUMP": "0, request_1234"
         }
-    )
+    }

@@ -19,7 +19,7 @@ file, parses out the IP CIDRs for the deploy region, and automatically
 updates the In-Region IAM Role's Policy Document `condition` block.
 
 This lambda is defined in
-[update_lambda.py](https://github.com/asfadmin/thin-egress-app/blob/master/thin_egress_app/update_lambda.py)
+[update_lambda.py](https://github.com/asfadmin/thin-egress-app/blob/devel/thin_egress_app/update_lambda.py)
 
 ## Build Process
 

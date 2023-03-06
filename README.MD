@@ -5,7 +5,7 @@
 ![Last Good Build](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastgoodbuild.json)
 [![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json)]((https://github.com/asfadmin/thin-egress-app/releases/latest))
 ![Test Results](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Ftestresults.json)
-[![codecov](https://codecov.io/gh/asfadmin/thin-egress-app/branch/master/graph/badge.svg?token=Jd5l4IVpkM)](https://codecov.io/gh/asfadmin/thin-egress-app)
+[![codecov](https://codecov.io/gh/asfadmin/thin-egress-app/branch/devel/graph/badge.svg?token=Jd5l4IVpkM)](https://codecov.io/gh/asfadmin/thin-egress-app)
 [![Safety Badge](https://pyup.io/repos/github/asfadmin/thin-egress-app/shield.svg?t=1559317620375)](https://pyup.io/account/repos/github/asfadmin/thin-egress-app/)
 [![CodeFactor](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app/badge)](https://www.codefactor.io/repository/github/asfadmin/thin-egress-app)
 

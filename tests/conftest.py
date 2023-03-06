@@ -6,14 +6,14 @@ import boto3
 import pytest
 from moto import mock_iam, mock_lambda
 
-# Need to import these modules first because they will override the log level at import time
-import thin_egress_app.app  # noqa: E402
-import thin_egress_app.tea_bumper  # noqa: F401,E402
 
-root_logger = logging.getLogger()
-for handler in root_logger.handlers:
-    root_logger.removeHandler(handler)
-root_logger.setLevel(logging.DEBUG)
+@pytest.fixture(autouse=True)
+def root_logger():
+    """Set up logger for pytest"""
+    root = logging.getLogger()
+    for handler in root.handlers:
+        root.removeHandler(handler)
+    root.setLevel(logging.DEBUG)
 
 
 @pytest.fixture(scope="session", autouse=True)

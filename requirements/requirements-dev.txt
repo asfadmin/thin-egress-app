@@ -98,7 +98,7 @@ pyyaml==6.0
     # via
     #   -c requirements/requirements.txt
     #   -r requirements/requirements-dev.in
-requests==2.28.2
+requests==2.31.0
     # via
     #   docker
     #   moto

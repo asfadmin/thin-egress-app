@@ -63,6 +63,10 @@ as the source bucket you are pulling from. See
 [Using temporary credentials with AWS resources](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html)
 for more information on how to use your temporary credentials.
 
+### Multipart Chunksize
+
+The AWS `multipart_chunksize` is 8MB by default. It is recommended to increase this to between 128MB-1GB as shown in the example below. Additional resources can be found in the [AWS documentation](https://docs.aws.amazon.com/cli/latest/topic/s3-config.html#configuration-values).
+
 **Example:**
 
 This example lambda function uses
@@ -77,6 +81,7 @@ import boto3
 import json
 import urllib.request
 
+MB = 1000 ** 2
 
 def lambda_handler(event, context):
     # Get temporary download credentials
@@ -94,10 +99,15 @@ def lambda_handler(event, context):
         "s3",
         aws_access_key_id=creds["accessKeyId"],
         aws_secret_access_key=creds["secretAccessKey"],
-        aws_session_token=creds["sessionToken"]
+        aws_session_token=creds["sessionToken"],
     )
     # Lambda needs to have permission to upload to destination bucket
     upload_client = boto3.client("s3")
+
+    # Set up transfer config object
+    transfer_config = {
+        multipart_chunksize = 128 * MB
+    }
 
     # Stream from the source bucket to the destination bucket
     resp = download_client.get_object(
@@ -105,9 +115,10 @@ def lambda_handler(event, context):
         Key=event["Source"]["Key"],
     )
     upload_client.upload_fileobj(
-        resp["Body"],
-        event["Dest"]["Bucket"],
-        event["Dest"].get("Key") or event["Source"]["Key"],
+        Fileobj=resp["Body"],
+        Bucket=event["Dest"]["Bucket"],
+        Key=event["Dest"].get("Key") or event["Source"]["Key"],
+        Config=transfer_config,
     )
 ```
 

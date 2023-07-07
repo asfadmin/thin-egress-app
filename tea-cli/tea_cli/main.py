@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from tea_cli.commands import list_versions
+from tea_cli.commands import list_versions, quick_deploy
 
 
 def main(args=None):
@@ -20,6 +20,9 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser_list = subparsers.add_parser("list")
     configure_subparser(parser_list, list_versions)
+
+    parser_quickdeploy = subparsers.add_parser("quickdeploy")
+    configure_subparser(parser_quickdeploy, quick_deploy)
 
     return parser
 

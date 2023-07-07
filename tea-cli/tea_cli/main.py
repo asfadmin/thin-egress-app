@@ -2,6 +2,8 @@ import argparse
 import logging
 import sys
 
+from tea_cli.commands import list_versions
+
 
 def main(args=None):
     parser = get_parser()
@@ -16,7 +18,15 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", help="enable verbose output", action="store_true", dest="verbose")
     subparsers = parser.add_subparsers(required=True, dest="command")
 
+    parser_list = subparsers.add_parser("list")
+    configure_subparser(parser_list, list_versions)
+
     return parser
+
+
+def configure_subparser(parser: argparse.ArgumentParser, mod):
+    mod.configure_parser(parser)
+    parser.set_defaults(func=mod.handle_args)
 
 
 def setup_logger(args: argparse.Namespace):

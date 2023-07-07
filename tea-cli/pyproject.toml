@@ -15,6 +15,7 @@ tea = "tea_cli:main.main"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+boto3 = "^1.26.163"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

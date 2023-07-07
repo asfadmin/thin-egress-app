@@ -21,6 +21,7 @@ from tea_cli.deploy import (
     Secret,
     Step
 )
+from tea_cli.selector import Selector
 
 log = logging.getLogger(__name__)
 
@@ -107,21 +108,16 @@ def get_tea_version(session: boto3.Session) -> Optional[TeaVersion]:
         return
 
     default_version = versions[0]
+    selector = Selector(choices=[version.id for version in versions[:5]])
 
     log.info("Latest available releases:")
-    for version in versions[:5]:
-        log.info("    %s", version.id)
-
-    selected = input(f"Version to deploy [{default_version.id}]: ").strip() or default_version.id
-
-    selected_version = next(
-        (version for version in versions if version.id == selected),
-        None
+    selected = selector.select(
+        "Version to deploy",
+        default=default_version.id,
+        error_text="Invalid version specified"
     )
-    if not selected_version:
-        log.error("Invalid version specified")
 
-    return selected_version
+    return next(version for version in versions if version.id == selected)
 
 
 class UrsSecretStep(Step):
@@ -412,10 +408,11 @@ class CloudFormationStep(Step):
 
         if vpcs:
             if len(vpcs) > 1:
-                # TODO(reweeden): Select the VPC to use on CL
-                raise NotImplementedError()
-
-            vpc_id = vpcs[0]["VpcId"]
+                selector = Selector(choices=[vpc["VpcId"] for vpc in vpcs])
+                log.info("Available VPCs:")
+                vpc_id = selector.select("VPC to use")
+            else:
+                vpc_id = vpcs[0]["VpcId"]
 
             subnets = client.describe_subnets(
                 Filters=[

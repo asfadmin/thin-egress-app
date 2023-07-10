@@ -48,6 +48,7 @@ def configure_parser(parser: argparse.ArgumentParser):
         type=_validate_stack_name
     )
     parser.add_argument("--profile", help="AWS profile")
+    parser.add_argument("--region", help="AWS region override")
     parser.add_argument("--edl-uid", help="EDL app uid", dest="edl_uid")
     parser.add_argument("--edl-pass", help="EDL app password", dest="edl_password")
     parser.add_argument("--edl-client-id", help="EDL app client ID", dest="edl_client_id")
@@ -56,7 +57,8 @@ def configure_parser(parser: argparse.ArgumentParser):
 def handle_args(args: argparse.Namespace):
     quick_deploy(
         stack_name=args.stack_name,
-        profile_name=args.profile,
+        profile=args.profile,
+        region=args.region,
         edl_uid=args.edl_uid,
         edl_password=args.edl_password,
         edl_client_id=args.edl_client_id
@@ -65,12 +67,16 @@ def handle_args(args: argparse.Namespace):
 
 def quick_deploy(
     stack_name: str,
-    profile_name: str,
+    profile: str,
+    region: str = None,
     edl_uid: str = None,
     edl_password: str = None,
     edl_client_id: str = None,
 ):
-    session = boto3.Session(profile_name=profile_name)
+    session = boto3.Session(
+        profile_name=profile,
+        region_name=region
+    )
     inputs = {
         "stack_name": stack_name,
         "edl_uid": edl_uid,

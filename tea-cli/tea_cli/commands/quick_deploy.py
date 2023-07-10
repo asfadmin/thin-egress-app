@@ -42,7 +42,11 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def configure_parser(parser: argparse.ArgumentParser):
-    parser.add_argument("--stack-name", help="CloudFormation stack name")
+    parser.add_argument(
+        "--stack-name",
+        help="CloudFormation stack name",
+        type=_validate_stack_name
+    )
     parser.add_argument("--profile", help="AWS profile")
     parser.add_argument("--edl-uid", help="EDL app uid", dest="edl_uid")
     parser.add_argument("--edl-pass", help="EDL app password", dest="edl_password")
@@ -95,6 +99,25 @@ def quick_deploy(
     # 7. Deploy CloudFormation
     deployer.deploy_step(CloudFormationStep())
     # 8. Validate deployment
+
+
+def _validate_stack_name(value: str):
+    if not value[:1].isalpha():
+        raise argparse.ArgumentTypeError(
+            f"must start with an alphabetic character: '{value}'"
+        )
+
+    if len(value) > 127:
+        raise argparse.ArgumentTypeError(
+            f"must be 128 characters or less: '{value}'"
+        )
+
+    if not value.replace("-", "").isalnum():
+        raise argparse.ArgumentTypeError(
+            f"must contain only alphanumeric characters and hyphens: '{value}'"
+        )
+
+    return value
 
 
 def get_tea_version(session: boto3.Session) -> Optional[TeaVersion]:

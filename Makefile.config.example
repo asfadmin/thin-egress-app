@@ -32,7 +32,7 @@ CONFIG_PREFIX := $(STACK_NAME)/
 BUCKETNAME_PREFIX :=
 
 # These secrets are required but not managed by the Makefile.
-# For full deployments use `build/deploy.sh`
+# For full deployments use the TEA CLI
 JWT_KEY_SECRET_NAME := REQUIRED_FOR_DEPLOY!
 URS_CREDS_SECRET_NAME := REQUIRED_FOR_DEPLOY!
 

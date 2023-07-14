@@ -1,34 +1,51 @@
 # Deploying
 
+It is recommended to deploy any production system using an Infrastructure As
+Code (IAC) solution such as [`terraform`](https://www.terraform.io) or AWS
+CloudFormation. The commands in this section exist to help you get started and
+understand how the TEA infrastructure works, but do not necessarily represent
+the best way to deploy TEA in production.
+
 ## Quickstart
 
-You can either download [`deploy.sh`](https://github.com/asfadmin/thin-egress-app/blob/devel/build/deploy.sh)
-and run it, or, as show below, curl the output directly into bash.
+You can install the TEA command line tool to get a TEA stack up and running as
+fast as possible. It is **not recommended** to use this method for production
+deployments.
 
-This bash script requires the following executables to be installed and
-available on your PATH:
-* `curl`
-* [`awscli`](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-install.html) version 1 with [`Session Manager Plugin`](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html). *NOTE: Only version 1 of the AWS CLI is supported for this script!*
-* [`jq`](https://github.com/stedolan/jq/wiki/Installation)
+### Installation
 
-Run `deploy.sh` by replacing all `<VARIABLES>` with the appropriate
-values. `STACK-NAME` should be less than 20 characters, lower-case
-letters, numbers, or `-`. It should also be globally unique.
+We recommend using [`pipx`](https://pypi.org/project/pipx/) to simplify
+virtual environment management for command line tools. `pipx install` provides
+an interface similar to `pip install` which means the following commands can be
+run using either `pipx` or `pip` if you prefer to do your own virtual
+environment management.
 
-```bash
-curl -s 'https://raw.githubusercontent.com/asfadmin/thin-egress-app/devel/build/deploy.sh' | bash /dev/stdin \
-            --stack-name=<STACK-NAME> \
-            --aws-profile=<AWS-PROFILE-NAME \
-            --bastion="<SSM-BASTION-NAME>" \
-            --key-file=<LOCAL-PATH-TO-YOUR-PRIVATE-KEY> \
-            --uid=<EDL-APP-UID> \
-            --client-id=<EDL-APP-CLIENT-ID> \
-            --pass='<EDL-APP-PASSWORD>' \
-            --maturity=<SBX|DEV|SIT|INT|UAT|TEST|PROD>  \
-            --edl-user-creds='<EDL-USERNAME>:<EDL-PASSWORD>'
+To install the TEA CLI using git over SSH:
+```
+pipx install git+ssh://git@github.com/asfadmin/thin-egress-app.git#subdirectory=tea-cli
 ```
 
-All parameters are optional, but not supplying params affects behavior.
+Or, to install the TEA CLI using git over HTTPS:
+```
+pipx install git+https://github.com/asfadmin/thin-egress-app.git#subdirectory=tea-cli
+```
+
+### Using the TEA CLI
+
+*NOTE: For a detailed, up to date list of available functionality run:*
+```
+tea --help
+```
+
+To quickly get a TEA stack up and running use the `quickdeploy` subcommand:
+```
+tea quickdeploy
+```
+
+This will guide you through an interactive prompt where you can choose to
+deploy various resources needed to set up a basic functioning TEA stack. Each
+step might prompt you for certain input configuration which can also be passed
+on the command line. See `tea quickdeploy --help` for a list of argument names.
 
 ## Getting TEA Code
 

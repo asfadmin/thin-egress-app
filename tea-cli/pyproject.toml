@@ -1,0 +1,22 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "tea-cli"
+version = "0.1.0"
+description = "TEA command line tool"
+authors = ["Rohan Weeden <reweeden@alaska.edu>"]
+license = "Apache-2.0"
+packages = [{include = "tea_cli"}]
+
+[tool.poetry.scripts]
+tea = "tea_cli:main.main"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+boto3 = "^1.26.163"
+cryptography = "^41.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"

@@ -5,17 +5,15 @@
 #    pip-compile requirements/requirements-test.in
 #
 boto3==1.26.153
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 botocore==1.29.153
     # via
     #   boto3
     #   s3transfer
-certifi==2023.5.7
+certifi==2023.7.22
     # via requests
 charset-normalizer==3.1.0
     # via requests
-exceptiongroup==1.1.1
-    # via pytest
 idna==3.4
     # via requests
 iniconfig==2.0.0
@@ -29,19 +27,17 @@ packaging==23.1
 pluggy==1.0.0
     # via pytest
 pytest==7.3.2
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 python-dateutil==2.8.2
     # via botocore
 pyyaml==6.0
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 requests==2.31.0
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 s3transfer==0.6.1
     # via boto3
 six==1.16.0
     # via python-dateutil
-tomli==2.0.1
-    # via pytest
 urllib3==1.26.16
     # via
     #   botocore

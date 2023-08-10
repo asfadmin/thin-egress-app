@@ -14,7 +14,7 @@ EOL
 
 function GENERATE_TEA_CREDS {
   cd /tmp || exit 1
-  ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key -N ''
+  ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key -N '' -C "asfjwt"
   openssl base64 -in jwtcookie.key -out jwtcookie.key.b64 -A
   openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64 -A
 

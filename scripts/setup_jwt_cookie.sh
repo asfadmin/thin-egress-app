@@ -14,7 +14,7 @@ EOL
 
 function GENERATE_TEA_CREDS {
   cd /tmp || exit 1
-  ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key -N '' -C "asfjwt"
+  ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key -N '' -C "teajwt"
   openssl base64 -in jwtcookie.key -out jwtcookie.key.b64 -A
   openssl base64 -in jwtcookie.key.pub -out jwtcookie.key.pub.b64 -A
 
@@ -28,7 +28,3 @@ GENERATE_TEA_CREDS
 aws secretsmanager create-secret --name jwt_secret_for_tea --profile ${profile_name:-default} --region ${aws_region:-us-west-2} \
     --description "RS256 keys for TEA app JWT cookies" \
     --secret-string file:///tmp/jwtkeys.json
-
-
-
-

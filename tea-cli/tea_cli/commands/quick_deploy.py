@@ -19,7 +19,7 @@ from tea_cli.deploy import (
     Inputs,
     Resource,
     Secret,
-    Step
+    Step,
 )
 from tea_cli.selector import Selector
 

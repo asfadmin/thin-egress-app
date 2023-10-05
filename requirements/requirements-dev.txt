@@ -118,7 +118,7 @@ tomli==2.0.1
     #   pytest
 types-pyyaml==6.0.12.10
     # via responses
-urllib3==1.26.16
+urllib3==2.0.6
     # via
     #   -c requirements/requirements.txt
     #   botocore

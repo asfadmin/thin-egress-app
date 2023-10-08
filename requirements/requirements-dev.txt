@@ -64,7 +64,7 @@ moto[awslambda]==4.1.11
     # via -r requirements/requirements-dev.in
 opentelemetry-api==1.18.0
     # via opentelemetry-instrumentation
-opentelemetry-instrumentation==0.39b0
+opentelemetry-instrumentation==0.41b0
     # via -r requirements/requirements-dev.in
 packaging==23.1
     # via

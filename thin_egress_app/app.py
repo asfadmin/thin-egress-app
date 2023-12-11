@@ -102,7 +102,7 @@ JWT_MANAGER = JwtManager(
     public_key=None,
     private_key=None,
     cookie_name=os.getenv('JWT_COOKIENAME', JWT_COOKIE_NAME),
-    session_ttl_in_hours=int(os.getenv('SESSION_TTL_HRS', 7 * 24)),
+    session_ttl_in_hours=float(os.getenv('SESSION_TTL_HRS', 7 * 24)),
 )
 TEMPLATE_MANAGER = TemplateManager(conf_bucket, template_dir)
 

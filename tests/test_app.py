@@ -901,22 +901,86 @@ def test_version(mock_retrieve_secret, monkeypatch, client):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_locate(mock_get_yaml_file, mock_retrieve_secret, data_path, client):
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
     del mock_retrieve_secret
 
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "")
+
     response = client.http.get("/locate?bucket_name=pa-dt1")
-    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
     assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
 
     response = client.http.get("/locate?bucket_name=nonexistent")
-    assert response.body == b"No route defined for nonexistent"
     assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate_old_style_bucket_map(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
+    del mock_retrieve_secret
+
+    with open(data_path / "old_style_bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "")
+
+    response = client.http.get("/locate?bucket_name=pa-dt1")
+    assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
+
+    response = client.http.get("/locate?bucket_name=nonexistent")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate_bucket_name_prefix(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
+    del mock_retrieve_secret
+
+    with open(data_path / "bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "bucket-prefix-")
+
+    response = client.http.get("/locate?bucket_name=bucket-prefix-pa-dt1")
+    assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
+
+    response = client.http.get("/locate?bucket_name=pa-dt1")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for pa-dt1"
+
+    response = client.http.get("/locate?bucket_name=nonexistent")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
 
 
 @pytest.mark.parametrize("req", ("/locate", "/locate?foo=bar"))
+@mock.patch(f"{MODULE}.b_map", None)
 def test_locate_missing_bucket(mock_retrieve_secret, client, req):
     del mock_retrieve_secret
 
@@ -926,41 +990,6 @@ def test_locate_missing_bucket(mock_retrieve_secret, client, req):
     assert response.headers == {
         "x-request-id": app.app.lambda_context.aws_request_id,
         "Content-Type": "text/plain"
-    }
-
-
-def test_collapse_bucket_configuration():
-    bucket_map = {
-        "foo": "bar",
-        "key1": {
-            "key2": {
-                "bucket": "bucket1"
-            }
-        },
-        "bucket": {
-            "bucket": "bucket2"
-        },
-        "key3": {
-            "bucket": {
-                "bucket": {
-                    "bucket": "bucket3"
-                }
-            }
-        }
-    }
-    app.collapse_bucket_configuration(bucket_map)
-
-    assert bucket_map == {
-        "foo": "bar",
-        "key1": {
-            "key2": "bucket1"
-        },
-        "bucket": "bucket2",
-        "key3": {
-            "bucket": {
-                "bucket": "bucket3"
-            }
-        }
     }
 
 

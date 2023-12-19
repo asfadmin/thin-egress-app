@@ -569,6 +569,7 @@ def test_get_user_ip(current_request):
 @mock.patch(f"{MODULE}.get_role_creds", autospec=True)
 @mock.patch(f"{MODULE}.get_role_session", autospec=True)
 @mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
 def test_try_download_from_bucket(
     mock_get_presigned_url,
     mock_get_role_session,
@@ -587,7 +588,6 @@ def test_try_download_from_bucket(
     client = mock_get_role_session().client()
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
-    app.b_map = None
 
     response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
     client.head_object.assert_called_once()
@@ -1152,7 +1152,6 @@ def test_dynamic_url(
 
     mock_get_profile.return_value = user_profile
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
-    app.b_map = None
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
@@ -1445,6 +1444,7 @@ def test_dynamic_url_directory(
 @mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_bearer_auth(
     mock_get_header_to_set_auth_cookie,
     mock_handle_auth_bearer_header,

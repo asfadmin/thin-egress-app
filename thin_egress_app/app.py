@@ -13,7 +13,6 @@ from urllib.parse import quote_plus, urlencode, urlparse
 import boto3
 import cachetools
 import chalice
-import flatdict
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
@@ -720,33 +719,36 @@ def version():
 @app.route('/locate')
 @with_trace(context={})
 def locate():
+    timer = Timer()
+    timer.mark('restore_bucket_vars()')
+
     query_params = app.current_request.query_params
     if query_params is None or query_params.get('bucket_name') is None:
         return Response(body='Required "bucket_name" query paramater not specified',
                         status_code=400,
                         headers={'Content-Type': 'text/plain'})
+
+    restore_bucket_vars()
+    timer.mark()
+
     bucket_name = query_params.get('bucket_name')
-    bucket_map = collapse_bucket_configuration(get_yaml_file(conf_bucket, bucket_map_file)['MAP'])
-    search_map = flatdict.FlatDict(bucket_map, delimiter='/')
-    matching_paths = [key for key, value in search_map.items() if value == bucket_name]
-    if (len(matching_paths) > 0):
+    matching_paths = [
+        entry.bucket_path
+        for entry in b_map.entries()
+        if entry.bucket == bucket_name
+    ]
+    log.debug('matching_paths: %s', matching_paths)
+
+    log.debug('timing for locate(): ')
+    timer.log_all(log)
+
+    if matching_paths:
         return Response(body=json.dumps(matching_paths),
                         status_code=200,
                         headers={'Content-Type': 'application/json'})
     return Response(body=f'No route defined for {bucket_name}',
                     status_code=404,
                     headers={'Content-Type': 'text/plain'})
-
-
-@with_trace()
-def collapse_bucket_configuration(bucket_map):
-    for k, v in bucket_map.items():
-        if isinstance(v, dict):
-            if 'bucket' in v:
-                bucket_map[k] = v['bucket']
-            else:
-                collapse_bucket_configuration(v)
-    return bucket_map
 
 
 @with_trace()

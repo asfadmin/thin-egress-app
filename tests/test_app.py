@@ -569,6 +569,7 @@ def test_get_user_ip(current_request):
 @mock.patch(f"{MODULE}.get_role_creds", autospec=True)
 @mock.patch(f"{MODULE}.get_role_session", autospec=True)
 @mock.patch(f"{MODULE}.get_presigned_url", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
 def test_try_download_from_bucket(
     mock_get_presigned_url,
     mock_get_role_session,
@@ -587,7 +588,6 @@ def test_try_download_from_bucket(
     client = mock_get_role_session().client()
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
-    app.b_map = None
 
     response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
     client.head_object.assert_called_once()
@@ -901,22 +901,86 @@ def test_version(mock_retrieve_secret, monkeypatch, client):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-def test_locate(mock_get_yaml_file, mock_retrieve_secret, data_path, client):
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
     del mock_retrieve_secret
 
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "")
+
     response = client.http.get("/locate?bucket_name=pa-dt1")
-    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
     assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
 
     response = client.http.get("/locate?bucket_name=nonexistent")
-    assert response.body == b"No route defined for nonexistent"
     assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate_old_style_bucket_map(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
+    del mock_retrieve_secret
+
+    with open(data_path / "old_style_bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "")
+
+    response = client.http.get("/locate?bucket_name=pa-dt1")
+    assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
+
+    response = client.http.get("/locate?bucket_name=nonexistent")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
+
+
+@mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.b_map", None)
+def test_locate_bucket_name_prefix(
+    mock_get_yaml_file,
+    mock_retrieve_secret,
+    data_path,
+    monkeypatch,
+    client,
+):
+    del mock_retrieve_secret
+
+    with open(data_path / "bucket_map_example.yaml") as f:
+        mock_get_yaml_file.return_value = yaml.full_load(f)
+
+    monkeypatch.setenv("BUCKETNAME_PREFIX", "bucket-prefix-")
+
+    response = client.http.get("/locate?bucket_name=bucket-prefix-pa-dt1")
+    assert response.status_code == 200
+    assert response.json_body == ["DATA-TYPE-1/PLATFORM-A"]
+
+    response = client.http.get("/locate?bucket_name=pa-dt1")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for pa-dt1"
+
+    response = client.http.get("/locate?bucket_name=nonexistent")
+    assert response.status_code == 404
+    assert response.body == b"No route defined for nonexistent"
 
 
 @pytest.mark.parametrize("req", ("/locate", "/locate?foo=bar"))
+@mock.patch(f"{MODULE}.b_map", None)
 def test_locate_missing_bucket(mock_retrieve_secret, client, req):
     del mock_retrieve_secret
 
@@ -926,41 +990,6 @@ def test_locate_missing_bucket(mock_retrieve_secret, client, req):
     assert response.headers == {
         "x-request-id": app.app.lambda_context.aws_request_id,
         "Content-Type": "text/plain"
-    }
-
-
-def test_collapse_bucket_configuration():
-    bucket_map = {
-        "foo": "bar",
-        "key1": {
-            "key2": {
-                "bucket": "bucket1"
-            }
-        },
-        "bucket": {
-            "bucket": "bucket2"
-        },
-        "key3": {
-            "bucket": {
-                "bucket": {
-                    "bucket": "bucket3"
-                }
-            }
-        }
-    }
-    app.collapse_bucket_configuration(bucket_map)
-
-    assert bucket_map == {
-        "foo": "bar",
-        "key1": {
-            "key2": "bucket1"
-        },
-        "bucket": "bucket2",
-        "key3": {
-            "bucket": {
-                "bucket": "bucket3"
-            }
-        }
     }
 
 
@@ -1152,7 +1181,6 @@ def test_dynamic_url(
 
     mock_get_profile.return_value = user_profile
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
-    app.b_map = None
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
@@ -1445,6 +1473,7 @@ def test_dynamic_url_directory(
 @mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
+@mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_bearer_auth(
     mock_get_header_to_set_auth_cookie,
     mock_handle_auth_bearer_header,

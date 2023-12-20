@@ -13,6 +13,11 @@ repo_url: https://github.com/asfadmin/thin-egress-app
 repo_name: thin-egress-app
 edit_uri: ''
 
+extra:
+  social:
+    - icon: fontawesome/brands/gitter
+      link: https://gitter.im/ASFHyP3/community
+
 nav:
   - Home: index.md
   - Vision: vision.md

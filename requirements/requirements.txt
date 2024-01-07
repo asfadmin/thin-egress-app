@@ -22,7 +22,7 @@ click==8.1.7
     # via chalice
 cryptography==41.0.7
     # via pyjwt
-inquirer==2.10.1
+inquirer==3.2.1
     # via chalice
 jinja2==3.1.2
     # via rain-api-core

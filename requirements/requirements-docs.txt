@@ -22,7 +22,7 @@ importlib-metadata==7.0.0
     # via
     #   markdown
     #   mkdocs
-jinja2==3.1.2
+jinja2==3.1.3
     # via
     #   mkdocs
     #   mkdocs-material
@@ -39,11 +39,11 @@ mergedeep==1.3.4
     # via mkdocs
 mkdocs==1.5.3
     # via
-    #   -r requirements/requirements-docs.in
+    #   -r requirements-docs.in
     #   mkdocs-asf-theme
     #   mkdocs-material
 mkdocs-asf-theme==0.3.0
-    # via -r requirements/requirements-docs.in
+    # via -r requirements-docs.in
 mkdocs-material==9.4.14
     # via mkdocs-asf-theme
 mkdocs-material-extensions==1.3.1

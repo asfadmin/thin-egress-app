@@ -4,7 +4,7 @@ from pathlib import Path
 
 import boto3
 import pytest
-from moto import mock_iam, mock_lambda
+from moto import mock_aws
 
 
 @pytest.fixture(autouse=True)
@@ -33,11 +33,11 @@ def data_path():
 
 @pytest.fixture
 def client_iam():
-    with mock_iam():
+    with mock_aws():
         yield boto3.client("iam")
 
 
 @pytest.fixture
 def client_lambda():
-    with mock_lambda():
+    with mock_aws():
         yield boto3.client("lambda")

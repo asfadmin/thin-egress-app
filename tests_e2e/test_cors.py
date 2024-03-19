@@ -51,8 +51,9 @@ def test_cors_preflight_options(urls, auth_cookies):
     headers = dict(r.headers)
 
     assert r.status_code == 204
-    assert headers.get("Access-Control-Allow-Origin") == origin_host
-    assert "GET" in headers.get("Access-Control-Allow-Methods")
+    assert headers["Access-Control-Allow-Origin"] == origin_host
+    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {"GET", "HEAD", "OPTIONS"}
+    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {"Authorization", "Origin"}
 
 
 def test_cors_preflight_options_origin_null(urls, auth_cookies):
@@ -71,5 +72,6 @@ def test_cors_preflight_options_origin_null(urls, auth_cookies):
     headers = dict(r.headers)
 
     assert r.status_code == 204
-    assert headers.get("Access-Control-Allow-Origin") == "null"
-    assert "GET" in headers.get("Access-Control-Allow-Methods")
+    assert headers["Access-Control-Allow-Origin"] == "null"
+    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {"GET", "HEAD", "OPTIONS"}
+    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {"Authorization", "Origin"}

@@ -478,6 +478,7 @@ def is_cors_allowed():
     origin_header = app.current_request.headers.get("origin")
     cors_origin = os.getenv("CORS_ORIGIN")
 
+    log.debug("origin_header: %r, cors_origin: %r", origin_header, cors_origin)
     return bool(
         origin_header
         and cors_origin
@@ -966,21 +967,33 @@ def dynamic_url_options():
         "HEAD",
         "OPTIONS",
     ]
+    allowed_headers = [
+        "Authorization",
+        "Origin",
+        "X-Requested-With",
+    ]
     request_method = app.current_request.headers.get(
         "access-control-request-method",
         "",
     ).strip()
+    log.info("Received CORS preflight request for method: %r", request_method)
+
+    log.debug("is_cors_allowed: %s", is_cors_allowed())
+    log.debug("request_method in allowed_methods: %s", request_method in allowed_methods)
     if is_cors_allowed() and request_method in allowed_methods:
         headers = {
-            "Access-Control-Allow-Methods": ", ".join(allowed_methods)
+            "Access-Control-Allow-Methods": ", ".join(allowed_methods),
+            "Access-Control-Allow-Headers": ", ".join(allowed_headers),
         }
         add_cors_headers(headers)
+        log.info("Returning success response")
         return Response(
             body="",
             headers=headers,
             status_code=204,
         )
 
+    log.info("Returning error response")
     return Response(
         body="Method Not Allowed",
         status_code=405,

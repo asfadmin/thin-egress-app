@@ -459,17 +459,33 @@ def add_cors_headers(headers):
 
     # send CORS headers if we're configured to use them
     origin_header = app.current_request.headers.get("origin")
-    if origin_header is not None:
+    if is_cors_allowed():
+        headers["Access-Control-Allow-Origin"] = origin_header
+        headers["Access-Control-Allow-Credentials"] = "true"
+    else:
         cors_origin = os.getenv("CORS_ORIGIN")
-        if cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == "null"):
-            headers["Access-Control-Allow-Origin"] = origin_header
-            headers["Access-Control-Allow-Credentials"] = "true"
-        else:
-            log.warning(
-                "Origin %s is not an approved CORS host: %s",
-                origin_header,
-                cors_origin,
-            )
+        log.warning(
+            "Origin %s is not an approved CORS host: %s",
+            origin_header,
+            cors_origin,
+        )
+
+
+def is_cors_allowed():
+    assert app.current_request is not None
+
+    # send CORS headers if we're configured to use them
+    origin_header = app.current_request.headers.get("origin")
+    cors_origin = os.getenv("CORS_ORIGIN")
+
+    return bool(
+        origin_header
+        and cors_origin
+        and (
+            origin_header.endswith(cors_origin)
+            or origin_header.lower() == "null"
+        )
+    )
 
 
 @with_trace()
@@ -940,6 +956,35 @@ def try_download_head(bucket, filename):
     timer.log_all(log)
 
     return make_redirect(presigned_url, {}, 303)
+
+
+@app.route("/{proxy+}", methods=["OPTIONS"])
+@with_trace(context={})
+def dynamic_url_options():
+    allowed_methods = [
+        "GET",
+        "HEAD",
+        "OPTIONS",
+    ]
+    request_method = app.current_request.headers.get(
+        "access-control-request-method",
+        "",
+    ).strip()
+    if is_cors_allowed() and request_method in allowed_methods:
+        headers = {
+            "Access-Control-Allow-Methods": ", ".join(allowed_methods)
+        }
+        add_cors_headers(headers)
+        return Response(
+            body="",
+            headers=headers,
+            status_code=204,
+        )
+
+    return Response(
+        body="Method Not Allowed",
+        status_code=405,
+    )
 
 
 # Attempt to validate HEAD request

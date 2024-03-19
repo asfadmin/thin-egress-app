@@ -6,7 +6,7 @@ from uuid import uuid1
 import pytest
 import requests
 
-LOCATE_BUCKET = "s1-ocn-1e29d408"
+LOCATE_BUCKET = "rain-uw2-t-s1-ocn-1e29d408"
 
 
 def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies, urs_username):

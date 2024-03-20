@@ -32,7 +32,7 @@ class Bucket(Resource):
             client.create_bucket(
                 Bucket=self.name,
                 CreateBucketConfiguration={
-                    'LocationConstraint': session.region_name
+                    "LocationConstraint": session.region_name
                 }
             )
 

@@ -152,8 +152,8 @@ def _boto3_api_host(stack_name):
     client = boto3.client("apigateway")
     rest_apis = client.get_rest_apis()
 
-    for api in rest_apis['items']:
-        if api['name'] == f"{stack_name}-EgressGateway":
+    for api in rest_apis["items"]:
+        if api["name"] == f"{stack_name}-EgressGateway":
             return f"{api['id']}.execute-api.{client.meta.region_name}.amazonaws.com"
 
     raise Exception(f"Could not find API for the given stackname {stack_name}")
@@ -294,4 +294,4 @@ def pytest_sessionfinish(session, exitstatus):
     }
 
     # Dump results to S3.
-    boto3.resource('s3').Object(s3_bucket, s3_object).put(Body=testresults, **put_args)
+    boto3.resource("s3").Object(s3_bucket, s3_object).put(Body=testresults, **put_args)

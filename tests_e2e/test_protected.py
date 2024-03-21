@@ -16,12 +16,12 @@ def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies, urs_username):
 
     assert r.status_code == 303
     assert r.is_redirect is True
-    assert r.headers['Location'] is not None
+    assert r.headers["Location"] is not None
     query_params = urllib.parse.parse_qs(
-        urllib.parse.urlparse(r.headers['Location']).query
+        urllib.parse.urlparse(r.headers["Location"]).query
     )
-    assert query_params['A-userid'] == [urs_username]
-    assert 'oauth/authorize' not in r.headers['Location']
+    assert query_params["A-userid"] == [urs_username]
+    assert "oauth/authorize" not in r.headers["Location"]
 
 
 def test_origin_request_header(urls, auth_cookies):
@@ -32,7 +32,7 @@ def test_origin_request_header(urls, auth_cookies):
     r = requests.get(url, cookies=auth_cookies, headers=headers, allow_redirects=False)
 
     headers = dict(r.headers)
-    assert headers.get('x-origin-request-id') == origin_request_value
+    assert headers.get("x-origin-request-id") == origin_request_value
 
 
 @pytest.mark.parametrize("method", ("get", "head"))
@@ -80,7 +80,7 @@ def test_validate_custom_headers(urls, auth_cookies):
     r = requests.get(url, cookies=auth_cookies, allow_redirects=False)
 
     headers = dict(r.headers)
-    assert headers.get('x-rainheader1') is not None
+    assert headers.get("x-rainheader1") is not None
 
 
 def test_validate_locate_handles_complex_configuration_key(api_url, auth_cookies):
@@ -94,15 +94,15 @@ def test_validate_locate_handles_complex_configuration_key(api_url, auth_cookies
 
 def find_bearer_token(auth_cookies):
     for cookie in auth_cookies:
-        if cookie.name == 'asf-urs':
+        if cookie.name == "asf-urs":
             # Grab the JWT payload:
             cookie_b64 = cookie.value.split(".")[1]
             # Fix the padding:
-            cookie_b64 += '=' * (4 - (len(cookie_b64) % 4))
+            cookie_b64 += "=" * (4 - (len(cookie_b64) % 4))
             # Decode & Load...
             cookie_json = json.loads(base64.b64decode(cookie_b64))
-            if 'urs-access-token' in cookie_json:
-                return cookie_json['urs-access-token']
+            if "urs-access-token" in cookie_json:
+                return cookie_json["urs-access-token"]
     return None
 
 

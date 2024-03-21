@@ -66,8 +66,8 @@ def test_validate_invalid_jwt(urls, auth_cookies, endpoint_patcher):
         r = requests.get(url, cookies=auth_cookies, allow_redirects=False)
 
         assert r.is_redirect is True
-        assert r.headers['Location'] is not None
-        assert 'oauth/authorize' in r.headers['Location']
+        assert r.headers["Location"] is not None
+        assert "oauth/authorize" in r.headers["Location"]
 
 
 def test_validate_valid_jwt(urls, auth_cookies, endpoint_patcher):

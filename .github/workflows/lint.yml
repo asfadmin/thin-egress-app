@@ -14,7 +14,7 @@ jobs:
       - uses: TrueBrain/actions-flake8@v2
         with:
           flake8_version: 6.0.0
-          plugins: flake8-isort~=6.0
+          plugins: flake8-isort==6.1.1 flake8-quotes==3.4.0
 
   requirements:
     runs-on: ubuntu-latest

@@ -437,7 +437,7 @@ def test_do_auth_and_return(mock_get_urs_url, monkeypatch):
     assert response.headers == {"Location": "%2Fsome%2Fpath"}
 
 
-def test_send_cors_header(current_request, monkeypatch):
+def test_add_cors_headers(current_request, monkeypatch):
     current_request.headers = {}
     headers = {"foo": "bar"}
     app.add_cors_headers(headers)
@@ -1091,6 +1091,41 @@ def test_try_download_head_error(
         404,
         "error.html"
     )
+
+
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_options(current_request, monkeypatch):
+    monkeypatch.setenv("CORS_ORIGIN", "example.com")
+    current_request.headers = {
+        "origin": "example.com",
+        "access-control-request-method": "GET",
+    }
+
+    current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url_options()
+
+    assert response.body == ""
+    assert response.status_code == 204
+    assert response.headers == {
+        "Access-Control-Allow-Origin": "example.com",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Origin, X-Requested-With",
+    }
+
+
+@mock.patch(f"{MODULE}.b_map", None)
+def test_dynamic_url_options_error(current_request):
+    current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
+
+    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
+    response = app.dynamic_url_options()
+
+    assert response.body == "Method Not Allowed"
+    assert response.status_code == 405
+    assert response.headers == {}
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)

@@ -1,6 +1,7 @@
 # Python
 *.pyc
 /venv
+/.venv
 
 # IDE
 .idea

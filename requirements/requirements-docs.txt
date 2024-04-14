@@ -16,7 +16,7 @@ colorama==0.4.6
     # via mkdocs-material
 ghp-import==2.1.0
     # via mkdocs
-idna==3.6
+idna==3.7
     # via requests
 importlib-metadata==7.0.1
     # via

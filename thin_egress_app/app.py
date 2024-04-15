@@ -389,7 +389,7 @@ def get_user_from_token(token):
 
 @with_trace()
 def get_api_request_uuid(query_params):
-    api_request_uuid=None
+    api_request_uuid = None
     if query_params is not None:
         api_request_uuid = query_params.get("A-api-request-uuid")
         if api_request_uuid is not None:
@@ -678,7 +678,16 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_
             redirheaders.update(headers)
 
         # Generate URL
-        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id, 'GET', api_request_uuid)
+        presigned_url = get_presigned_url(
+            creds,
+            bucket,
+            filename,
+            bucket_region,
+            expires_in,
+            user_id,
+            "GET",
+            api_request_uuid
+        )
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was %s", s3_host)
 

@@ -1719,6 +1719,5 @@ def test_x_origin_request_id_forwarded(mock_retrieve_secret, client):
 
 
 def test_get_api_request_uuid():
-    # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.get_api_request_uuid({"A-api-request-uuid": "test-uuid"})
     assert response == "test-uuid"

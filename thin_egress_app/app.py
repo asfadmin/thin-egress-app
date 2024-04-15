@@ -389,7 +389,6 @@ def get_user_from_token(token):
 
 @with_trace()
 def get_api_request_uuid(query_params):
-    api_request_uuid = None
     if query_params is not None:
         api_request_uuid = query_params.get("A-api-request-uuid")
         if api_request_uuid is not None:

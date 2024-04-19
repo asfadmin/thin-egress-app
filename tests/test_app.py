@@ -1721,3 +1721,9 @@ def test_x_origin_request_id_forwarded(mock_retrieve_secret, client):
 def test_get_api_request_uuid():
     response = app.get_api_request_uuid({"A-api-request-uuid": "test-uuid"})
     assert response == "test-uuid"
+
+    response = app.get_api_request_uuid({"A-userid": "test-userid"})
+    assert response == None
+
+    response = app.get_api_request_uuid(None)
+    assert response == None

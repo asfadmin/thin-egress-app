@@ -589,7 +589,7 @@ def test_try_download_from_bucket(
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
+    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, api_request_uuid=None)
     client.head_object.assert_called_once()
     assert response.body == ""
     assert response.status_code == 303
@@ -606,7 +606,7 @@ def test_try_download_from_bucket(
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
     client.head_object.reset_mock()
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, "not a dict")
+    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, "not a dict", api_request_uuid=None)
     client.head_object.assert_not_called()
     assert response.body == ""
     assert response.status_code == 303
@@ -635,7 +635,7 @@ def test_try_download_from_bucket_client_error(
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
     mock_get_role_session().client.side_effect = ClientError({}, "bar")
 
-    app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
+    app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, None)
     mock_make_html_response.assert_called_once_with(
         {
             "contentstring": "There was a problem accessing download data.",
@@ -672,7 +672,7 @@ def test_try_download_from_bucket_not_found(
         "bar"
     )
 
-    app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
+    app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, None)
     mock_make_html_response.assert_called_once_with(
         {
             "contentstring": "Could not find requested data.",
@@ -710,7 +710,7 @@ def test_try_download_from_bucket_invalid_range(
         "bar"
     )
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {})
+    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, None)
     assert response.body == "Invalid Range"
     assert response.status_code == 416
     assert response.headers == {}
@@ -1197,6 +1197,7 @@ def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1204,6 +1205,7 @@ def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
 def test_dynamic_url(
     mock_get_profile,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
@@ -1215,6 +1217,7 @@ def test_dynamic_url(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
@@ -1224,12 +1227,14 @@ def test_dynamic_url(
         "gsfc-ngap-d-pa-dt1",
         "OBJECT_1",
         user_profile,
-        {}
+        {},
+        None
     )
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1237,6 +1242,7 @@ def test_dynamic_url(
 def test_dynamic_url_public_unauthenticated(
     mock_get_profile,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     current_request
@@ -1247,16 +1253,18 @@ def test_dynamic_url_public_unauthenticated(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "BROWSE/PLATFORM-A/OBJECT_2"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {})
+    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {}, None)
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1264,6 +1272,7 @@ def test_dynamic_url_public_unauthenticated(
 def test_dynamic_url_public_authenticated(
     mock_get_profile,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
@@ -1275,16 +1284,18 @@ def test_dynamic_url_public_authenticated(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "BROWSE/PLATFORM-A/OBJECT_2"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", user_profile, {})
+    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", user_profile, {}, None)
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1292,6 +1303,7 @@ def test_dynamic_url_public_authenticated(
 def test_dynamic_url_public_custom_headers(
     mock_get_profile,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     current_request
@@ -1302,6 +1314,7 @@ def test_dynamic_url_public_custom_headers(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "HEADERS/BROWSE/OBJECT_1"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
@@ -1314,12 +1327,14 @@ def test_dynamic_url_public_custom_headers(
         {
             "custom-header-1": "custom-header-1-value",
             "custom-header-2": "custom-header-2-value"
-        }
+        },
+        None
     )
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.user_in_group", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
@@ -1331,6 +1346,7 @@ def test_dynamic_url_private(
     mock_get_profile,
     mock_user_in_group,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
@@ -1344,6 +1360,7 @@ def test_dynamic_url_private(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "PRIVATE/PLATFORM-A/OBJECT_2"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
@@ -1353,12 +1370,14 @@ def test_dynamic_url_private(
         "gsfc-ngap-d-pa-priv",
         "OBJECT_2",
         user_profile,
-        {"SET-COOKIE": "cookie"}
+        {"SET-COOKIE": "cookie"},
+        None
     )
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.user_in_group", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
@@ -1370,6 +1389,7 @@ def test_dynamic_url_private_custom_headers(
     mock_get_profile,
     mock_user_in_group,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
@@ -1384,6 +1404,7 @@ def test_dynamic_url_private_custom_headers(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "HEADERS/PRIVATE/OBJECT_1"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
@@ -1397,12 +1418,14 @@ def test_dynamic_url_private_custom_headers(
             "custom-header-3": "custom-header-3-value",
             "custom-header-4": "custom-header-4-value",
             "SET-COOKIE": "cookie"
-        }
+        },
+        None
     )
     assert response is MOCK_RESPONSE
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1410,6 +1433,7 @@ def test_dynamic_url_private_custom_headers(
 def test_dynamic_url_public_within_private(
     mock_get_profile_from_headers,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     current_request
 ):
@@ -1427,12 +1451,13 @@ def test_dynamic_url_public_within_private(
     }
 
     mock_get_profile_from_headers.return_value = None
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "FOO/BROWSE/OBJECT_1"}
 
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {})
+    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {}, None)
     assert response is MOCK_RESPONSE
 
 
@@ -1503,6 +1528,7 @@ def test_dynamic_url_directory(
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
+@mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
@@ -1514,6 +1540,7 @@ def test_dynamic_url_bearer_auth(
     mock_handle_auth_bearer_header,
     mock_get_profile,
     mock_try_download_from_bucket,
+    mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
@@ -1526,6 +1553,7 @@ def test_dynamic_url_bearer_auth(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = None
+    mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
     current_request.headers = {"Authorization": "bearer b64token"}
 
@@ -1536,7 +1564,8 @@ def test_dynamic_url_bearer_auth(
         "gsfc-ngap-d-pa-dt1",
         "OBJECT_1",
         user_profile,
-        {"SET-COOKIE": "cookie"}
+        {"SET-COOKIE": "cookie"},
+        None
     )
     assert response.body == "Mock response"
     assert response.status_code == 200
@@ -1687,3 +1716,14 @@ def test_x_origin_request_id_forwarded(mock_retrieve_secret, client):
     response = client.http.get("/profile", headers={"x-origin-request-id": "x_origin_request_1234"})
 
     assert response.headers["x-origin-request-id"] == "x_origin_request_1234"
+
+
+def test_get_api_request_uuid():
+    response = app.get_api_request_uuid({"A-api-request-uuid": "test-uuid"})
+    assert response == "test-uuid"
+
+    response = app.get_api_request_uuid({"A-userid": "test-userid"})
+    assert response is None
+
+    response = app.get_api_request_uuid(None)
+    assert response is None

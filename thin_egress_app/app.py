@@ -388,6 +388,15 @@ def get_user_from_token(token):
 
 
 @with_trace()
+def get_api_request_uuid(query_params):
+    if query_params is not None:
+        api_request_uuid = query_params.get("A-api-request-uuid")
+        if api_request_uuid is not None:
+            log.info("A-api-request-uuid query param is " + api_request_uuid)
+        return api_request_uuid
+
+
+@with_trace()
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
     k_v.update({
         "code": code,
@@ -583,7 +592,7 @@ def get_user_ip():
 
 
 @with_trace()
-def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
+def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_request_uuid):
     timer = Timer()
     timer.mark()
     user_id = None
@@ -668,7 +677,16 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict):
             redirheaders.update(headers)
 
         # Generate URL
-        presigned_url = get_presigned_url(creds, bucket, filename, bucket_region, expires_in, user_id)
+        presigned_url = get_presigned_url(
+            creds,
+            bucket,
+            filename,
+            bucket_region,
+            expires_in,
+            user_id,
+            "GET",
+            api_request_uuid
+        )
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was %s", s3_host)
 
@@ -1126,7 +1144,9 @@ def dynamic_url():
     log.debug("timing for dynamic_url()")
     timer.log_all(log)
 
-    return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers)
+    api_request_uuid = get_api_request_uuid(app.current_request.query_params)
+
+    return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers, api_request_uuid)
 
 
 @app.route("/s3credentials", methods=["GET"])

@@ -143,6 +143,7 @@ container path:
 file:/var/deps/rain-api-core
 ```
 *NOTE: This is a generated file and you should NOT be committing these changes*
+
 3. Add any source files of that dependency to the `REQUIREMENTS_DEPS` in your `Makefile.config`:
 ```makefile
 REQUIREMENTS_DEPS := $(shell find /host/path/to/rain-api-core/rain_api_core/ -name '*.py')

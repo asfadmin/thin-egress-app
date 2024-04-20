@@ -46,6 +46,7 @@ LOG_TYPE := flat
 # For NGAP Deployments #
 ########################
 # In an NGAP environment you must uncomment the following line or the deployment will fail
+# This has been deprecated in NGAP and is no longer necessary
 # PERMISSION_BOUNDARY_NAME := NGAPShRoleBoundary
 
 PRIVATE_VPC :=

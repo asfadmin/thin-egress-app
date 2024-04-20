@@ -1,5 +1,5 @@
 cachetools
 cfnresponse
 chalice
-git+https://github.com/asfadmin/rain-api-core.git@318aac226c92cf6f60cc8821d6d94669485972c6
+git+https://github.com/asfadmin/rain-api-core.git@a9a00d126878f56213af972f6fb5bf6bb1490909
 netaddr

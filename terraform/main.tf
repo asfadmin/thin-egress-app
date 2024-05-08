@@ -19,7 +19,7 @@ resource "aws_security_group" "egress_lambda" {
 }
 
 resource "aws_s3_bucket" "lambda_source" {
-  tags = var.tags
+  tags = merge(var.tags, { DAR = "YES" })
 }
 
 resource "aws_s3_bucket_object" "lambda_source" {

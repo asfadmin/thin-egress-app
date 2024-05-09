@@ -1,8 +1,8 @@
 locals {
-  vpc_security_group_ids_set = length(var.vpc_security_group_ids) > 0
+  vpc_security_group_ids_set       = length(var.vpc_security_group_ids) > 0
   cloudformation_template_filename = "${path.module}/thin-egress-app.yaml"
-  lambda_source_filename     = "${path.module}/lambda.zip"
-  dependency_layer_filename  ="${path.module}/dependencylayer.zip"
+  lambda_source_filename           = "${path.module}/lambda.zip"
+  dependency_layer_filename        = "${path.module}/dependencylayer.zip"
 }
 
 resource "aws_security_group" "egress_lambda" {
@@ -19,7 +19,7 @@ resource "aws_security_group" "egress_lambda" {
 }
 
 resource "aws_s3_bucket" "lambda_source" {
-  tags = var.tags
+  tags = merge(var.tags, { DAR = "YES" })
 }
 
 resource "aws_s3_bucket_object" "lambda_source" {
@@ -44,7 +44,7 @@ resource "aws_s3_bucket_object" "cloudformation_template" {
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
-  depends_on   = [
+  depends_on = [
     aws_s3_bucket_object.lambda_source,
     aws_s3_bucket_object.lambda_code_dependency_archive,
     aws_s3_bucket_object.cloudformation_template

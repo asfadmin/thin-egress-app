@@ -22,12 +22,25 @@ def main(args=None):
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Thin Egress App Command Line Tool")
     parser.add_argument("-v", help="enable verbose output", action="store_true", dest="verbose")
-    subparsers = parser.add_subparsers(required=True, dest="command")
+    subparsers = parser.add_subparsers(
+        required=True,
+        dest="command",
+        metavar="subcommand",
+    )
 
-    parser_list = subparsers.add_parser("list")
+    parser_list = subparsers.add_parser(
+        "list",
+        help="show a list of deployable versions",
+    )
     configure_subparser(parser_list, list_versions)
 
-    parser_quickdeploy = subparsers.add_parser("quickdeploy")
+    parser_quickdeploy = subparsers.add_parser(
+        "quickdeploy",
+        help=(
+            "deploy necessary TEA resources to an account for development or "
+            "testing purposes. For production, use terraform or CloudFormation"
+        ),
+    )
     configure_subparser(parser_quickdeploy, quick_deploy)
 
     return parser

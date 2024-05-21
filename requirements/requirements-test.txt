@@ -34,7 +34,7 @@ python-dateutil==2.9.0.post0
     # via botocore
 pyyaml==6.0.1
     # via -r requirements/requirements-test.in
-requests==2.31.0
+requests==2.32.1
     # via -r requirements/requirements-test.in
 s3transfer==0.10.1
     # via boto3

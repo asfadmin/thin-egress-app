@@ -103,7 +103,7 @@ pyyaml==6.0.1
     #   -c requirements/requirements.txt
     #   -r requirements/requirements-dev.in
     #   responses
-requests==2.31.0
+requests==2.32.1
     # via
     #   docker
     #   moto

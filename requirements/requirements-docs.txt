@@ -22,7 +22,6 @@ importlib-metadata==7.1.0
     # via
     #   markdown
     #   mkdocs
-    #   mkdocs-get-deps
 jinja2==3.1.3
     # via
     #   mkdocs
@@ -37,16 +36,14 @@ markupsafe==2.1.5
     #   jinja2
     #   mkdocs
 mergedeep==1.3.4
-    # via
-    #   mkdocs
-    #   mkdocs-get-deps
+    # via mkdocs
 mkdocs==1.5.3
     # via
-    #   -r requirements/requirements-docs.in
+    #   -r requirements-docs.in
     #   mkdocs-asf-theme
     #   mkdocs-material
 mkdocs-asf-theme==0.3.2
-    # via -r requirements/requirements-docs.in
+    # via -r requirements-docs.in
 mkdocs-material==9.5.18
     # via mkdocs-asf-theme
 mkdocs-material-extensions==1.3.1
@@ -58,9 +55,7 @@ paginate==0.5.6
 pathspec==0.12.1
     # via mkdocs
 platformdirs==4.2.1
-    # via
-    #   mkdocs
-    #   mkdocs-get-deps
+    # via mkdocs
 pygments==2.17.2
     # via mkdocs-material
 pymdown-extensions==10.8
@@ -72,14 +67,13 @@ pytz==2024.1
 pyyaml==6.0.1
     # via
     #   mkdocs
-    #   mkdocs-get-deps
     #   pymdown-extensions
     #   pyyaml-env-tag
 pyyaml-env-tag==0.1
     # via mkdocs
 regex==2024.4.16
     # via mkdocs-material
-requests==2.31.0
+requests==2.32.0
     # via mkdocs-material
 six==1.16.0
     # via python-dateutil

@@ -5,7 +5,7 @@
 #    pip-compile requirements/requirements-test.in
 #
 boto3==1.34.90
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 botocore==1.34.90
     # via
     #   boto3
@@ -29,13 +29,13 @@ packaging==24.0
 pluggy==1.5.0
     # via pytest
 pytest==8.1.1
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
 python-dateutil==2.9.0.post0
     # via botocore
 pyyaml==6.0.1
-    # via -r requirements/requirements-test.in
-requests==2.31.0
-    # via -r requirements/requirements-test.in
+    # via -r requirements-test.in
+requests==2.32.0
+    # via -r requirements-test.in
 s3transfer==0.10.1
     # via boto3
 six==1.16.0

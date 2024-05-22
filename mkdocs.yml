@@ -14,9 +14,7 @@ repo_name: thin-egress-app
 edit_uri: ''
 
 extra:
-  social:
-    - icon: fontawesome/brands/gitter
-      link: https://gitter.im/ASFHyP3/community
+  social: []
 
 nav:
   - Home: index.md

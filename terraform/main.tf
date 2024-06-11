@@ -22,21 +22,21 @@ resource "aws_s3_bucket" "lambda_source" {
   tags = merge(var.tags, { DAR = "YES" })
 }
 
-resource "aws_s3_bucket_object" "lambda_source" {
+resource "aws_s3_object" "lambda_source" {
   bucket = aws_s3_bucket.lambda_source.bucket
   key    = "${filemd5(local.lambda_source_filename)}.zip"
   source = local.lambda_source_filename
   etag   = filemd5(local.lambda_source_filename)
 }
 
-resource "aws_s3_bucket_object" "lambda_code_dependency_archive" {
+resource "aws_s3_object" "lambda_code_dependency_archive" {
   bucket = aws_s3_bucket.lambda_source.bucket
   key    = "${filemd5(local.dependency_layer_filename)}.zip"
   source = local.dependency_layer_filename
   etag   = filemd5(local.dependency_layer_filename)
 }
 
-resource "aws_s3_bucket_object" "cloudformation_template" {
+resource "aws_s3_object" "cloudformation_template" {
   bucket = aws_s3_bucket.lambda_source.bucket
   key    = "${filemd5(local.cloudformation_template_filename)}.yaml"
   source = local.cloudformation_template_filename
@@ -45,12 +45,12 @@ resource "aws_s3_bucket_object" "cloudformation_template" {
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
   depends_on = [
-    aws_s3_bucket_object.lambda_source,
-    aws_s3_bucket_object.lambda_code_dependency_archive,
-    aws_s3_bucket_object.cloudformation_template
+    aws_s3_object.lambda_source,
+    aws_s3_object.lambda_code_dependency_archive,
+    aws_s3_object.cloudformation_template
   ]
   name         = substr(var.stack_name, 0, 36)
-  template_url = "https://s3.amazonaws.com/${aws_s3_bucket_object.lambda_source.bucket}/${aws_s3_bucket_object.cloudformation_template.key}"
+  template_url = "https://s3.amazonaws.com/${aws_s3_object.lambda_source.bucket}/${aws_s3_object.cloudformation_template.key}"
   capabilities = ["CAPABILITY_NAMED_IAM"]
   parameters = {
     AuthBaseUrl                     = var.auth_base_url
@@ -67,9 +67,9 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     HtmlTemplateDir                 = var.html_template_dir
     JwtAlgo                         = var.jwt_algo
     JwtKeySecretName                = var.jwt_secret_name
-    LambdaCodeDependencyArchive     = aws_s3_bucket_object.lambda_code_dependency_archive.key
-    LambdaCodeS3Bucket              = aws_s3_bucket_object.lambda_source.bucket
-    LambdaCodeS3Key                 = aws_s3_bucket_object.lambda_source.key
+    LambdaCodeDependencyArchive     = aws_s3_object.lambda_code_dependency_archive.key
+    LambdaCodeS3Bucket              = aws_s3_object.lambda_source.bucket
+    LambdaCodeS3Key                 = aws_s3_object.lambda_source.key
     LambdaTimeout                   = var.lambda_timeout
     LambdaMemory                    = var.lambda_memory
     Loglevel                        = var.log_level

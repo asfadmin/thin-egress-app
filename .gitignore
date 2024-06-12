@@ -11,7 +11,6 @@
 
 # Tools
 .terraform
-/terraform/providers.tf
 terraform.tfstate*
 *.tfvars
 /thin_egress_app/.chalice

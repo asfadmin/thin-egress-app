@@ -57,7 +57,7 @@ six==1.16.0
     #   blessed
     #   chalice
     #   python-dateutil
-urllib3==1.26.18
+urllib3==2.2.2
     # via
     #   botocore
     #   cfnresponse

@@ -42,7 +42,7 @@ six==1.16.0
     # via python-dateutil
 tomli==2.0.1
     # via pytest
-urllib3==1.26.18
+urllib3==2.2.2
     # via
     #   botocore
     #   requests

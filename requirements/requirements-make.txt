@@ -7,18 +7,18 @@
 importlib-metadata==7.1.0
     # via markdown
 jinja2==3.1.4
-    # via -r requirements/requirements-make.in
+    # via -r requirements-make.in
 markdown==3.6
     # via
-    #   -r requirements/requirements-make.in
+    #   -r requirements-make.in
     #   pymdown-extensions
 markupsafe==2.1.5
     # via jinja2
 pygments==2.18.0
-    # via -r requirements/requirements-make.in
+    # via -r requirements-make.in
 pymdown-extensions==10.8.1
-    # via -r requirements/requirements-make.in
+    # via -r requirements-make.in
 pyyaml==6.0.1
     # via pymdown-extensions
-zipp==3.18.2
+zipp==3.19.1
     # via importlib-metadata

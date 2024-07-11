@@ -20,5 +20,5 @@ pymdown-extensions==10.8.1
     # via -r requirements/requirements-make.in
 pyyaml==6.0.1
     # via pymdown-extensions
-zipp==3.18.2
+zipp==3.19.2
     # via importlib-metadata

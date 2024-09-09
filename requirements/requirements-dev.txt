@@ -4,21 +4,21 @@
 #
 #    pip-compile requirements/requirements-dev.in
 #
-boto3==1.34.110
+boto3==1.35.14
     # via
     #   -r requirements/requirements-dev.in
     #   moto
-botocore==1.34.110
+botocore==1.35.14
     # via
     #   -c requirements/requirements.txt
     #   boto3
     #   moto
     #   s3transfer
-build==1.2.1
+build==1.2.2
     # via pip-tools
-certifi==2024.2.2
+certifi==2024.8.30
     # via requests
-cffi==1.16.0
+cffi==1.17.1
     # via
     #   -c requirements/requirements.txt
     #   cryptography
@@ -28,21 +28,21 @@ click==8.1.7
     # via
     #   -c requirements/requirements.txt
     #   pip-tools
-coverage[toml]==7.5.1
+coverage[toml]==7.6.1
     # via pytest-cov
-cryptography==42.0.7
+cryptography==43.0.1
     # via
     #   -c requirements/requirements.txt
     #   moto
 deprecated==1.2.14
     # via opentelemetry-api
-docker==7.0.0
+docker==7.1.0
     # via moto
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
     # via pytest
-idna==3.7
+idna==3.8
     # via requests
-importlib-metadata==7.0.0
+importlib-metadata==8.4.0
     # via
     #   build
     #   opentelemetry-api
@@ -62,16 +62,15 @@ markupsafe==2.1.5
     #   -c requirements/requirements.txt
     #   jinja2
     #   werkzeug
-moto[awslambda]==5.0.7
+moto[awslambda]==5.0.14
     # via -r requirements/requirements-dev.in
-opentelemetry-api==1.24.0
+opentelemetry-api==1.27.0
     # via opentelemetry-instrumentation
-opentelemetry-instrumentation==0.45b0
+opentelemetry-instrumentation==0.48b0
     # via -r requirements/requirements-dev.in
-packaging==24.0
+packaging==24.1
     # via
     #   build
-    #   docker
     #   pytest
 pip-tools==7.4.1
     # via -r requirements/requirements-dev.in
@@ -85,7 +84,7 @@ pyproject-hooks==1.1.0
     # via
     #   build
     #   pip-tools
-pytest==8.2.1
+pytest==8.3.2
     # via
     #   -r requirements/requirements-dev.in
     #   pytest-cov
@@ -96,19 +95,19 @@ python-dateutil==2.9.0.post0
     #   -c requirements/requirements.txt
     #   botocore
     #   moto
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via
     #   -c requirements/requirements.txt
     #   -r requirements/requirements-dev.in
     #   responses
-requests==2.32.2
+requests==2.32.3
     # via
     #   docker
     #   moto
     #   responses
-responses==0.25.0
+responses==0.25.3
     # via moto
-s3transfer==0.10.1
+s3transfer==0.10.2
     # via boto3
 six==1.16.0
     # via
@@ -120,16 +119,16 @@ tomli==2.0.1
     #   coverage
     #   pip-tools
     #   pytest
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   -c requirements/requirements.txt
     #   botocore
     #   docker
     #   requests
     #   responses
-werkzeug==3.0.3
+werkzeug==3.0.4
     # via moto
-wheel==0.43.0
+wheel==0.44.0
     # via
     #   -c requirements/requirements.txt
     #   pip-tools
@@ -139,7 +138,7 @@ wrapt==1.16.0
     #   opentelemetry-instrumentation
 xmltodict==0.13.0
     # via moto
-zipp==3.18.2
+zipp==3.20.1
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

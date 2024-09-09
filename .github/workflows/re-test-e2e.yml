@@ -43,12 +43,12 @@ jobs:
       YAML_NAME: tea-cloudformation-run.${{ github.run_id }}.yaml
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
 
       - name: Upload to AWS
         env:

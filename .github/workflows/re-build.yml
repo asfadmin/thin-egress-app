@@ -49,7 +49,7 @@ jobs:
     needs: variables
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
@@ -72,25 +72,25 @@ jobs:
         run: make build
 
       - name: Save dependency layer zip
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dependency-layer
           path: dist/thin-egress-app-dependencies.zip
 
       - name: Save Lambda code
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code
           path: dist/thin-egress-app-code.zip
 
       - name: Save CloudFormation yaml
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cloudformation
           path: dist/thin-egress-app.yaml
 
       - name: Save Terraform zip
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform
           path: dist/thin-egress-app-terraform.zip

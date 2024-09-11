@@ -31,7 +31,7 @@ DOCKER := docker
 # On Linux we need to do a bit of userid finagling so that the output files
 # end up being owned by us and not by root. On Mac this works out of the box.
 DOCKER_USER_ARG := --user "$(shell id -u):$(shell id -g)"
-DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS)
+DOCKER_COMMAND = $(DOCKER) run --rm $(DOCKER_USER_ARG) -v "$$PWD":/var/task $(DOCKER_ARGS) --entrypoint ""
 
 PYTHON := python3
 BUILD_VENV := $(DIR)/.venv
@@ -57,7 +57,6 @@ Makefile.config:
 include Makefile.config
 
 ifdef DOCKER_COMMAND
-DOCKER_LAMBDA_CI = $(DOCKER_COMMAND) lambci/lambda:build-python3.8
 DOCKER_DEPENDENCY_BUILDER = $(DOCKER_COMMAND) tea-dependency-builder
 endif
 
@@ -71,7 +70,7 @@ all: build ;
 
 # Build everything
 .PHONY: build
-build: \
+build: tea-dependency-builder \
 	$(DIR)/thin-egress-app-code.zip \
 	$(DIR)/thin-egress-app-dependencies.zip \
 	$(DIR)/thin-egress-app.yaml \
@@ -106,7 +105,7 @@ $(BUILD_VENV): requirements/requirements-make.txt
 $(DIR)/thin-egress-app-dependencies.zip: requirements/requirements.txt $(REQUIREMENTS_DEPS)
 	rm -rf $(DIR)/python
 	@mkdir -p $(DIR)/python
-	$(DOCKER_LAMBDA_CI) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
+	$(DOCKER_DEPENDENCY_BUILDER) build/dependency_builder.sh "$(DIR)/thin-egress-app-dependencies.zip" "$(DIR)"
 
 .SECONDARY: $(DIST_MD_RESOURCES)
 $(DIST_MD_RESOURCES): $(DIR)/code/%.html: %.md $(BUILD_VENV)
@@ -271,8 +270,8 @@ cleandeploy:
 ###############
 
 .PHONY: tea-dependency-builder
-tea-dependency-builder: build/lambda-ci.Dockerfile
-	$(DOCKER) build -f build/lambda-ci.Dockerfile -t tea-dependency-builder ./build
+tea-dependency-builder: build/tea-dependency-builder.Dockerfile
+	$(DOCKER) build -f build/tea-dependency-builder.Dockerfile -t tea-dependency-builder ./build
 	@mkdir -p $(EMPTY)
 	@touch $@
 

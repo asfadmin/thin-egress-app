@@ -12,7 +12,7 @@ mkdir -p $BUILD_DIR/python
 cd $BUILD_DIR/python || exit
 
 echo "Installing ${REQUIREMENTS_FILE}"
-python3.8 -m pip install \
+python3 -m pip install \
   --upgrade \
   -r "$REQUIREMENTS_FILE" \
   --target $BUILD_DIR/python \

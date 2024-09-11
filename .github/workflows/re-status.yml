@@ -36,12 +36,12 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
 
       - name: Upload success labels
         run: |
@@ -68,12 +68,12 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
 
       - name: Upload failure labels
         run: |

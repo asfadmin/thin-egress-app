@@ -6,21 +6,21 @@
 #
 blessed==1.20.0
     # via inquirer
-botocore==1.34.110
+botocore==1.35.14
     # via chalice
 cachetools==5.0.0
     # via
     #   -r requirements/requirements.in
     #   rain-api-core
-cffi==1.16.0
+cffi==1.17.1
     # via cryptography
-cfnresponse==1.1.4
+cfnresponse==1.1.5
     # via -r requirements/requirements.in
-chalice==1.31.0
+chalice==1.31.2
     # via -r requirements/requirements.in
 click==8.1.7
     # via chalice
-cryptography==42.0.7
+cryptography==43.0.1
     # via pyjwt
 inquirer==2.10.1
     # via chalice
@@ -32,38 +32,38 @@ jmespath==1.0.1
     #   chalice
 markupsafe==2.1.5
     # via jinja2
-netaddr==1.2.1
+netaddr==1.3.0
     # via
     #   -r requirements/requirements.in
     #   rain-api-core
 pycparser==2.22
     # via cffi
-pyjwt[crypto]==2.8.0
+pyjwt[crypto]==2.9.0
     # via rain-api-core
 python-dateutil==2.9.0.post0
     # via botocore
 python-editor==1.0.4
     # via inquirer
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via
     #   chalice
     #   rain-api-core
 rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@a9a00d126878f56213af972f6fb5bf6bb1490909
     # via -r requirements/requirements.in
-readchar==4.1.0
+readchar==4.2.0
     # via inquirer
 six==1.16.0
     # via
     #   blessed
     #   chalice
     #   python-dateutil
-urllib3==1.26.18
+urllib3==1.26.20
     # via
     #   botocore
     #   cfnresponse
 wcwidth==0.2.13
     # via blessed
-wheel==0.43.0
+wheel==0.44.0
     # via chalice
 
 # The following packages are considered to be unsafe in a requirements file:

@@ -4,11 +4,11 @@
 #
 #    pip-compile requirements/requirements-dev.in
 #
-boto3==1.35.14
+boto3==1.35.18
     # via
     #   -r requirements/requirements-dev.in
     #   moto
-botocore==1.35.14
+botocore==1.35.18
     # via
     #   -c requirements/requirements.txt
     #   boto3
@@ -42,7 +42,7 @@ exceptiongroup==1.2.2
     # via pytest
 idna==3.8
     # via requests
-importlib-metadata==8.4.0
+importlib-metadata==7.1.0
     # via
     #   build
     #   opentelemetry-api
@@ -64,8 +64,10 @@ markupsafe==2.1.5
     #   werkzeug
 moto[awslambda]==5.0.14
     # via -r requirements/requirements-dev.in
-opentelemetry-api==1.27.0
-    # via opentelemetry-instrumentation
+opentelemetry-api==1.25.0
+    # via
+    #   -c requirements/constraints.txt
+    #   opentelemetry-instrumentation
 opentelemetry-instrumentation==0.48b0
     # via -r requirements/requirements-dev.in
 packaging==24.1
@@ -84,7 +86,7 @@ pyproject-hooks==1.1.0
     # via
     #   build
     #   pip-tools
-pytest==8.3.2
+pytest==8.3.3
     # via
     #   -r requirements/requirements-dev.in
     #   pytest-cov

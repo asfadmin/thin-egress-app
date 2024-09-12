@@ -276,7 +276,12 @@ tea-dependency-builder: build/lambda-ci.Dockerfile
 	@mkdir -p $(EMPTY)
 	@touch $@
 
-requirements/requirements-dev.txt: requirements/requirements-dev.in requirements/requirements.txt
+requirements/requirements.txt: requirements/requirements.in requirements/constraints.txt
+
+requirements/requirements-dev.txt: \
+	requirements/requirements-dev.in \
+	requirements/constraints.txt \
+	requirements/requirements.txt
 
 requirements/%.txt: requirements/%.in
 	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ $<

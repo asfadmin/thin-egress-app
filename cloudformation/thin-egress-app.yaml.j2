@@ -633,7 +633,7 @@ Resources:
       Runtime: 'python3.8'
       Layers:
         - !Ref EgressLambdaDependencyLayer
-        - !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python38-ver-1-5-0:3"
+        - !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python-amd64-ver-1-25-0:1"
       MemorySize: !Ref LambdaMemory
 
   ExtDomainName:

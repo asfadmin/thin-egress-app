@@ -1,5 +1,6 @@
+-c constraints.txt
 cachetools
 cfnresponse
 chalice
-git+https://github.com/asfadmin/rain-api-core.git@a9a00d126878f56213af972f6fb5bf6bb1490909
+git+https://github.com/asfadmin/rain-api-core.git@f5186c00c8e9d576f710eac62e6ca1e51516d6d7
 netaddr

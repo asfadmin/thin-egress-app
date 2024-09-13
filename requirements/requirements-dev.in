@@ -1,3 +1,4 @@
+-c constraints.txt
 -c requirements.txt
 boto3
 moto[awslambda]

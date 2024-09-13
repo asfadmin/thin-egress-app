@@ -1,0 +1,3 @@
+# This needs to match the version of the otel lambda layer in cloudformation
+# https://aws-otel.github.io/docs/getting-started/lambda/lambda-python#add-the-arn-of-the-lambda-layer
+opentelemetry-api==1.25.0

@@ -6,9 +6,9 @@
 #
 blessed==1.20.0
     # via inquirer
-botocore==1.35.14
+botocore==1.35.18
     # via chalice
-cachetools==5.0.0
+cachetools==5.5.0
     # via
     #   -r requirements/requirements.in
     #   rain-api-core
@@ -48,7 +48,7 @@ pyyaml==6.0.2
     # via
     #   chalice
     #   rain-api-core
-rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@a9a00d126878f56213af972f6fb5bf6bb1490909
+rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@f5186c00c8e9d576f710eac62e6ca1e51516d6d7
     # via -r requirements/requirements.in
 readchar==4.2.0
     # via inquirer

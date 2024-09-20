@@ -14,7 +14,7 @@ packages = [{include = "tea_cli"}]
 tea = "tea_cli:main.main"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 boto3 = "^1.26.163"
 cryptography = "^41.0.1"
 

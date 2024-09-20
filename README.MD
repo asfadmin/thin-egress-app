@@ -40,7 +40,7 @@ releases see the [GitHub Actions README](.github/workflows/README.md).*
 In order to build TEA, you will need to have a few tools installed:
 
 - `make` for build automation
-- `python3.8` for running tests and creating the CloudFormation template
+- `python3.10` for running tests and creating the CloudFormation template
 - `docker` for building the dependency layer
 - `git` for installing rain-api-core
 - `zip` for creating zip files

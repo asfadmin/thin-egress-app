@@ -746,11 +746,6 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_
         return make_html_response(template_vars, headers, 404, "error.html")
 
 
-@with_trace()
-def get_jwt_field(cookievar: dict, fieldname: str):
-    return cookievar.get(JWT_COOKIE_NAME, {}).get(fieldname, None)
-
-
 @app.route("/")
 @with_trace(context={})
 def root():

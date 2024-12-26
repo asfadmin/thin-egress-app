@@ -11,6 +11,7 @@ from urllib.parse import quote_plus, urlparse
 import boto3
 import cachetools
 import chalice
+import jwt
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
@@ -47,6 +48,7 @@ from rain_api_core.timer import Timer
 from rain_api_core.urs_util import (
     do_login,
     get_new_token_and_profile,
+    get_profile,
     get_urs_creds,
     get_urs_url,
     user_in_group,
@@ -209,12 +211,18 @@ class RequestAuthorizer:
     )
     def _get_profile_and_response_from_bearer(self, token):
         """
-        Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
-        returns it. If user_id is not determined returns data to be returned
+        Will handle the output from get_user_from_token in context of a chalice
+        function. If user_id is determined, returns it. If user_id is not
+        determined returns data to be returned.
 
         :param token:
         :return: action, data
         """
+        profile = get_profile_with_jwt_bearer(token)
+        if profile is not None:
+            log.debug("Shortcut profile fetching by using the users bearer token directly")
+            return profile
+
         user_profile = None
         response = None
         try:
@@ -296,6 +304,32 @@ def get_aux_request_headers():
 @with_trace()
 def check_for_browser(hdrs):
     return "user-agent" in hdrs and hdrs["user-agent"].lower().startswith("mozilla")
+
+
+@with_trace()
+def get_profile_with_jwt_bearer(token):
+    try:
+        # TODO(reweeden): We could verify with the EDL pub key here to
+        # potentially save an extra call to EDL on expired or invalid tokens.
+
+        # We don't need to verify the signature as EDL will do this for us
+        # anyway in the call to `get_profile`.
+        claims = jwt.decode(token, options={"verify_signature": False})
+    except jwt.DecodeError as e:
+        log.error("Unable to verify jwt bearer token: %s", e)
+        return None
+
+    user_id = claims.get("uid")
+
+    if user_id is None:
+        return None
+
+    log_context(user_id=user_id)
+    aux_headers = get_aux_request_headers()
+    params = {
+        "client_id": get_urs_creds()["UrsId"],
+    }
+    return get_profile(user_id, "fake-token", token, aux_headers, params)
 
 
 @with_trace()

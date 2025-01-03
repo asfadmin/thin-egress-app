@@ -6,9 +6,7 @@ import time
 import urllib.request
 from functools import wraps
 from typing import Optional
-from urllib import request
-from urllib.error import HTTPError
-from urllib.parse import quote_plus, urlencode, urlparse
+from urllib.parse import quote_plus, urlparse
 
 import boto3
 import cachetools
@@ -37,6 +35,7 @@ from rain_api_core.aws_util import (
     retrieve_secret,
 )
 from rain_api_core.bucket_map import BucketMap
+from rain_api_core.edl import EdlClient, EdlException, EulaException
 from rain_api_core.egress_util import get_bucket_name_prefix, get_presigned_url
 from rain_api_core.general_util import (
     duration,
@@ -164,11 +163,6 @@ class TeaException(Exception):
     """ base exception for TEA """
 
 
-class EulaException(TeaException):
-    def __init__(self, payload: dict):
-        self.payload = payload
-
-
 class RequestAuthorizer:
     def __init__(self):
         self._response = None
@@ -225,16 +219,23 @@ class RequestAuthorizer:
         response = None
         try:
             user_id = get_user_from_token(token)
+            log_context(user_id=user_id)
+
+            user_profile = get_new_token_and_profile(
+                user_id,
+                True,
+                aux_headers=get_aux_request_headers(),
+            )
         except EulaException as e:
             log.warning("user has not accepted EULA")
             # TODO(reweeden): changing the response based on user agent looks like a really bad idea...
             if check_for_browser(app.current_request.headers):
                 template_vars = {
-                    "title": e.payload["error_description"],
+                    "title": e.msg["error_description"],
                     "status_code": 403,
                     "contentstring": (
-                        f'Could not fetch data because "{e.payload["error_description"]}". Please accept EULA here: '
-                        f'<a href="{e.payload["resolution_url"]}">{e.payload["resolution_url"]}</a> and try again.'
+                        f'Could not fetch data because "{e.msg["error_description"]}". Please accept EULA here: '
+                        f'<a href="{e.msg["resolution_url"]}">{e.msg["resolution_url"]}</a> and try again.'
                     ),
                     "requestid": get_request_id(),
                 }
@@ -243,11 +244,8 @@ class RequestAuthorizer:
             else:
                 response = Response(body=e.payload, status_code=403, headers={})
             return None, response
-
-        if user_id:
-            log_context(user_id=user_id)
-            aux_headers = get_aux_request_headers()
-            user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
+        except EdlException:
+            user_profile = None
 
         if user_profile is None:
             response = do_auth_and_return(app.current_request.context)
@@ -318,76 +316,35 @@ def get_user_from_token(token):
         "token": token
     }
 
-    url = "{}/oauth/tokens/user?{}".format(
-        os.getenv("AUTH_BASE_URL", "https://urs.earthdata.nasa.gov"),
-        urlencode(params)
-    )
-
     authval = f"Basic {urs_creds['UrsAuth']}"
     headers = {"Authorization": authval}
 
     # Tack on auxillary headers
     headers.update(get_aux_request_headers())
-    log.debug("headers: %s, params: %s", headers, params)
 
-    _time = time.time()
-
-    req = request.Request(url, headers=headers, method="POST")
+    client = EdlClient()
     try:
-        response = request.urlopen(req)
-    except HTTPError as e:
-        response = e
-        log.debug("%s", e)
-
-    payload = response.read()
-    log.info(return_timing_object(service="EDL", endpoint=url, method="POST", duration=duration(_time)))
-
-    try:
-        msg = json.loads(payload)
-    except json.JSONDecodeError:
-        log.error("could not get json message from payload: %s", payload)
-        msg = {}
-
-    log.debug("raw payload: %s", payload)
-    log.debug("json loads: %s", msg)
-    log.debug("code: %s", response.code)
-
-    if response.code == 200:
-        try:
-            return msg["uid"]
-        except KeyError as e:
-            log.error(
-                "Problem with return from URS: e: %s, url: %s, params: %s, response payload: %s",
-                e,
-                url,
-                params,
-                payload,
-            )
-            return None
-    elif response.code == 403:
-        if "error_description" in msg and "eula" in msg["error_description"].lower():
-            # sample json in this case:
-            # `{"status_code": 403, "error_description": "EULA Acceptance Failure",
-            #   "resolution_url": "http://uat.urs.earthdata.nasa.gov/approve_app?client_id=LqWhtVpLmwaD4VqHeoN7ww"}`
-            log.warning("user needs to sign the EULA")
-            raise EulaException(msg)
-        # Probably an expired token if here
-        log.warning("403 error from URS: %s", msg)
-    else:
-        if "error" in msg:
-            errtxt = msg["error"]
-        else:
-            errtxt = ""
-        if "error_description" in msg:
-            errtxt = errtxt + " " + msg["error_description"]
-
-        log.error(
-            "Error getting URS userid from token: %s with code %s",
-            errtxt,
-            response.code,
+        msg = client.request(
+            "POST",
+            "/oauth/tokens/user",
+            params=params,
+            headers=headers,
         )
-        log.debug("url: %s, params: %s", url, params)
-    return None
+
+        user_id = msg.get("uid")
+        if user_id is None:
+            log.error("Problem with return from URS: msg: %s", msg)
+            raise EdlException(KeyError("uid"), msg, None)
+        return user_id
+    except EulaException:
+        raise
+    except EdlException as e:
+        log.error(
+            "Error getting URS userid from token: %s, response: %s",
+            e.inner,
+            e.payload,
+        )
+        raise
 
 
 @with_trace()

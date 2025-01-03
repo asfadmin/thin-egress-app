@@ -10,6 +10,7 @@ import yaml
 from botocore.exceptions import ClientError
 from chalice.test import Client
 from rain_api_core.auth import UserProfile
+from rain_api_core.edl import EdlException, EulaException
 
 from thin_egress_app import app
 
@@ -108,7 +109,7 @@ def mock_make_html_response():
 
 @pytest.fixture
 def mock_request():
-    with mock.patch(f"{MODULE}.request", autospec=True) as m:
+    with mock.patch(f"{MODULE}.urllib.request", autospec=True) as m:
         yield m
 
 
@@ -188,7 +189,11 @@ def test_request_authorizer_bearer_header_eula_error(
     current_request,
 ):
     current_request.headers = {"Authorization": "Bearer token"}
-    mock_get_user_from_token.side_effect = app.EulaException({})
+    mock_get_user_from_token.side_effect = EulaException(
+        HTTPError("", 403, "Forbidden", {}, io.StringIO()),
+        {},
+        "",
+    )
 
     authorizer = app.RequestAuthorizer()
 
@@ -210,11 +215,16 @@ def test_request_authorizer_bearer_header_eula_error_browser(
         "Authorization": "Bearer token",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-    mock_get_user_from_token.side_effect = app.EulaException({
+    msg = {
         "status_code": 403,
         "error_description": "EULA Acceptance Failure",
-        "resolution_url": "http://resolution_url"
-    })
+        "resolution_url": "http://resolution_url",
+    }
+    mock_get_user_from_token.side_effect = EulaException(
+        HTTPError("", 403, "Forbidden", {}, None),
+        msg,
+        None,
+    )
 
     authorizer = app.RequestAuthorizer()
 
@@ -287,7 +297,7 @@ def test_request_authorizer_bearer_header_no_user_id(
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
-    mock_get_user_from_token.return_value = None
+    mock_get_user_from_token.side_effect = EdlException(KeyError("uid"), {}, None)
 
     authorizer = app.RequestAuthorizer()
 
@@ -335,8 +345,9 @@ def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
     del current_request
 
     payload = '{"uid": "user_name"}'
-    mock_response = mock.Mock()
-    mock_response.read.return_value = payload
+    mock_response = mock.MagicMock()
+    with mock_response as mock_f:
+        mock_f.read.return_value = payload
     mock_response.code = 200
     mock_request.urlopen.return_value = mock_response
 
@@ -355,7 +366,7 @@ def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, curren
     """
     mock_request.urlopen.side_effect = HTTPError("", 403, "Forbidden", {}, io.StringIO(payload))
 
-    with pytest.raises(app.EulaException):
+    with pytest.raises(EulaException):
         app.get_user_from_token("token")
     mock_get_urs_creds.assert_called_once()
 
@@ -371,7 +382,8 @@ def test_get_user_from_token_other_error(mock_request, mock_get_urs_creds, curre
     """
     mock_request.urlopen.side_effect = HTTPError("", 401, "Bad Request", {}, io.StringIO(payload))
 
-    assert app.get_user_from_token("token") is None
+    with pytest.raises(EdlException):
+        assert app.get_user_from_token("token")
     mock_get_urs_creds.assert_called_once()
 
 
@@ -381,7 +393,8 @@ def test_get_user_from_token_json_error(mock_request, mock_get_urs_creds, curren
 
     mock_request.urlopen.side_effect = HTTPError("", code, "Message", {}, io.StringIO("not valid json"))
 
-    assert app.get_user_from_token("token") is None
+    with pytest.raises(EdlException):
+        assert app.get_user_from_token("token")
     mock_get_urs_creds.assert_called_once()
 
 

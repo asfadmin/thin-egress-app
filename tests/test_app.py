@@ -44,6 +44,7 @@ def user_profile():
 def _clear_caches():
     app.get_bc_config_client.cache_clear()
     app.get_bucket_region_cache.clear()
+    app.RequestAuthorizer._get_profile_and_response_from_bearer.__wrapped__.cache.clear()
 
 
 @pytest.fixture(scope="module")
@@ -134,7 +135,12 @@ def test_request_authorizer_no_headers(current_request, mock_get_urs_url):
 
 @mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
 @mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
-def test_request_authorizer_bearer_header(mock_get_new_token_and_profile, mock_get_user_from_token, current_request):
+def test_request_authorizer_bearer_header(
+    mock_get_new_token_and_profile,
+    mock_get_user_from_token,
+    _clear_caches,
+    current_request,
+):
     current_request.headers = {
         "Authorization": "Bearer token",
         "x-origin-request-id": "origin_request_id"
@@ -157,7 +163,11 @@ def test_request_authorizer_bearer_header(mock_get_new_token_and_profile, mock_g
 
 
 @mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
-def test_request_authorizer_basic_header(mock_do_auth_and_return, current_request):
+def test_request_authorizer_basic_header(
+    mock_do_auth_and_return,
+    _clear_caches,
+    current_request,
+):
     current_request.headers = {
         "Authorization": "Basic token",
         "x-origin-request-id": "origin_request_id"
@@ -172,7 +182,11 @@ def test_request_authorizer_basic_header(mock_do_auth_and_return, current_reques
 
 
 @mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-def test_request_authorizer_bearer_header_eula_error(mock_get_user_from_token, current_request):
+def test_request_authorizer_bearer_header_eula_error(
+    mock_get_user_from_token,
+    _clear_caches,
+    current_request,
+):
     current_request.headers = {"Authorization": "Bearer token"}
     mock_get_user_from_token.side_effect = app.EulaException({})
 
@@ -189,7 +203,8 @@ def test_request_authorizer_bearer_header_eula_error(mock_get_user_from_token, c
 def test_request_authorizer_bearer_header_eula_error_browser(
     mock_get_user_from_token,
     mock_make_html_response,
-    current_request
+    _clear_caches,
+    current_request,
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
@@ -231,7 +246,8 @@ def test_request_authorizer_bearer_header_no_profile(
     mock_do_auth_and_return,
     mock_get_new_token_and_profile,
     mock_get_user_from_token,
-    current_request
+    _clear_caches,
+    current_request,
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
@@ -239,7 +255,7 @@ def test_request_authorizer_bearer_header_no_profile(
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
-    mock_get_new_token_and_profile.return_value = False
+    mock_get_new_token_and_profile.return_value = None
     mock_get_user_from_token.return_value = "user_name"
 
     authorizer = app.RequestAuthorizer()
@@ -262,7 +278,8 @@ def test_request_authorizer_bearer_header_no_profile(
 def test_request_authorizer_bearer_header_no_user_id(
     mock_do_auth_and_return,
     mock_get_user_from_token,
-    current_request
+    _clear_caches,
+    current_request,
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
@@ -1530,29 +1547,32 @@ def test_dynamic_url_directory(
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
+@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
-@mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 @mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_bearer_auth(
     mock_get_header_to_set_auth_cookie,
-    mock_handle_auth_bearer_header,
-    mock_get_profile,
+    mock_get_profile_from_headers,
+    mock_get_new_token_and_profile,
+    mock_get_user_from_token,
     mock_try_download_from_bucket,
     mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    mock_handle_auth_bearer_header.return_value = user_profile
+    mock_get_new_token_and_profile.return_value = user_profile
+    mock_get_user_from_token.return_value = user_profile.user_id
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
-    mock_get_profile.return_value = None
+    mock_get_profile_from_headers.return_value = None
     mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
     current_request.headers = {"Authorization": "bearer b64token"}
@@ -1611,14 +1631,12 @@ def test_s3credentials(
 
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
-@mock.patch(f"{MODULE}.RequestAuthorizer._handle_auth_bearer_header", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
 @mock.patch(f"{MODULE}.b_map", None)
 def test_s3credentials_unauthenticated(
     mock_do_auth_and_return,
     mock_get_profile,
-    mock_handle_auth_bearer_header,
     mock_get_yaml_file,
     mock_retrieve_secret,
     data_path,
@@ -1626,7 +1644,6 @@ def test_s3credentials_unauthenticated(
 ):
     del mock_retrieve_secret
 
-    mock_handle_auth_bearer_header.return_value = None
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
     mock_get_profile.return_value = None

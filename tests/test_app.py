@@ -42,8 +42,8 @@ def user_profile():
 
 @pytest.fixture
 def _clear_caches():
-    app.get_bc_config_client.cache_clear()
-    app.get_bucket_region_cache.clear()
+    app.get_bc_config_client.cache.clear()
+    app.get_bucket_region.cache.clear()
     app.RequestAuthorizer._get_profile_and_response_from_bearer.__wrapped__.cache.clear()
 
 

@@ -88,9 +88,6 @@ template_dir = os.getenv("HTML_TEMPLATE_DIR")
 # Here's a lifetime-of lambda cache of these values:
 bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket_map.yaml")
 b_map = None
-# TODO(reweeden): Refactor when wrapped attributes are implemented
-# https://github.com/tkem/cachetools/issues/176
-get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 
 STAGE = os.getenv("STAGE_NAME", "DEV")
 
@@ -558,7 +555,7 @@ def get_bcconfig(user_id: str) -> dict:
 
 @with_trace()
 @cachetools.cached(
-    get_bucket_region_cache,
+    cachetools.LRUCache(maxsize=128),
     # Cache by bucketname only
     key=lambda _, bucketname: hashkey(bucketname)
 )

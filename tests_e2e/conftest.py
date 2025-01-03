@@ -239,6 +239,32 @@ def auth_cookies(earthdata_auth_session, url_earthdata, api_host, urs_username, 
     return cookiejar
 
 
+@pytest.fixture(scope="module")
+def user_bearer_token(url_earthdata, urs_username, urs_password):
+    parse_result = urllib.parse.urlparse(url_earthdata)
+    edl_url = f"{parse_result.scheme}://{parse_result.netloc}"
+
+    # Create a new token
+    response = requests.post(
+        f"{edl_url}/api/users/token",
+        auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password)),
+    )
+    response.raise_for_status()
+
+    token = response.json()["access_token"]
+
+    yield token
+
+    # Revoke the token to clean up after ourselves. EDL only allows 2 active
+    # tokens at a time.
+    response = requests.post(
+        f"{edl_url}/api/users/revoke_token",
+        params={"token": token},
+        auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password)),
+    )
+    response.raise_for_status()
+
+
 # Functions that generate the JSON report file
 def pytest_sessionstart(session):
     session.results = {}

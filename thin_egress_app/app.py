@@ -180,10 +180,14 @@ class RequestAuthorizer:
             self._response = do_auth_and_return(app.current_request.context)
             return None
 
-        method, token, *_ = authorization.split()
-        method = method.lower()
+        parsed_auth = self._parse_auth_header(authorization)
+        if parsed_auth is None:
+            return None
+
+        method, args = parsed_auth
 
         if method == "bearer":
+            token, *_ = args
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug("we got an Authorization header. %s", authorization)
             user_profile, self._response = self._get_profile_and_response_from_bearer(token)
@@ -202,6 +206,33 @@ class RequestAuthorizer:
 
         self._response = do_auth_and_return(app.current_request.context)
         return None
+
+    def _parse_auth_header(self, authorization: str):
+        try:
+            method, token, *args = authorization.split()
+            method = method.lower()
+            return method, (token, *args)
+        except Exception:
+            status_code = 400
+            if check_for_browser(app.current_request.headers):
+                template_vars = {
+                    "title": "Bad Request",
+                    "status_code": status_code,
+                    "contentstring": "Malformed Authorization header",
+                    "requestid": get_request_id(),
+                }
+
+                self._response = make_html_response(template_vars, {}, status_code, "error.html")
+            else:
+                self._response = Response(
+                    body={
+                        "status_code": status_code,
+                        "error_description": "Malformed Authorization header",
+                    },
+                    status_code=status_code,
+                    headers={},
+                )
+            return None
 
     @with_trace()
     @cachetools.cached(

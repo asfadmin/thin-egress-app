@@ -166,6 +166,22 @@ def test_request_authorizer_no_headers(current_request, mock_get_urs_url):
     assert authorizer.get_success_response_headers() == {}
 
 
+def test_request_authorizer_malformed_header(current_request):
+    current_request.headers = {
+        "Authorization": "token",
+        "x-origin-request-id": "origin_request_id",
+    }
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    response = authorizer.get_error_response()
+    assert response.status_code == 400
+    assert response.body == {
+        "status_code": 400,
+        "error_description": "Malformed Authorization header",
+    }
+
+
 @mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 def test_request_authorizer_bearer_header(
     mock_get_profile_with_jwt_bearer,

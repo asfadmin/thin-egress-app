@@ -47,10 +47,9 @@ from rain_api_core.general_util import (
 from rain_api_core.timer import Timer
 from rain_api_core.urs_util import (
     do_login,
-    get_new_token_and_profile,
-    get_profile,
     get_urs_creds,
     get_urs_url,
+    get_user_profile,
     user_in_group,
 )
 from rain_api_core.view_util import TemplateManager
@@ -211,36 +210,25 @@ class RequestAuthorizer:
     )
     def _get_profile_and_response_from_bearer(self, token):
         """
-        Will handle the output from get_user_from_token in context of a chalice
-        function. If user_id is determined, returns it. If user_id is not
-        determined returns data to be returned.
+        Get user profile from EDL using a bearer token. If the profile can't be
+        fetched, the response value will be set to a chalice Response object to
+        be returned by the route handler.
 
         :param token:
-        :return: action, data
+        :return: user_profile, response
         """
-        profile = get_profile_with_jwt_bearer(token)
-        if profile is not None:
-            log.debug("Shortcut profile fetching by using the users bearer token directly")
-            return profile
-
         user_profile = None
         response = None
         try:
-            user_id = get_user_from_token(token)
-            log_context(user_id=user_id)
-
-            user_profile = get_new_token_and_profile(
-                user_id,
-                True,
-                aux_headers=get_aux_request_headers(),
-            )
+            user_profile = get_profile_with_jwt_bearer(token)
         except EulaException as e:
             log.warning("user has not accepted EULA")
+            status_code = 403
             # TODO(reweeden): changing the response based on user agent looks like a really bad idea...
             if check_for_browser(app.current_request.headers):
                 template_vars = {
                     "title": e.msg["error_description"],
-                    "status_code": 403,
+                    "status_code": status_code,
                     "contentstring": (
                         f'Could not fetch data because "{e.msg["error_description"]}". Please accept EULA here: '
                         f'<a href="{e.msg["resolution_url"]}">{e.msg["resolution_url"]}</a> and try again.'
@@ -248,11 +236,38 @@ class RequestAuthorizer:
                     "requestid": get_request_id(),
                 }
 
-                response = make_html_response(template_vars, {}, 403, "error.html")
+                response = make_html_response(template_vars, {}, status_code, "error.html")
             else:
-                response = Response(body=e.payload, status_code=403, headers={})
+                response = Response(
+                    body={
+                        **e.msg,
+                        "status_code": status_code,
+                    },
+                    status_code=status_code,
+                    headers={},
+                )
             return None, response
-        except EdlException:
+        except EdlException as e:
+            log.warning("EDL responded with %s", e)
+            status_code = e.inner.status
+            if check_for_browser(app.current_request.headers):
+                description = e.msg.get("error_description", "Unknown Error")
+                template_vars = {
+                    "title": description,
+                    "status_code": status_code,
+                    "contentstring": (
+                        f'Could not fetch data because "{description}".'
+                        f"Full error: {e.msg}"
+                    ),
+                    "requestid": get_request_id(),
+                }
+
+                response = make_html_response(template_vars, {}, status_code, "error.html")
+            else:
+                response = Response(body=e.msg, status_code=status_code, headers={})
+            return None, response
+        except Exception as e:
+            log.warning("Failed to get user profile %s: %s", e.__class__.__name__, e)
             user_profile = None
 
         if user_profile is None:
@@ -316,69 +331,24 @@ def get_profile_with_jwt_bearer(token):
         # anyway in the call to `get_profile`.
         claims = jwt.decode(token, options={"verify_signature": False})
     except jwt.DecodeError as e:
-        log.error("Unable to verify jwt bearer token: %s", e)
-        return None
+        log.error("Unable to decode jwt bearer token: %s", e)
+        raise
 
-    user_id = claims.get("uid")
-
-    if user_id is None:
-        return None
+    user_id = claims["uid"]
 
     log_context(user_id=user_id)
     aux_headers = get_aux_request_headers()
-    params = {
-        "client_id": get_urs_creds()["UrsId"],
-    }
-    return get_profile(user_id, "fake-token", token, aux_headers, params)
-
-
-@with_trace()
-def get_user_from_token(token):
-    """
-    This may be moved to rain-api-core.urs_util.py once things stabilize.
-    Will query URS for user ID of requesting user based on token sent with request
-
-    :param token: token received in request for data
-    :return: user ID of requesting user.
-    """
-
-    urs_creds = get_urs_creds()
-
-    params = {
-        "client_id": urs_creds["UrsId"],
-        # The client_id of the non SSO application you registered with Earthdata Login
-        "token": token
-    }
-
-    authval = f"Basic {urs_creds['UrsAuth']}"
-    headers = {"Authorization": authval}
-
-    # Tack on auxillary headers
-    headers.update(get_aux_request_headers())
+    headers = {"Authorization": "Bearer " + token}
+    headers.update(aux_headers)
 
     client = EdlClient()
-    try:
-        msg = client.request(
-            "POST",
-            "/oauth/tokens/user",
-            params=params,
-            headers=headers,
-        )
-
-        user_id = msg.get("uid")
-        if user_id is None:
-            log.error("Problem with return from URS: msg: %s", msg)
-            raise EdlException(KeyError("uid"), msg, None)
-        return user_id
-    except EulaException:
-        raise
-    except EdlException as e:
-        log.error(
-            "Error getting URS userid from token: %s, response: %s",
-            e.inner,
-            e.payload,
-        )
-        raise
+    user_profile = client.request(
+        "GET",
+        f"/api/users/{user_id}",
+        params={"client_id": get_urs_creds()["UrsId"]},
+        headers=headers,
+    )
+    return get_user_profile(user_profile, token)
 
 
 @with_trace()

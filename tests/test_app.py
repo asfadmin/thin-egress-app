@@ -1,10 +1,13 @@
 import base64
 import contextlib
 import io
+import json
+import time
 from unittest import mock
 from urllib.error import HTTPError
 
 import chalice
+import jwt
 import pytest
 import yaml
 from botocore.exceptions import ClientError
@@ -38,6 +41,35 @@ def user_profile():
         token="test_token",
         iat=0,
         exp=0
+    )
+
+
+@pytest.fixture
+def jwt_encoder(private_key):
+    def encode(payload, headers):
+        return jwt.encode(
+            payload,
+            private_key,
+            headers=headers,
+            algorithm="RS256",
+        )
+    return encode
+
+
+@pytest.fixture
+def bearer_token(jwt_encoder):
+    return jwt_encoder(
+        {
+            "type": "User",
+            "uid": "test_user",
+            "exp": int(time.time()) + 50_000,
+            "iat": int(time.time()),
+            "iss": "https://uat.urs.earthdata.nasa.gov",
+            "identity_provider": "edl_uat",
+            "acr": "edl",
+            "assurance_level": 3,
+        },
+        headers={"origin": "Earthdata Login", "sig": "edlfakepubkey_uat"},
     )
 
 
@@ -134,11 +166,9 @@ def test_request_authorizer_no_headers(current_request, mock_get_urs_url):
     assert authorizer.get_success_response_headers() == {}
 
 
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 def test_request_authorizer_bearer_header(
-    mock_get_new_token_and_profile,
-    mock_get_user_from_token,
+    mock_get_profile_with_jwt_bearer,
     _clear_caches,
     current_request,
 ):
@@ -147,20 +177,12 @@ def test_request_authorizer_bearer_header(
         "x-origin-request-id": "origin_request_id"
     }
     mock_user_profile = mock.Mock()
-    mock_get_new_token_and_profile.return_value = mock_user_profile
-    mock_get_user_from_token.return_value = "user_name"
+    mock_get_profile_with_jwt_bearer.return_value = mock_user_profile
 
     authorizer = app.RequestAuthorizer()
 
     assert authorizer.get_profile() == mock_user_profile
-    mock_get_new_token_and_profile.assert_called_once_with(
-        "user_name",
-        True,
-        aux_headers={
-            "x-request-id": "request_1234",
-            "x-origin-request-id": "origin_request_id"
-        }
-    )
+    mock_get_profile_with_jwt_bearer.assert_called_once_with("token")
 
 
 @mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
@@ -182,17 +204,22 @@ def test_request_authorizer_basic_header(
     assert authorizer.get_error_response() == mock_response
 
 
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 def test_request_authorizer_bearer_header_eula_error(
-    mock_get_user_from_token,
+    mock_get_profile_with_jwt_bearer,
     _clear_caches,
     current_request,
 ):
     current_request.headers = {"Authorization": "Bearer token"}
-    mock_get_user_from_token.side_effect = EulaException(
-        HTTPError("", 403, "Forbidden", {}, io.StringIO()),
-        {},
-        "",
+    mock_get_profile_with_jwt_bearer.side_effect = EulaException(
+        HTTPError("", 403, "Forbidden", {}, None),
+        {
+            "status_code": 403,
+            "error": "invalid_token",
+            "error_description": "EULA Acceptance Failure",
+            "resolution_url": "http://example",
+        },
+        None,
     )
 
     authorizer = app.RequestAuthorizer()
@@ -204,9 +231,9 @@ def test_request_authorizer_bearer_header_eula_error(
     assert response.headers == {}
 
 
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 def test_request_authorizer_bearer_header_eula_error_browser(
-    mock_get_user_from_token,
+    mock_get_profile_with_jwt_bearer,
     mock_make_html_response,
     _clear_caches,
     current_request,
@@ -220,7 +247,7 @@ def test_request_authorizer_bearer_header_eula_error_browser(
         "error_description": "EULA Acceptance Failure",
         "resolution_url": "http://resolution_url",
     }
-    mock_get_user_from_token.side_effect = EulaException(
+    mock_get_profile_with_jwt_bearer.side_effect = EulaException(
         HTTPError("", 403, "Forbidden", {}, None),
         msg,
         None,
@@ -249,13 +276,11 @@ def test_request_authorizer_bearer_header_eula_error_browser(
     assert response.headers == {"Content-Type": "text/html"}
 
 
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 @mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
-def test_request_authorizer_bearer_header_no_profile(
+def test_request_authorizer_bearer_header_other_error(
     mock_do_auth_and_return,
-    mock_get_new_token_and_profile,
-    mock_get_user_from_token,
+    mock_get_profile_with_jwt_bearer,
     _clear_caches,
     current_request,
 ):
@@ -265,29 +290,66 @@ def test_request_authorizer_bearer_header_no_profile(
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
-    mock_get_new_token_and_profile.return_value = None
-    mock_get_user_from_token.return_value = "user_name"
+    mock_get_profile_with_jwt_bearer.side_effect = Exception("test exception")
 
     authorizer = app.RequestAuthorizer()
 
     assert authorizer.get_profile() is None
     assert authorizer.get_error_response() == mock_response
-    mock_get_new_token_and_profile.assert_called_once_with(
-        "user_name",
-        True,
-        aux_headers={
-            "x-request-id": "request_1234",
-            "x-origin-request-id": "origin_request_id"
-        }
-    )
+    mock_get_profile_with_jwt_bearer.assert_called_once_with("token")
     mock_do_auth_and_return.assert_called_once_with(current_request.context)
 
 
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
+def test_request_authorizer_bearer_header_other_edl_error(
+    mock_get_profile_with_jwt_bearer,
+    _clear_caches,
+    current_request,
+):
+    current_request.headers = {"Authorization": "Bearer token"}
+    mock_get_profile_with_jwt_bearer.side_effect = EdlException(
+        HTTPError("", 400, "Bad Request", {}, None),
+        {"error": "invalid_token"},
+        None,
+    )
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+
+    response = authorizer.get_error_response()
+    assert response.status_code == 400
+    assert response.headers == {}
+
+
 @mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
 def test_request_authorizer_bearer_header_no_user_id(
     mock_do_auth_and_return,
-    mock_get_user_from_token,
+    _clear_caches,
+    jwt_encoder,
+    current_request,
+):
+    token = jwt_encoder(
+        payload={},
+        headers={"origin": "Earthdata Login", "sig": "edlfakepubkey_uat"},
+    )
+    current_request.headers = {
+        "Authorization": f"Bearer {token}",
+        "x-origin-request-id": "origin_request_id"
+    }
+    mock_response = mock.Mock()
+    mock_do_auth_and_return.return_value = mock_response
+
+    authorizer = app.RequestAuthorizer()
+
+    assert authorizer.get_profile() is None
+    assert authorizer.get_error_response() == mock_response
+    mock_do_auth_and_return.assert_called_once_with(current_request.context)
+
+
+@mock.patch(f"{MODULE}.do_auth_and_return", autospec=True)
+def test_request_authorizer_bearer_header_invalid_token(
+    mock_do_auth_and_return,
     _clear_caches,
     current_request,
 ):
@@ -297,7 +359,6 @@ def test_request_authorizer_bearer_header_no_user_id(
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
-    mock_get_user_from_token.side_effect = EdlException(KeyError("uid"), {}, None)
 
     authorizer = app.RequestAuthorizer()
 
@@ -341,37 +402,67 @@ def test_check_for_browser():
     assert app.check_for_browser({"user-agent": "Not a valid user agent"}) is False
 
 
-def test_get_user_from_token(mock_request, mock_get_urs_creds, current_request):
+def test_get_profile_with_jwt_bearer(
+    mock_request,
+    mock_get_urs_creds,
+    bearer_token,
+    current_request,
+):
     del current_request
 
-    payload = '{"uid": "user_name"}'
+    payload = json.dumps({
+        "uid": "test_user",
+        "user_groups": [],
+        "first_name": "John",
+        "last_name": "Smith",
+        "email_address": "j.smith@email.com",
+    })
     mock_response = mock.MagicMock()
     with mock_response as mock_f:
         mock_f.read.return_value = payload
     mock_response.code = 200
     mock_request.urlopen.return_value = mock_response
 
-    assert app.get_user_from_token("token") == "user_name"
+    profile = app.get_profile_with_jwt_bearer(bearer_token)
+    assert profile.user_id == "test_user"
+    assert profile.token == bearer_token
     mock_get_urs_creds.assert_called_once()
 
 
-def test_get_user_from_token_eula_error(mock_request, mock_get_urs_creds, current_request):
+def test_get_profile_with_jwt_bearer_eula_error(
+    mock_request,
+    mock_get_urs_creds,
+    bearer_token,
+    current_request,
+):
     del current_request
 
     payload = """{
         "status_code": 403,
+        "error": "invalid_token",
         "error_description": "EULA Acceptance Failure",
         "resolution_url": "http://uat.urs.earthdata.nasa.gov/approve_app?client_id=asdf"
     }
     """
-    mock_request.urlopen.side_effect = HTTPError("", 403, "Forbidden", {}, io.StringIO(payload))
+    mock_request.urlopen.side_effect = HTTPError(
+        "",
+        403,
+        "Forbidden",
+        {},
+        io.StringIO(payload),
+    )
 
     with pytest.raises(EulaException):
-        app.get_user_from_token("token")
+        app.get_profile_with_jwt_bearer(bearer_token)
     mock_get_urs_creds.assert_called_once()
 
 
-def test_get_user_from_token_other_error(mock_request, mock_get_urs_creds, current_request):
+def test_get_profile_with_jwt_bearer_other_error(
+    mock_request,
+    mock_get_urs_creds,
+    bearer_token,
+    current_request,
+):
     del current_request
 
     payload = """{
@@ -380,21 +471,39 @@ def test_get_user_from_token_other_error(mock_request, mock_get_urs_creds, curre
         "error_description": "some error description"
     }
     """
-    mock_request.urlopen.side_effect = HTTPError("", 401, "Bad Request", {}, io.StringIO(payload))
+    mock_request.urlopen.side_effect = HTTPError(
+        "",
+        401,
+        "Bad Request",
+        {},
+        io.StringIO(payload),
+    )
 
     with pytest.raises(EdlException):
-        assert app.get_user_from_token("token")
+        assert app.get_profile_with_jwt_bearer(bearer_token)
     mock_get_urs_creds.assert_called_once()
 
 
 @pytest.mark.parametrize("code", (200, 403, 500))
-def test_get_user_from_token_json_error(mock_request, mock_get_urs_creds, current_request, code):
+def test_get_profile_with_jwt_bearer_json_error(
+    mock_request,
+    mock_get_urs_creds,
+    bearer_token,
+    current_request,
+    code,
+):
     del current_request
 
-    mock_request.urlopen.side_effect = HTTPError("", code, "Message", {}, io.StringIO("not valid json"))
+    mock_request.urlopen.side_effect = HTTPError(
+        "",
+        code,
+        "Message",
+        {},
+        io.StringIO("not valid json"),
+    )
 
     with pytest.raises(EdlException):
-        assert app.get_user_from_token("token")
+        assert app.get_profile_with_jwt_bearer(bearer_token) is not None
     mock_get_urs_creds.assert_called_once()
 
 
@@ -1553,8 +1662,7 @@ def test_dynamic_url_directory(
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
-@mock.patch(f"{MODULE}.get_user_from_token", autospec=True)
-@mock.patch(f"{MODULE}.get_new_token_and_profile", autospec=True)
+@mock.patch(f"{MODULE}.get_profile_with_jwt_bearer", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
@@ -1562,8 +1670,7 @@ def test_dynamic_url_directory(
 def test_dynamic_url_bearer_auth(
     mock_get_header_to_set_auth_cookie,
     mock_get_profile_from_headers,
-    mock_get_new_token_and_profile,
-    mock_get_user_from_token,
+    mock_get_profile_with_jwt_bearer,
     mock_try_download_from_bucket,
     mock_get_api_request_uuid,
     mock_get_yaml_file,
@@ -1571,9 +1678,12 @@ def test_dynamic_url_bearer_auth(
     user_profile,
     current_request,
 ):
-    mock_try_download_from_bucket.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
-    mock_get_new_token_and_profile.return_value = user_profile
-    mock_get_user_from_token.return_value = user_profile.user_id
+    mock_try_download_from_bucket.return_value = chalice.Response(
+        body="Mock response",
+        headers={},
+        status_code=200,
+    )
+    mock_get_profile_with_jwt_bearer.return_value = user_profile
     mock_get_header_to_set_auth_cookie.return_value = {"SET-COOKIE": "cookie"}
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)

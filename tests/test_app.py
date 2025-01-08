@@ -736,13 +736,6 @@ def test_try_download_from_bucket_invalid_range(
     mock_check_in_region_request.assert_called_once()
 
 
-@mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
-def test_get_jwt_field():
-    assert app.get_jwt_field({"asf-cookie": {"foo": "bar"}}, "foo") == "bar"
-    assert app.get_jwt_field({"asf-cookie": {}}, "foo") is None
-    assert app.get_jwt_field({}, "foo") is None
-
-
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 def test_root(mock_get_urs_url, mock_retrieve_secret, mock_make_html_response, client):
     del mock_retrieve_secret

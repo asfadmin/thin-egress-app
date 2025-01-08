@@ -16,7 +16,7 @@ import chalice
 from botocore.config import Config as bc_Config
 from botocore.exceptions import ClientError
 from cachetools.func import ttl_cache
-from cachetools.keys import hashkey
+from cachetools.keys import hashkey, methodkey
 from chalice import Chalice, Response
 
 try:
@@ -88,9 +88,6 @@ template_dir = os.getenv("HTML_TEMPLATE_DIR")
 # Here's a lifetime-of lambda cache of these values:
 bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket_map.yaml")
 b_map = None
-# TODO(reweeden): Refactor when wrapped attributes are implemented
-# https://github.com/tkem/cachetools/issues/176
-get_bucket_region_cache = cachetools.LRUCache(maxsize=128)
 
 STAGE = os.getenv("STAGE_NAME", "DEV")
 
@@ -194,7 +191,7 @@ class RequestAuthorizer:
         if method == "bearer":
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug("we got an Authorization header. %s", authorization)
-            user_profile = self._handle_auth_bearer_header(token)
+            user_profile, self._response = self._get_profile_and_response_from_bearer(token)
 
             if user_profile is None:
                 # Not a successful event.
@@ -212,7 +209,11 @@ class RequestAuthorizer:
         return None
 
     @with_trace()
-    def _handle_auth_bearer_header(self, token) -> Optional[UserProfile]:
+    @cachetools.cached(
+        cachetools.TTLCache(maxsize=32, ttl=1 * 60),
+        key=methodkey,
+    )
+    def _get_profile_and_response_from_bearer(self, token):
         """
         Will handle the output from get_user_from_token in context of a chalice function. If user_id is determined,
         returns it. If user_id is not determined returns data to be returned
@@ -220,6 +221,8 @@ class RequestAuthorizer:
         :param token:
         :return: action, data
         """
+        user_profile = None
+        response = None
         try:
             user_id = get_user_from_token(token)
         except EulaException as e:
@@ -236,20 +239,20 @@ class RequestAuthorizer:
                     "requestid": get_request_id(),
                 }
 
-                self._response = make_html_response(template_vars, {}, 403, "error.html")
+                response = make_html_response(template_vars, {}, 403, "error.html")
             else:
-                self._response = Response(body=e.payload, status_code=403, headers={})
-            return None
+                response = Response(body=e.payload, status_code=403, headers={})
+            return None, response
 
         if user_id:
             log_context(user_id=user_id)
             aux_headers = get_aux_request_headers()
             user_profile = get_new_token_and_profile(user_id, True, aux_headers=aux_headers)
-            if user_profile:
-                return user_profile
 
-        self._response = do_auth_and_return(app.current_request.context)
-        return None
+        if user_profile is None:
+            response = do_auth_and_return(app.current_request.context)
+
+        return user_profile, response
 
     def get_error_response(self) -> Optional[Response]:
         """Get the response to return if the user was not authenticated. This
@@ -552,7 +555,7 @@ def get_bcconfig(user_id: str) -> dict:
 
 @with_trace()
 @cachetools.cached(
-    get_bucket_region_cache,
+    cachetools.LRUCache(maxsize=128),
     # Cache by bucketname only
     key=lambda _, bucketname: hashkey(bucketname)
 )

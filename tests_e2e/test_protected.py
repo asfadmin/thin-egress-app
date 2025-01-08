@@ -106,7 +106,8 @@ def find_bearer_token(auth_cookies):
     return None
 
 
-def validate_bearer_token_works(auth_cookies, url):
+def test_validate_app_bearer_token(urls, auth_cookies):
+    url = urls.join(urls.METADATA_FILE)
     token = find_bearer_token(auth_cookies)
     assert token is not None
 
@@ -114,11 +115,24 @@ def validate_bearer_token_works(auth_cookies, url):
     assert r.status_code == 200
 
 
-def test_validate_bearer_token_works(urls, auth_cookies):
-    url = urls.join(urls.METADATA_FILE)
-    validate_bearer_token_works(auth_cookies, url)
-
-
-def test_validate_private_file_bearer_token_works(urls, auth_cookies):
+def test_validate_app_bearer_token_private_file(urls, auth_cookies):
     url = urls.join("PRIVATE", "ACCESS", "testfile")
-    validate_bearer_token_works(auth_cookies, url)
+    token = find_bearer_token(auth_cookies)
+    assert token is not None
+
+    r = requests.get(url, headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+
+
+def test_validate_user_bearer_token(urls, user_bearer_token):
+    url = urls.join(urls.METADATA_FILE)
+
+    r = requests.get(url, headers={"Authorization": f"Bearer {user_bearer_token}"})
+    assert r.status_code == 200
+
+
+def test_validate_user_bearer_token_private_file(urls, user_bearer_token):
+    url = urls.join("PRIVATE", "ACCESS", "testfile")
+
+    r = requests.get(url, headers={"Authorization": f"Bearer {user_bearer_token}"})
+    assert r.status_code == 200

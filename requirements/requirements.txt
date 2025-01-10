@@ -41,14 +41,16 @@ netaddr==1.3.0
 pycparser==2.22
     # via cffi
 pyjwt[crypto]==2.10.1
-    # via rain-api-core
+    # via
+    #   -r requirements/requirements.in
+    #   rain-api-core
 python-dateutil==2.9.0.post0
     # via botocore
 pyyaml==6.0.2
     # via
     #   chalice
     #   rain-api-core
-rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@1be67560f7c41b50afbd2ca20473ffbdc7efae68
+rain-api-core @ git+https://github.com/asfadmin/rain-api-core.git@8d241610b50299198aa0cc210852259fef9e482b
     # via -r requirements/requirements.in
 readchar==4.2.1
     # via inquirer

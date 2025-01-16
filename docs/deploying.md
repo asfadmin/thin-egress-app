@@ -22,12 +22,12 @@ environment management.
 
 To install the TEA CLI using git over SSH:
 ```
-pipx install git+ssh://git@github.com/asfadmin/thin-egress-app.git#subdirectory=tea-cli
+pipx install git+ssh://git@github.com/asfadmin/thin-egress-app.git#subdirectory=src/tea-cli
 ```
 
 Or, to install the TEA CLI using git over HTTPS:
 ```
-pipx install git+https://github.com/asfadmin/thin-egress-app.git#subdirectory=tea-cli
+pipx install git+https://github.com/asfadmin/thin-egress-app.git#subdirectory=src/tea-cli
 ```
 
 ### Using the TEA CLI

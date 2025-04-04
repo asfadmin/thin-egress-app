@@ -2,14 +2,14 @@
 
 ### ⚠️ If you're deploying from Cumulus, most or all of this provided for you. Please consult current Cumulus Documentation ⚠️
 
-Cumulus provides a baseline Bucket Map, but its often desirable to overwrite that bucket map with one that fits your particular and evolving deployment, data structure, and DAAC needs. For more information on creating a bucket map file, see the [**Create A Bucket Map**](https://github.com/asfadmin/thin-egress-app/blob/devel/NGAP-DEPLOY-README.MD#create-a-bucket-map-file) Section below. 
+Cumulus provides a baseline Bucket Map, but its often desirable to overwrite that bucket map with one that fits your particular and evolving deployment, data structure, and DAAC needs. For more information on creating a bucket map file, see the [**Create A Bucket Map**](https://github.com/asfadmin/thin-egress-app/blob/main/NGAP-DEPLOY-README.MD#create-a-bucket-map-file) Section below. 
 
-### Using Terraform to deploy TEA 
+### Using Terraform to deploy TEA
 
-The Thin Egress App is available as a [Terraform module](https://www.terraform.io/docs/configuration/modules.html). It can be added to your Terraform configuration using a `module` block. 
+The Thin Egress App is available as a [Terraform module](https://www.terraform.io/docs/configuration/modules.html). It can be added to your Terraform configuration using a `module` block.
 
 The latest version of TEA and the Terrafrom module can be found at
-[https://s3.amazonaws.com/asf.public.code/index.html](https://s3.amazonaws.com/asf.public.code/index.html). The below guide is intended to be a step-by-step set of instructions for deploying TEA into NGAP. 
+[https://s3.amazonaws.com/asf.public.code/index.html](https://s3.amazonaws.com/asf.public.code/index.html). The below guide is intended to be a step-by-step set of instructions for deploying TEA into NGAP.
 
 As of this writing, the lastest module source is
 `https://s3.amazonaws.com/asf.public.code/thin-egress-app/tea-terraform-build.74.zip`, The latest released version is ![Last Release](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fs3.amazonaws.com%2Fasf.public.code%2Fthin-egress-app%2Flastrelease.json)
@@ -87,7 +87,7 @@ PUBLIC_BUCKETS:
 EOS
 ```
 
-Data in the `protected` (aka `s3://data-ingest-dev-protected`) bucket will require URS Authentication to access. 
+Data in the `protected` (aka `s3://data-ingest-dev-protected`) bucket will require URS Authentication to access.
 
 For more info on constructing a bucket Mmp, see [Buckets and Bucket Map](https://github.com/asfadmin/thin-egress-app#buckets-and-bucket-map)
 
@@ -105,4 +105,4 @@ See [AWS Secrets](https://github.com/asfadmin/thin-egress-app/#aws-secrets) for 
 
 ### Update URS redirect_uri:
 
-The TEA Terraform module has the output value `urs_redirect_uri`. This URL should be added to your URS App as a valid Redirect URI. If updating the app to supply CloudFront URL or Custom DNS records using the `domain_name` and `cookie_domain` fields, it will be important to update or replace the output `urs_redirect_uri` value in your URS App. 
+The TEA Terraform module has the output value `urs_redirect_uri`. This URL should be added to your URS App as a valid Redirect URI. If updating the app to supply CloudFront URL or Custom DNS records using the `domain_name` and `cookie_domain` fields, it will be important to update or replace the output `urs_redirect_uri` value in your URS App.

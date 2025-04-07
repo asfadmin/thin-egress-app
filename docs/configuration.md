@@ -222,7 +222,7 @@ credentials to access all data in the bucket.
 You may optionally create your own [jinja2](http://jinja.pocoo.org/docs/2.10/) html
 templates. If no custom templates are supplied in the `HtmlTemplateDir` subdirectory
 of the `ConfigBucket` bucket, ultra-generic (and a little annoying!)
-[default templates](https://github.com/asfadmin/thin-egress-app/tree/devel/lambda/templates)
+[default templates](https://github.com/asfadmin/thin-egress-app/tree/main/lambda/templates)
 are used.
 
 **base.html**

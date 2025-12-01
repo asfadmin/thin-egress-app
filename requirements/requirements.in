@@ -2,6 +2,6 @@
 cachetools
 cfnresponse
 chalice
-git+https://github.com/asfadmin/rain-api-core.git@8d241610b50299198aa0cc210852259fef9e482b
+git+https://github.com/asfadmin/rain-api-core.git@9637b7d135c8079137bf5b0b4237961e2c1f1351
 netaddr
 pyjwt

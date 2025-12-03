@@ -233,7 +233,8 @@ def auth_cookies(earthdata_auth_session, url_earthdata, api_host, urs_username, 
             cookiejar.set_cookie(requests.cookies.create_cookie(
                 domain=api_host,
                 name=z.name,
-                value=z.value
+                value=z.value,
+                expires=z.expires,
             ))
 
     return cookiejar

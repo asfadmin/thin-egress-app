@@ -1,0 +1,1287 @@
+<!-- Extends https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/base.html -->
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Thin Egress App">
+      
+      
+        <meta name="author" content="ASF RAIN">
+      
+      
+      
+        <link rel="prev" href="../deploying/">
+      
+      
+        <link rel="next" href="../s3access/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Configuration - Thin Egress App</title>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    <link rel="stylesheet" href="../assets/stylesheets/asf.css">
+
+    
+
+      
+    
+<script src="https://fbm.earthdata.nasa.gov/for/ASF/feedback.js" type="text/javascript"></script>
+<script type="text/javascript">
+ // This prevents the FBM flyout banner from appearing on the side of the page.
+feedback.init({showIcon: false});
+</script>
+
+<script src="https://cdn.earthdata.nasa.gov/tophat2/tophat2.js"
+        id="earthdata-tophat-script"
+        data-show-fbm="true"
+        data-show-status="false"
+        data-fbm-subject-line="How can we help you?"
+        data-current-daac="ASF DAAC">
+</script>
+
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#configuration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/header.html -->
+
+<!-- Determine classes -->
+
+
+  
+
+
+<!-- Header -->
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav
+    class="md-header__inner md-grid"
+    aria-label="Header"
+  >
+
+    
+    <!-- Link to ASF -->
+    <a
+      href="https://asf.alaska.edu/"
+      title="ASF"
+      class="md-header__button md-logo"
+      aria-label="ASF"
+      data-md-component="logo"
+    >
+      <img src="../assets/images/ASFLogo-Blue2.png" alt="logo" />
+    </a>
+    
+
+    <!-- Link to home -->
+    <a
+      href=".."
+      title="Thin Egress App"
+      class="md-header__button md-logo"
+      aria-label="Thin Egress App"
+      data-md-component="logo"
+    >
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+
+    <!-- Button to open drawer -->
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+
+    <!-- Header title -->
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Thin Egress App
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color palette toggle -->
+    
+
+    <!-- Site language selector -->
+    
+
+    <!-- Button to open search modal -->
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+
+      <!-- Search interface -->
+      <div class="expert-rec-search">
+  <ci-search></ci-search>
+</div>
+    
+
+    <!-- Repository information -->
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asfadmin/thin-egress-app" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thin-egress-app
+  </div>
+</a>
+      </div>
+    
+  </nav>
+
+  <!-- Navigation tabs (sticky) -->
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Thin Egress App" class="md-nav__button md-logo" aria-label="Thin Egress App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Thin Egress App
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asfadmin/thin-egress-app" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thin-egress-app
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vision/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deploying/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#bucket-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bucket Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bucket Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edl-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EDL Access Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EDL Access Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#public-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Private Buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#public-and-private-prefixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public and Private Prefixes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public and Private Prefixes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3-direct-access-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Direct Access Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-direct-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Direct Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Templating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-token-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Token Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-custom-domain-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using custom domain names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating-configuration-of-a-live-tea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating configuration of a live TEA
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../s3access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../technical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Technical
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trouble Shooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#bucket-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bucket Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bucket Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edl-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EDL Access Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EDL Access Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#public-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#private-buckets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Private Buckets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#public-and-private-prefixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public and Private Prefixes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public and Private Prefixes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3-direct-access-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Direct Access Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-direct-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Direct Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-templating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Templating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-token-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Token Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-custom-domain-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using custom domain names
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating-configuration-of-a-live-tea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating configuration of a live TEA
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="configuration">Configuration</h1>
+<h2 id="bucket-mapping">Bucket Mapping</h2>
+<p>At the heart of TEA is the concept of the Bucket Map. This YAML file tells TEA how to
+map URLs to buckets and how to control access to data in buckets. Mapping depths are
+arbitrary and dynamically account for object path prefixes. Bucket maps are case
+sensitive!</p>
+<p>When working with a bucket map, it is important to remember that bucket names are
+relative to the optional <code>bucket prefix</code> TEA parameter. If a <code>bucket prefix</code> is
+supplied, that value is prepended to any bucket name. This optional feature is intended
+to allow bucket maps to be used in multiple maturities (e.g. Sandbox, SIT, UAT, Prod)
+where bucket names are consistent across maturities given a specific bucket prefix.</p>
+<p>Assume the following bucket map:</p>
+<pre><code class="language-yaml">MAP:
+  path1: bucket-path-1
+
+  path2:
+    path2a: bucket-path-2a
+    path2b: bucket-path-2b
+
+  path3:
+    path3a:
+      path3ai: bucket-path-3ai
+</code></pre>
+<p>You can derive the following object -&gt; URL mappings:</p>
+<pre><code>s3://bucket-path-1/object.txt           =&gt; https://[APP-BASE-URL]/path1/object.txt
+s3://bucket-path-2a/file.ext            =&gt; https://[APP-BASE-URL]/path2/path2a/file.ext
+s3://bucket-path-2b/low-res/browse.jpg  =&gt; https://[APP-BASE-URL]/path2/path2b/low-res/browse.jpg
+s3://bucket-path-3ai/some-product.h5    =&gt; https://[APP-BASE-URL]/path3/path3a/path3ai/some-product.h5
+</code></pre>
+<p>It is <strong>NOT</strong> possible to have distribution at the app root. That is,
+<code>s3://bucket-path-1/object.txt</code> cannot be configured to be distributed at
+<code>https://[APP-BASE-URL]/object.txt</code>.</p>
+<h3 id="custom-headers">Custom Headers</h3>
+<p>Custom HTTP response headers can be added to bucket mappings:</p>
+<pre><code class="language-yaml">MAP:
+  path1:
+      bucket: bucket-path-1
+      headers:
+        Content-Type: &quot;text/plain&quot;
+</code></pre>
+<h3 id="edl-access-control">EDL Access Control</h3>
+<p>By default, all buckets are assumed to require a user to log into Earthdata Login to
+download data. However, there are two options to change that behavior</p>
+<h4 id="public-buckets">Public Buckets</h4>
+<p>Buckets can be made public by adding a <code>PUBLIC_BUCKETS</code> block:</p>
+<pre><code class="language-yaml">MAP:
+   browse: browse-bucket
+
+PUBLIC_BUCKETS:
+   browse-bucket:  &quot;Internal only Comment about browse being public&quot;
+</code></pre>
+<p>In the above example, accessing <code>https://[APP-BASE-URL]/browse/some-browse-image.jpg</code>
+would not require EDL authentication, however, if a user was already logged in, the
+downloads would be tagged with that users EDL User ID.</p>
+<h4 id="private-buckets">Private Buckets</h4>
+<p>TEA download can also be restricted to users who belonging to an EDL Application
+User Group. This allows App and Data owners to specify a discrete list of specially
+approved users who can download data.</p>
+<pre><code class="language-yaml">MAP:
+   pre-commission: pre-comission-data-bucket
+
+PRIVATE_BUCKETS:
+   pre-commission-data-bucket:
+     - internal_users
+     - external_team
+</code></pre>
+<p>In the example above, TEA will ensure that a user attempt to download
+<code>https://[APP-BASE-URL]/pre-commission/not-yet-public.zip</code> belongs to <strong>either</strong>
+the App User Group <code>internal_users</code> or <code>external_team</code>. Users who are not in one or
+both of those groups will not be granted a download.</p>
+<h4 id="public-and-private-prefixes">Public and Private Prefixes</h4>
+<p>In addition you specifying whole buckets as Public or Private, you can also use
+object prefixing to control access:</p>
+<pre><code class="language-yaml">MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/browse/: &quot;Browse image&quot;
+
+PRIVATE_BUCKETS:
+    data-bucket/:
+      - internal_users
+      - external_team
+</code></pre>
+<p>In the above example, while access to data in <code>data-bucket</code> requires EDL App
+group access to one of the specified groups, accessing an object with the
+prefix <code>browse/</code> will not require any auth.</p>
+<p>TEA will always check the rules from most deeply nested to most shallow. So
+for example, in this bucket map:</p>
+<pre><code class="language-yaml">MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/external/public/: &quot;Browse image&quot;
+
+PRIVATE_BUCKETS:
+    data-bucket/:
+      - internal_users
+    data-bucket/external/:
+      - internal_users
+      - external_team
+</code></pre>
+<p>Any data in the prefix <code>external/public/</code> will be public, data in the prefix
+<code>external/</code> but not in the prefix <code>external/public/</code> will be available to users
+in either of the defined EDL App groups, and everything else in the bucket will
+be available to users in the <code>internal_users</code> group only.</p>
+<h5 id="s3-direct-access-compatibility">S3 Direct Access Compatibility</h5>
+<p>Some access configurations supported by the standard HTTP methods are not allowed when S3 direct access is enabled. Of note:</p>
+<ol>
+<li>The first prefix in the bucket map will need to be set to the most restrictive access level and subsequent prefixes must have access levels that become successively more open. This is due to a limitation with how IAM policies work (For more information, see <a href="#s3-direct-access">S3 direct access</a>).</li>
+<li>Public buckets will require EDL authentication for S3 direct access. e.g. "Browse image"</li>
+</ol>
+<p>All of the bucket maps shown above are compatible with S3 direct access; however, long time users of
+TEA might recognize the following configuration example from previous versions which will be rejected when S3 direct access is enabled.</p>
+<p>Bad Example:</p>
+<pre><code class="language-yaml">MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/browse/: &quot;Browse image&quot;
+
+PRIVATE_BUCKETS:
+    # Since no permission is specified for `data-bucket/`, the default is used
+    # which allows access to any authenticated user. Therefore, adding a
+    # prefix `pre-commission-data/` that is more restrictive will break IAM
+    # compatibility.
+    data-bucket/pre-commission-data/:
+      - internal_users
+      - external_team
+</code></pre>
+<p>To fix this, the bucket map could be modified as follows:</p>
+<p>Good Example:</p>
+<pre><code class="language-yaml">MAP:
+    data-path: data-bucket
+
+PUBLIC_BUCKETS:
+    data-bucket/browse/: &quot;Browse image&quot;
+
+PRIVATE_BUCKETS:
+    data-bucket/:
+      - internal_users
+      - external_team
+    # The following rule is redundant, but might not be in the presence of
+    # other rules.
+    data-bucket/pre-commission-data/:
+      - internal_users
+      - external_team
+</code></pre>
+<h4 id="s3-direct-access">S3 Direct Access</h4>
+<p>TEA can be deployed with an <code>/s3credentials</code> endpoint (See
+<a href="../deploying/#enabling-s3-direct-access">Enabling S3 direct access</a>) for
+facilitating S3 direct access. Credentials handed out over this endpoint will
+have both <code>s3:ListBucket</code> and <code>s3:GetObject</code> permissions for in-region requests
+to prefixes configured in the bucket map.</p>
+<p>For example:</p>
+<pre><code class="language-yaml">MAP:
+   data-path: data-bucket
+
+PUBLIC_BUCKETS:
+   data-bucket/browse/: &quot;Browse image&quot;
+
+PRIVATE_BUCKETS:
+   data-bucket/pre-commission-data/:
+     - internal_users
+     - external_team
+</code></pre>
+<p>Using this bucket map, the <code>/s3credentials</code> endpoint would return credentials
+allowing in-region access to any objects in <code>data-bucket</code> EXCEPT objects that
+have the <code>pre-commission-data/</code> prefix to any logged in user. Any user in the
+<code>internal_users</code> or <code>external_team</code> groups would be able to use their
+credentials to access all data in the bucket.</p>
+<h2 id="custom-templating">Custom Templating</h2>
+<p>You may optionally create your own <a href="http://jinja.pocoo.org/docs/2.10/">jinja2</a> html
+templates. If no custom templates are supplied in the <code>HtmlTemplateDir</code> subdirectory
+of the <code>ConfigBucket</code> bucket, ultra-generic (and a little annoying!)
+<a href="https://github.com/asfadmin/thin-egress-app/tree/main/lambda/templates">default templates</a>
+are used.</p>
+<p><strong>base.html</strong>
+This is the base template.</p>
+<p>Blocks:</p>
+<ul>
+<li><code>pagetitle</code>: Gets inserted inside the <code>&lt;title&gt;&lt;/title&gt;</code> element</li>
+<li><code>content</code>: Content payload fed into the template.</li>
+</ul>
+<p><strong>root.html</strong>
+Child template. Gets called by <code>/</code> and <code>/logout</code> for 200 responses.</p>
+<p>Variables:</p>
+<ul>
+<li><code>title</code>: page title</li>
+<li><code>URS_URL</code>: used to make the login link</li>
+<li><code>STAGE</code>: used to make a URL back to the egress app</li>
+<li><code>profile</code>: in the default template, <code>profile.first_name</code> and <code>profile.last_name</code> are used to greet a logged-in user. The entire profile dict is available to the template.</li>
+<li><code>contentstring</code>: any text can go here</li>
+</ul>
+<p><strong>error.html</strong>
+Child template that gets called when various 400 type errors happen.</p>
+<p>Variables:</p>
+<ul>
+<li><code>title</code>: page title</li>
+<li><code>status_code</code>: http status code goes here</li>
+<li><code>contentstring</code>: any text can go here</li>
+</ul>
+<p><strong>profile.html</strong>
+Child template that displays profile info. Only used for debugging in dev.</p>
+<h2 id="shared-token-support">Shared Token Support</h2>
+<p>TEA can accept a shared <a href="https://urs.earthdata.nasa.gov/documentation/for_users/user_token">EDL Token</a>
+as an Authorization (Bearer Token) method. To enable this behavior, EDL Apps
+(Service + TEA) must belong to a shared EDL App Group. Processing a
+shared token is temporally expensive. After the initial request, subsequent
+Service-&gt;TEA data requests should reuse cookies. EULA enforcement is
+preserved with shared tokens.</p>
+<p><img alt="TEA" src="../images/harmony-chain.png" /></p>
+<h2 id="using-custom-domain-names">Using custom domain names</h2>
+<p>There is a process by which you can request an Alternate Domain name to your
+CloudFront endpoint. If you do this, you'll need to update the <code>DomainName</code>,
+<code>CookieName</code>, and <code>DomainCertArn</code> parameters of your
+<a href="../deploying/#all-parameters">TEA Deploment</a>.</p>
+<h2 id="updating-configuration-of-a-live-tea">Updating configuration of a live TEA</h2>
+<p>If the bucket map is updated, because of caching it can take quite some time before TEA loads it.
+If you would like to force TEA to load the new configs immediately, invoke the bumper lambda:</p>
+<pre><code class="language-bash">aws lambda invoke --function-name=&quot;${STACK_NAME}-BumperLambda&quot; output.txt
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/footer.html -->
+
+<!-- Footer -->
+<footer class="md-footer">
+
+  <!-- Link to previous and/or next page -->
+  
+
+  <!-- Further information -->
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/copyright.html -->
+
+<!-- Copyright and theme information -->
+<div class="md-copyright">
+  <div class="md-copyright__highlight">
+    
+      &copy; <span id="copyright-year"></span>
+      <script type="text/javascript">
+          current_year = new Date().getFullYear();
+          document.getElementById("copyright-year").innerHTML=current_year;
+      </script>
+      Alaska Satellite Facility
+    
+    <!-- ASF non-discrimination disclaimer-->
+    &nbsp;&nbsp;
+    <a href="https://www.alaska.edu/nondiscrimination"
+       target="_blank"
+       class="md-copyright-link">
+      UA is an AA/EO employer and educational institution and prohibits
+      illegal discrimination against any individual
+    </a>
+  </div>
+</div>
+
+      <!-- Social links -->
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/social.html -->
+
+<!-- Social links -->
+<div class="md-social">
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://www.facebook.com/AKSatellite"
+      target="_blank" rel="noopener"
+      title="www.facebook.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M80 299.3V512h116V299.3h86.5l18-97.8H196v-34.6c0-51.7 20.3-71.5 72.7-71.5 16.3 0 29.4.4 37 1.2V7.9C291.4 4 256.4 0 236.2 0 129.3 0 80 50.5 80 159.4v42.1H14v97.8z"/></svg>
+    </a>
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://twitter.com/Ak_Satellite"
+      target="_blank" rel="noopener"
+      title="twitter.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M459.4 151.7c.3 4.5.3 9.1.3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53C87.4 130.8 165 172.4 252.1 176.9c-1.6-7.8-2.6-15.9-2.6-24C249.5 95.1 296.3 48 354.4 48c30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3"/></svg>
+    </a>
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://www.youtube.com/channel/UChCfI0oVWw4qDwEidnDskJQ"
+      target="_blank" rel="noopener"
+      title="www.youtube.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M549.7 124.1c-6.2-23.7-24.8-42.3-48.3-48.6C458.9 64 288.1 64 288.1 64S117.3 64 74.7 75.5c-23.5 6.3-42 24.9-48.3 48.6C15 167 15 256.4 15 256.4s0 89.4 11.4 132.3c6.3 23.6 24.8 41.5 48.3 47.8C117.3 448 288.1 448 288.1 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zM232.2 337.6V175.2l142.7 81.2z"/></svg>
+    </a>
+  
+</div>
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../search/main.js"></script>
+      
+    
+    <script src="../assets/javascripts/expert-rec-search.js"></script>
+
+  </body>
+</html>

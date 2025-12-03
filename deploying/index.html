@@ -1,0 +1,1723 @@
+<!-- Extends https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/base.html -->
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Thin Egress App">
+      
+      
+        <meta name="author" content="ASF RAIN">
+      
+      
+      
+        <link rel="prev" href="../vision/">
+      
+      
+        <link rel="next" href="../configuration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.ico">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Deploying - Thin Egress App</title>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    <link rel="stylesheet" href="../assets/stylesheets/asf.css">
+
+    
+
+      
+    
+<script src="https://fbm.earthdata.nasa.gov/for/ASF/feedback.js" type="text/javascript"></script>
+<script type="text/javascript">
+ // This prevents the FBM flyout banner from appearing on the side of the page.
+feedback.init({showIcon: false});
+</script>
+
+<script src="https://cdn.earthdata.nasa.gov/tophat2/tophat2.js"
+        id="earthdata-tophat-script"
+        data-show-fbm="true"
+        data-show-status="false"
+        data-fbm-subject-line="How can we help you?"
+        data-current-daac="ASF DAAC">
+</script>
+
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#deploying" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/header.html -->
+
+<!-- Determine classes -->
+
+
+  
+
+
+<!-- Header -->
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav
+    class="md-header__inner md-grid"
+    aria-label="Header"
+  >
+
+    
+    <!-- Link to ASF -->
+    <a
+      href="https://asf.alaska.edu/"
+      title="ASF"
+      class="md-header__button md-logo"
+      aria-label="ASF"
+      data-md-component="logo"
+    >
+      <img src="../assets/images/ASFLogo-Blue2.png" alt="logo" />
+    </a>
+    
+
+    <!-- Link to home -->
+    <a
+      href=".."
+      title="Thin Egress App"
+      class="md-header__button md-logo"
+      aria-label="Thin Egress App"
+      data-md-component="logo"
+    >
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+
+    <!-- Button to open drawer -->
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+
+    <!-- Header title -->
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Thin Egress App
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Deploying
+            
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color palette toggle -->
+    
+
+    <!-- Site language selector -->
+    
+
+    <!-- Button to open search modal -->
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+
+      <!-- Search interface -->
+      <div class="expert-rec-search">
+  <ci-search></ci-search>
+</div>
+    
+
+    <!-- Repository information -->
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asfadmin/thin-egress-app" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thin-egress-app
+  </div>
+</a>
+      </div>
+    
+  </nav>
+
+  <!-- Navigation tabs (sticky) -->
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Thin Egress App" class="md-nav__button md-logo" aria-label="Thin Egress App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Thin Egress App
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asfadmin/thin-egress-app" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    thin-egress-app
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vision/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploying
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploying
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-tea-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the TEA CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-tea-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting TEA Code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting TEA Code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3asfpubliccode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        s3://asf.public.code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secrets-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secrets Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#urs-auth-creds-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URS Auth Creds Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt-cookie-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT Cookie Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-cloudformation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From CloudFormation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="From CloudFormation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#all-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aws-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-awscli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using awscli
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-terraform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Terraform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-cumulus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Cumulus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enabling-s3-direct-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling S3 direct access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-deployment-procedures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post deployment procedures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Post deployment procedures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#update-edl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update EDL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-a-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validating a Deployment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validating a Deployment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#accessing-the-api-gateway-inside-edc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accessing the API Gateway inside EDC
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#requesting-an-edc-public-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requesting an EDC Public App
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-inside-edc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working inside EDC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Working inside EDC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vpc-and-networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VPC and Networking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vpc-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VPC Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-need-a-bastion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do I need a Bastion?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../s3access/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Access
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../technical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Technical
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trouble Shooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quickstart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-the-tea-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the TEA CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-tea-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting TEA Code
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting TEA Code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3asfpubliccode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        s3://asf.public.code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secrets-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secrets Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secrets Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#urs-auth-creds-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        URS Auth Creds Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt-cookie-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JWT Cookie Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-cloudformation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From CloudFormation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="From CloudFormation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#all-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aws-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-awscli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using awscli
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-terraform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Terraform
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-cumulus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From Cumulus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enabling-s3-direct-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling S3 direct access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-deployment-procedures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post deployment procedures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Post deployment procedures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#update-edl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update EDL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-a-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validating a Deployment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validating a Deployment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#accessing-the-api-gateway-inside-edc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accessing the API Gateway inside EDC
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#requesting-an-edc-public-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requesting an EDC Public App
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-inside-edc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working inside EDC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Working inside EDC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vpc-and-networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VPC and Networking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vpc-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VPC Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permission-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permission Boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-i-need-a-bastion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do I need a Bastion?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="deploying">Deploying</h1>
+<p>It is recommended to deploy any production system using an Infrastructure As
+Code (IAC) solution such as <a href="https://www.terraform.io"><code>terraform</code></a> or AWS
+CloudFormation. The commands in this section exist to help you get started and
+understand how the TEA infrastructure works, but do not necessarily represent
+the best way to deploy TEA in production.</p>
+<h2 id="quickstart">Quickstart</h2>
+<p>You can install the TEA command line tool to get a TEA stack up and running as
+fast as possible. It is <strong>not recommended</strong> to use this method for production
+deployments.</p>
+<h3 id="installation">Installation</h3>
+<p>We recommend using <a href="https://pypi.org/project/pipx/"><code>pipx</code></a> to simplify
+virtual environment management for command line tools. <code>pipx install</code> provides
+an interface similar to <code>pip install</code> which means the following commands can be
+run using either <code>pipx</code> or <code>pip</code> if you prefer to do your own virtual
+environment management.</p>
+<p>To install the TEA CLI using git over SSH:</p>
+<pre><code>pipx install git+ssh://git@github.com/asfadmin/thin-egress-app.git#subdirectory=src/tea-cli
+</code></pre>
+<p>Or, to install the TEA CLI using git over HTTPS:</p>
+<pre><code>pipx install git+https://github.com/asfadmin/thin-egress-app.git#subdirectory=src/tea-cli
+</code></pre>
+<h3 id="using-the-tea-cli">Using the TEA CLI</h3>
+<p><em>NOTE: For a detailed, up to date list of available functionality run:</em></p>
+<pre><code>tea --help
+</code></pre>
+<p>To quickly get a TEA stack up and running use the <code>quickdeploy</code> subcommand:</p>
+<pre><code>tea quickdeploy
+</code></pre>
+<p>This will guide you through an interactive prompt where you can choose to
+deploy various resources needed to set up a basic functioning TEA stack. Each
+step might prompt you for certain input configuration which can also be passed
+on the command line. See <code>tea quickdeploy --help</code> for a list of argument names.</p>
+<h2 id="getting-tea-code">Getting TEA Code</h2>
+<p>Major release documentation can be found
+<a href="https://github.com/asfadmin/thin-egress-app/releases/latest">on github</a>.</p>
+<h3 id="s3asfpubliccode">s3://asf.public.code</h3>
+<p>All public releases of ASF code are made available via the public bucket
+<a href="https://s3.amazonaws.com/asf.public.code/index.html">asf.public.code</a>. Each build has 4
+files:</p>
+<ul>
+<li><strong>tea-cloudformation-build.#.yaml</strong> - CloudFormation template</li>
+<li><strong>tea-code-build.#.zip</strong> - Lambda App Python Code</li>
+<li><strong>tea-dependencylayer-build.#.zip</strong> - Lambda layer Python Dependency Code</li>
+<li><strong>tea-terraform-build.#.zip</strong> - TEA as a Terraform module (For cumulus!)</li>
+</ul>
+<h2 id="deployment-steps">Deployment Steps</h2>
+<p>At its core, TEA uses a CloudFormation template to deploy all of its resources to
+AWS. Additionally, there is an available <a href="#from-terraform">Terraform module</a> that can be used on its
+own, or as an add-on to Cumulus.</p>
+<h3 id="secrets-setup">Secrets Setup</h3>
+<p>Two secrets manager objects are required for TEA to function properly:</p>
+<h4 id="urs-auth-creds-secret">URS Auth Creds Secret</h4>
+<p>To set up the URS Auth secret object, You'll need these parameters:</p>
+<ul>
+<li><code>UrsId</code> can be found on your SSO application's URS home page as <code>Client ID</code>.</li>
+<li><code>UrsAuth</code> is the <code>UID</code> for your URS SSO app and password separated by a colon.
+You can create the value with the command below. See EDL's
+<a href="https://urs.earthdata.nasa.gov/documentation/for_integrators/edl_integration">Doumentation</a>
+for more details.</li>
+</ul>
+<p>Encode the Creds</p>
+<pre><code class="language-bash">UrsAuth=$(echo -n &quot;&lt;App UID&gt;:&lt;App Password&gt;&quot; | base64)
+UrsId=&quot;&lt;Client ID&gt;&quot;
+</code></pre>
+<p>Write the base64 encoded keys into a json file:</p>
+<pre><code class="language-bash">cat &lt;&lt; EOL &gt; urscreds.json
+{
+    &quot;UrsId&quot;: &quot;$UrsAuth&quot;,
+    &quot;UrsAuth&quot;: &quot;$UrsId&quot;
+}
+EOL
+</code></pre>
+<p>Create the secret in AWS, referencing the json file created above</p>
+<pre><code class="language-bash">aws $AWSENV secretsmanager create-secret --name urs_creds_for_tea \
+    --description &quot;URS creds for TEA app&quot; \
+    --secret-string file://urscreds.json
+</code></pre>
+<h4 id="jwt-cookie-secret">JWT Cookie Secret</h4>
+<p>JWT secrets allow multiple TEA instances to encode and decode each others JWT
+cookies. This helps reduce the number of times EDL Authentication needs to
+happen.  There are many ways to create JWS Secrets, here is one example:</p>
+<p>First, Create a key pair and b64 encode them:</p>
+<pre><code class="language-bash">ssh-keygen -t rsa -b 4096 -m PEM -f ./jwtcookie.key
+rsa_priv_key=$(openssl base64 -in jwtcookie.key -A)
+rsa_pub_key=$(openssl base64 -in jwtcookie.key.pub -A)
+</code></pre>
+<p>Put the base-64 encoded keys into a json file like so:</p>
+<pre><code class="language-bash">cat &lt;&lt; EOL &gt; jwtkeys.json
+{
+    &quot;rsa_priv_key&quot;: &quot;$rsa_priv_key&quot;,
+    &quot;rsa_pub_key&quot;:  &quot;$rsa_pub_key&quot;
+}
+EOL
+</code></pre>
+<p>Create the secret in AWS, referencing the json file created above</p>
+<pre><code class="language-bash">aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
+    --description &quot;RS256 keys for TEA app JWT cookies&quot; \
+    --secret-string file://jwtkeys.json
+</code></pre>
+<h3 id="from-cloudformation">From CloudFormation</h3>
+<h4 id="all-parameters">All Parameters</h4>
+<ul>
+<li><strong>App Settings</strong>:</li>
+<li><code>Loglevel</code> - How verbose the logging should be</li>
+<li><code>Logtype</code> - How log entries are formed. Use json in conjunction with log analysis tools. Use flat for human debugging.</li>
+<li><code>Maturity</code> - Maturity, mostly for logs</li>
+<li><code>ConfigBucket</code> - S3 bucket where configuration files (bucket map, templates) are kept</li>
+<li><code>HtmlTemplateDir</code> - (OPTIONAL) Subdirectory of <code>ConfigBucket</code> where templates can be found</li>
+<li><code>StageName</code> - API Gateway Stage value</li>
+<li><code>EnableApiGatewayLogToCloudWatch</code> - Whether or not API Gateway logs should be dumped</li>
+<li><code>EnableS3CredentialsEndpoint</code> - Whether or not to deploy the /s3credentials endpoint for s3 direct access.</li>
+<li><strong>Domain Settings</strong>:</li>
+<li><code>DomainName</code> - (OPTIONAL) domain name as a user will access it (ie CloudFront, CNAME, etc)</li>
+<li><code>CookieDomain</code> - (OPTIONAL) domain name value for minting cookies</li>
+<li><code>DomainCertArn</code> - (OPTIONAL) Arn to a AWS ACM SSL Cert for HTTPS access</li>
+<li><code>UseCorsCookieDomain</code> - If <code>True</code>, and <code>CookieDomain</code> is set, this enables CORS Response Headers</li>
+<li><strong>Lambda Code</strong>:</li>
+<li><code>LambdaCodeS3Bucket</code> - S3 bucket where Lambda code zip files are kept</li>
+<li><code>LambdaCodeS3Key</code> - Object name of Lambda code zip</li>
+<li><code>LambdaCodeDependencyArchive</code> - Object name of Lambda Dependency Layer zip</li>
+<li><code>LambdaTimeout</code> - Lambda timeout in seconds</li>
+<li><code>LambdaMemory</code> - The amount of memory available to the function during execution. Must be multiple of 64. Minimum: 128. Max: 3008. Default 1792.</li>
+<li><strong>URS Settings</strong>:</li>
+<li><code>URSAuthCredsSecretName</code> - <a href="#urs-auth-creds-secret">URS Auth Creds Secret</a></li>
+<li><code>AuthBaseUrl</code> - Which maturity of URS to hit</li>
+<li><strong>Data Bucket Setup</strong>:</li>
+<li><code>BucketnamePrefix</code> - (OPTIONAL) Bucket prefix value (see <a href="../configuration/#bucket-mapping">Bucket Mapping</a>)</li>
+<li><code>BucketMapFile</code> - bucket map YAML file (see <a href="../configuration/#bucket-mapping">Bucket Mapping</a>)</li>
+<li><code>UseReverseBucketMap</code> - Ignore this value!</li>
+<li><code>DownloadRoleArn</code> - (OPTIONAL) Pre-created IAM Role for minting presigned urls<ul>
+<li>Leave blank to create a new role for deployment</li>
+</ul>
+</li>
+<li><code>DownloadRoleInRegionArn</code> - (OPTIONAL) Pre-created IAM Role for minting IN-REGION presigned urls<ul>
+<li>Leave blank to create a new role for deployment</li>
+</ul>
+</li>
+<li><code>SuppressHeadCheck</code> - Disable the pre-sign object validation. Enable for speedier access.</li>
+<li><strong>Session Settings</strong>:</li>
+<li><code>SessionTTL</code> - How long, in seconds, JWT Cookies are valid for</li>
+<li><code>JwtAlgo</code> - JWT Signing algorithm</li>
+<li><code>JwtKeySecretName</code> - <a href="#jwt-cookie-secret">JWT Cookie Secret</a></li>
+<li><strong>NGAP Integration</strong>: ⚠️ These are <strong>REQUIRED</strong> for EDC Deployments. See
+<a href="#vpc-and-networking">VPC and Networking</a></li>
+<li><code>PrivateVPC</code> - Private VPC ID in which we create resources (<code>$VPCID</code>)</li>
+<li><code>VPCSecurityGroupIDs</code> - Security group (<code>$SUBNETID</code>)</li>
+<li><code>VPCSubnetIDs</code> - VPC Subnets to deploy into (<code>$SECURITYGROUP</code>)</li>
+<li><code>PermissionsBoundaryName</code> - Permissions Boundary used for creating IAM Roles;
+probably <code>NGAPShRoleBoundary</code></li>
+</ul>
+<h4 id="aws-console">AWS Console</h4>
+<p>See <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-stack.html">this guide</a>
+for deploying the CloudFormation template using the AWS web console.
+You'll need <a href="#getting-tea-code">three files</a>:</p>
+<ul>
+<li>This file will be uploaded to the CloudFormation web console:</li>
+<li><strong>tea-cloudformation-build.#.yaml</strong></li>
+<li>These two zips need to be uploaded to a bucket in your account:</li>
+<li><strong>tea-code-build.#.zip</strong></li>
+<li><strong>tea-dependencylayer-build.#.zip</strong></li>
+</ul>
+<h4 id="using-awscli">Using awscli</h4>
+<p>As with <a href="#aws-console">AWS Console</a> deployments, you'll need to upload the
+two zip files to a code bucket in your account.  After doing that, be sure
+you've sourced the <a href="#vpc-and-networking">VPC and Networking</a> parameters as
+well as create the two required <a href="#secrets-setup">Secrets</a>.</p>
+<pre><code class="language-bash"># Code path variables
+CF_TEMPLATE_FILE=/local/path/to/tea-cloudformation-build.#.yaml
+CODE_BUCKET=my-tea-code-bucket
+CODE_ARCHIVE_FILENAME=tea-code-build.#.zip
+DEPENDENCY_LAYER_FILENAME=tea-dependencylayer-build.#.zip
+BUCKETMAP_FILENAME=my_bucketmap.yaml
+CFG_BUCKETNAME=my-tea-cfg
+
+# See the Cloudformation parameters section above for a description of these params.
+STACK_NAME=my-tea # needs to be compatible with S3 naming requirements (lower case, no underscores, etc)
+                  # because the CF template may create buckets using this name.
+AWS_REGION=us-west-2 # Or another region if desired.
+AWS_PROFILE=default  # Or whichever awscli profile you want to deploy to.
+
+# Deploy the stack
+aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
+  --stack-name ${STACK_NAME} \
+  --template-file ${CF_TEMPLATE_FILE} \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides \
+        AuthBaseUrl=https://uat.urs.earthdata.nasa.gov \
+        BucketMapFile=${BUCKETMAP_FILENAME} \
+        ConfigBucket=${CFG_BUCKETNAME} \
+        EnableApiGatewayLogToCloudWatch=&quot;False&quot; \
+        JwtAlgo=&quot;RS256&quot; \
+        JwtKeySecretName=&quot;jwt_secret_for_tea&quot; \
+        LambdaCodeDependencyArchive={DEPENDENCY_LAYER_FILENAME} \
+        LambdaCodeS3Bucket=${CODE_BUCKET} \
+        LambdaCodeS3Key=${CODE_ARCHIVE_FILENAME} \
+        LambdaTimeout=6 \
+        Loglevel=INFO \
+        Logtype=json \
+        Maturity=DEV \
+        PermissionsBoundaryName=NGAPShRoleBoundary \
+        PrivateVPC=$VPCID \
+        SessionTTL=168 \
+        StageName=API \
+        URSAuthCredsSecretName=&quot;urs_creds_for_tea&quot; \
+        UseReverseBucketMap=&quot;False&quot; \
+        UseCorsCookieDomain=&quot;False&quot; \
+        VPCSecurityGroupIDs=$SECURITYGROUP \
+        VPCSubnetIDs=$SUBNETID
+
+</code></pre>
+<h3 id="from-terraform">From Terraform</h3>
+<p>Why would you want to deploy it from Terraform? Just use
+<a href="#from-cloudformation">CloudFormation</a>! But for real, if someone wants to do
+a write up for this, I'd love to include it.</p>
+<h3 id="from-cumulus">From Cumulus</h3>
+<p>Please see the
+<a href="https://nasa.github.io/cumulus/docs/deployment/thin_egress_app">Cumulus documentation</a>
+for current TEA deployment and configuration procedures.</p>
+<h3 id="enabling-s3-direct-access">Enabling S3 direct access</h3>
+<p>TEA supports handing out s3 direct access credentials over the optional
+<code>/s3credentials</code> endpoint. This endpoint can be deployed by setting the
+parameter <code>EnableS3CredentialsEndpoint="True"</code> in CloudFormation or by setting
+the parameter <code>s3credentials_endpoint=true</code> in Terraform.</p>
+<p><em>NOTE: Once you've deployed the CloudFormation template, you will need to
+manually update the API Gateway deployment if you ever want to change the value
+of <code>EnableS3CredentialsEndpoint</code>. This can also be forced in CloudFormation by
+adding a random number to the name of the ApiGateway Deployment resource before
+redeploying the stack.</em></p>
+<p>See <a href="../configuration/#s3-direct-access">S3 Direct Access</a> for a details on how
+the endpoint configuration works.</p>
+<h2 id="post-deployment-procedures">Post deployment procedures</h2>
+<p>Once a TEA stack has been successfully deployed, there are still a few
+remaining steps that need to be completed before users can start downloading
+data.</p>
+<h3 id="update-edl">Update EDL</h3>
+<p>After deploying TEA, you'll need to add the new URI to your EDL App's authorized
+redirect URIs. To get the proper value, you can query the cloudformation stack:</p>
+<pre><code class="language-bash">aws $AWSENV cloudformation describe-stacks \
+            --stack-name=$STACK_NAME \
+            --query 'Stacks[0].Outputs[?OutputKey==`URSredirectURI`].OutputValue' \
+            --output=text
+</code></pre>
+<h3 id="validating-a-deployment">Validating a Deployment</h3>
+<p>TEA has a <code>/version</code> endpoint you can use to check that a deployment is healthy
+and responsive:</p>
+<pre><code class="language-bash">api_endpoint=$(aws $AWSENV cloudformation describe-stacks \
+                           --stack-name=$STACK_NAME \
+                           --query 'Stacks[0].Outputs[?OutputKey==`ApiEndpoint`].OutputValue' \
+                           --output=text)
+curl ${api_endpoint}version
+</code></pre>
+<h4 id="accessing-the-api-gateway-inside-edc">Accessing the API Gateway inside EDC</h4>
+<p>It's important to understand that in the EDC, you can't do the above step.
+There is no route into the VPC from the general internet. There are
+write-ups elsewhere that go into depth on how to proxy HTTPS requests into
+the private VPC.</p>
+<h3 id="requesting-an-edc-public-app">Requesting an EDC Public App</h3>
+<p>To access TEA from outside the private VPC, you'll need to make a <a href="https://bugs.earthdata.nasa.gov/servicedesk/customer/portal/7/create/94">Publish
+New App</a>
+NASD request.</p>
+<p>After the NASD has been processed and a new CloudFront domain is generated
+for your TEA deployment, you'll need to update the <code>DomainName</code> and <code>CookieName</code>
+parameters of your <a href="#all-parameters">TEA Deployment</a> with the new CloudFront
+domain name.</p>
+<h2 id="working-inside-edc">Working inside EDC</h2>
+<p>While TEA is primarily designed to be deployed inside EDC, below are some
+important configurations to be aware of to make deploying to EDC Successful.</p>
+<h3 id="vpc-and-networking">VPC and Networking</h3>
+<p>This bash script will give you all the parameters you'll need to deploy into EDC:</p>
+<pre><code class="language-bash">export AWS_REGION='us-west-2'
+export AWS_PROFILE='default'
+export AWSENV=&quot;--profile=${AWS_PROFILE} --region=${AWS_REGION}&quot;
+export VPCID=$(aws $AWSENV ec2 describe-vpcs --query &quot;Vpcs[*].VpcId&quot; --filters &quot;Name=tag:Name,Values=Application VPC&quot; --output text)
+export SUBNETID=$(aws $AWSENV ec2 describe-subnets --query &quot;Subnets[?VpcId=='$VPCID'].{ID:SubnetId}[0]&quot; --filters &quot;Name=tag:Name,Values=Private*&quot; --output=text)
+export SECURITYGROUP=$(aws $AWSENV ec2 describe-security-groups --query &quot;SecurityGroups[?VpcId=='$VPCID'].{ID:GroupId}&quot; --filters &quot;Name=tag:Name,Values=Application Default*&quot; --output=text)
+echo &quot;PrivateVPC=$VPCID; VPCSecurityGroupIDs=$SECURITYGROUP; VPCSubnetIDs=$SUBNETID;&quot;
+</code></pre>
+<h3 id="vpc-endpoints">VPC Endpoints</h3>
+<p>It is also important to be aware that an API Gateway VPC Endpoint will need to
+be setup prior to deployment. You can check to see if your account has the
+appropriate VPCE by running this command:</p>
+<pre><code class="language-bash">aws $AWSENV ec2 describe-vpc-endpoints --query &quot;VpcEndpoints[?(VpcId=='$VPCID' &amp;&amp; ServiceName=='com.amazonaws.${AWS_REGION}.execute-api')].{ID:VpcEndpointId}&quot; --output=text
+</code></pre>
+<h3 id="permission-boundaries">Permission Boundaries</h3>
+<p>When deploying into NGAP, it is important to supply a Permission Boundary. This
+allows CloudFormation to create necessary IAM roles on your behalf.</p>
+<h3 id="do-i-need-a-bastion">Do I need a Bastion?</h3>
+<p>The answer is that it certainly helps. If your account does not have a bastion,
+validating a deployment will be very difficult.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/footer.html -->
+
+<!-- Footer -->
+<footer class="md-footer">
+
+  <!-- Link to previous and/or next page -->
+  
+
+  <!-- Further information -->
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/copyright.html -->
+
+<!-- Copyright and theme information -->
+<div class="md-copyright">
+  <div class="md-copyright__highlight">
+    
+      &copy; <span id="copyright-year"></span>
+      <script type="text/javascript">
+          current_year = new Date().getFullYear();
+          document.getElementById("copyright-year").innerHTML=current_year;
+      </script>
+      Alaska Satellite Facility
+    
+    <!-- ASF non-discrimination disclaimer-->
+    &nbsp;&nbsp;
+    <a href="https://www.alaska.edu/nondiscrimination"
+       target="_blank"
+       class="md-copyright-link">
+      UA is an AA/EO employer and educational institution and prohibits
+      illegal discrimination against any individual
+    </a>
+  </div>
+</div>
+
+      <!-- Social links -->
+      <!--
+  Copyright (c) 2016-2023 Martin Donath <martin.donath@squidfunk.com>
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+-->
+
+<!-- Adapted from https://github.com/squidfunk/mkdocs-material/blob/9.4.2/src/templates/partials/social.html -->
+
+<!-- Social links -->
+<div class="md-social">
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://www.facebook.com/AKSatellite"
+      target="_blank" rel="noopener"
+      title="www.facebook.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M80 299.3V512h116V299.3h86.5l18-97.8H196v-34.6c0-51.7 20.3-71.5 72.7-71.5 16.3 0 29.4.4 37 1.2V7.9C291.4 4 256.4 0 236.2 0 129.3 0 80 50.5 80 159.4v42.1H14v97.8z"/></svg>
+    </a>
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://twitter.com/Ak_Satellite"
+      target="_blank" rel="noopener"
+      title="twitter.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M459.4 151.7c.3 4.5.3 9.1.3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53C87.4 130.8 165 172.4 252.1 176.9c-1.6-7.8-2.6-15.9-2.6-24C249.5 95.1 296.3 48 354.4 48c30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3"/></svg>
+    </a>
+  
+
+    <!-- Automatically set rel=me for Mastodon -->
+    
+    
+
+    <!-- Compute title and render link -->
+    
+    
+      
+      
+    
+    <a
+      href="https://www.youtube.com/channel/UChCfI0oVWw4qDwEidnDskJQ"
+      target="_blank" rel="noopener"
+      title="www.youtube.com"
+      class="md-social__link"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M549.7 124.1c-6.2-23.7-24.8-42.3-48.3-48.6C458.9 64 288.1 64 288.1 64S117.3 64 74.7 75.5c-23.5 6.3-42 24.9-48.3 48.6C15 167 15 256.4 15 256.4s0 89.4 11.4 132.3c6.3 23.6 24.8 41.5 48.3 47.8C117.3 448 288.1 448 288.1 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zM232.2 337.6V175.2l142.7 81.2z"/></svg>
+    </a>
+  
+</div>
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../search/main.js"></script>
+      
+    
+    <script src="../assets/javascripts/expert-rec-search.js"></script>
+
+  </body>
+</html>

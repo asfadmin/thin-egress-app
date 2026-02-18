@@ -283,7 +283,7 @@ requirements/requirements-dev.txt: \
 	requirements/requirements.txt
 
 requirements/%.txt: requirements/%.in
-	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ --output-file $@ $<
+	$(DOCKER_DEPENDENCY_BUILDER) pip-compile -q -U --cache-dir /var/task/$(DIR)/.pip-cache/ --no-strip-extras --output-file $@ $<
 
 .PHONY: lock
 lock: $(REQUIREMENTS_TXT)

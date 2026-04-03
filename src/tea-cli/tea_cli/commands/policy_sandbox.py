@@ -1,6 +1,7 @@
 import argparse
 import json
 import tkinter as tk
+import tkinter.font
 import traceback
 
 import yaml
@@ -36,11 +37,34 @@ def policy_sandbox():
     window.columnconfigure(0, weight=1)
     window.rowconfigure(0, weight=1)
 
+    menubar = tk.Menu()
+    window.config(menu=menubar)
+
     frm_content = tk.Frame(window)
     frm_content.columnconfigure(0, weight=1)
     frm_content.columnconfigure(1, weight=1)
     frm_content.rowconfigure(1, weight=1)
     frm_content.grid(row=0, column=0, sticky="nsew")
+
+    font = tk.font.Font(family="Courier", size=14)
+
+    file_menu = tk.Menu(menubar)
+    file_menu.add_command(
+        label="Exit",
+        command=window.destroy,
+    )
+    menubar.add_cascade(label="File", menu=file_menu)
+
+    view_menu = tk.Menu(menubar)
+    view_menu.add_command(
+        label="Increate font size",
+        command=lambda: font.configure(size=font.cget("size") + 1),
+    )
+    view_menu.add_command(
+        label="Decrease font size",
+        command=lambda: font.configure(size=font.cget("size") - 1),
+    )
+    menubar.add_cascade(label="View", menu=view_menu)
 
     def handle_text():
         text = txt_bucketmap.get("1.0", tk.END).strip()
@@ -66,25 +90,25 @@ def policy_sandbox():
             var_size.set("0")
 
     # Bucket map panel
-    tk.Label(frm_content, text="Bucket map YAML").grid(row=0, column=0)
+    tk.Label(frm_content, text="Bucket map YAML", font=font).grid(row=0, column=0)
 
-    txt_bucketmap = tk.Text(frm_content)
+    txt_bucketmap = tk.Text(frm_content, font=font)
     txt_bucketmap.bind("<Key>", lambda _: window.after(1, handle_text))
     txt_bucketmap.grid(row=1, column=0, sticky="nsew")
 
     # Policy panel
-    tk.Label(frm_content, text="Policy JSON").grid(row=0, column=1)
+    tk.Label(frm_content, text="Policy JSON", font=font).grid(row=0, column=1)
 
-    txt_policy = tk.Text(frm_content)
+    txt_policy = tk.Text(frm_content, font=font)
     txt_policy.grid(row=1, column=1, sticky="nsew")
 
     # Group selector
     frm_groups = tk.Frame(frm_content)
     frm_groups.grid(row=2, column=0)
 
-    tk.Label(frm_groups, text="User Groups: ").grid(row=0, column=0)
+    tk.Label(frm_groups, text="User Groups: ", font=font).grid(row=0, column=0)
     var_group = tk.StringVar(value="null")
-    entry_groups = tk.Entry(frm_groups, textvariable=var_group)
+    entry_groups = tk.Entry(frm_groups, textvariable=var_group, font=font)
     entry_groups.bind("<Key>", lambda _: window.after(1, handle_text))
     entry_groups.grid(row=0, column=1)
 
@@ -92,12 +116,12 @@ def policy_sandbox():
     frm_size = tk.Frame(frm_content)
     frm_size.grid(row=2, column=1)
 
-    tk.Label(frm_size, text="Minified Size: ").grid(row=0, column=0)
+    tk.Label(frm_size, text="Minified Size: ", font=font).grid(row=0, column=0)
 
     var_size = tk.StringVar(value="0")
-    tk.Label(frm_size, textvariable=var_size).grid(row=0, column=1)
+    tk.Label(frm_size, textvariable=var_size, font=font).grid(row=0, column=1)
 
-    tk.Label(frm_size, text=" (max 2048)").grid(row=0, column=2)
+    tk.Label(frm_size, text=" (max 2048)", font=font).grid(row=0, column=2)
 
     handle_text()
     window.mainloop()

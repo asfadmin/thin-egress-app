@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from tea_cli.commands import list_versions, quick_deploy
+from tea_cli.commands import list_versions, policy_sandbox, quick_deploy
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,12 @@ def main(args=None):
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Thin Egress App Command Line Tool")
-    parser.add_argument("-v", help="enable verbose output", action="store_true", dest="verbose")
+    parser.add_argument(
+        "-v",
+        help="enable verbose output",
+        action="store_true",
+        dest="verbose",
+    )
     subparsers = parser.add_subparsers(
         required=True,
         dest="command",
@@ -42,6 +47,15 @@ def get_parser() -> argparse.ArgumentParser:
         ),
     )
     configure_subparser(parser_quickdeploy, quick_deploy)
+
+    parser_policy_sandbox = subparsers.add_parser(
+        "policy-sandbox",
+        help=(
+            "run a tkinter UI for exploring S3 session policies generated from "
+            "a bucket map"
+        ),
+    )
+    configure_subparser(parser_policy_sandbox, policy_sandbox)
 
     return parser
 

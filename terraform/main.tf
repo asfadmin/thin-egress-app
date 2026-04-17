@@ -65,11 +65,6 @@ resource "aws_s3_object" "cloudformation_template" {
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
-  depends_on = [
-    aws_s3_object.lambda_source,
-    aws_s3_object.lambda_code_dependency_archive,
-    aws_s3_object.cloudformation_template
-  ]
   name         = substr(var.stack_name, 0, 36)
   template_url = "https://s3.amazonaws.com/${aws_s3_object.lambda_source.bucket}/${aws_s3_object.cloudformation_template.key}"
   capabilities = ["CAPABILITY_NAMED_IAM"]

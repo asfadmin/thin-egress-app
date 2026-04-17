@@ -24,7 +24,7 @@ resource "aws_s3_bucket" "lambda_source" {
 
 resource "aws_s3_object" "lambda_source" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.lambda_source_filename)}.zip"
+  key         = "lambda-${filemd5(local.lambda_source_filename)}.zip"
   source      = local.lambda_source_filename
   source_hash = filemd5(local.lambda_source_filename)
   tags        = var.tags
@@ -32,7 +32,7 @@ resource "aws_s3_object" "lambda_source" {
 
 resource "aws_s3_object" "lambda_code_dependency_archive" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.dependency_layer_filename)}.zip"
+  key         = "dependency-${filemd5(local.dependency_layer_filename)}.zip"
   source      = local.dependency_layer_filename
   source_hash = filemd5(local.dependency_layer_filename)
   tags        = var.tags
@@ -40,7 +40,7 @@ resource "aws_s3_object" "lambda_code_dependency_archive" {
 
 resource "aws_s3_object" "cloudformation_template" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.cloudformation_template_filename)}.yaml"
+  key         = "cloudformation-${filemd5(local.cloudformation_template_filename)}.yaml"
   source      = local.cloudformation_template_filename
   source_hash = filemd5(local.cloudformation_template_filename)
   tags        = var.tags

@@ -28,6 +28,12 @@ resource "aws_s3_object" "lambda_source" {
   source      = local.lambda_source_filename
   source_hash = filemd5(local.lambda_source_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_s3_object" "lambda_code_dependency_archive" {
@@ -36,6 +42,12 @@ resource "aws_s3_object" "lambda_code_dependency_archive" {
   source      = local.dependency_layer_filename
   source_hash = filemd5(local.dependency_layer_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_s3_object" "cloudformation_template" {
@@ -44,6 +56,12 @@ resource "aws_s3_object" "cloudformation_template" {
   source      = local.cloudformation_template_filename
   source_hash = filemd5(local.cloudformation_template_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {

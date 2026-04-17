@@ -104,10 +104,3 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
   }
   tags = var.tags
 }
-
-data "aws_cloudformation_stack" "thin_egress_stack" {
-  name = aws_cloudformation_stack.thin_egress_app.name
-  depends_on = [
-    aws_cloudformation_stack.thin_egress_app
-  ]
-}

@@ -1,0 +1,5 @@
+bucketname_prefix          = ""
+config_bucket              = "<your bucket>"
+jwt_secret_name            = "<your jwt secret name>"
+urs_auth_creds_secret_name = "<your urs creds secret name>"
+stack_name                 = "<your stack name>"

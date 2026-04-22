@@ -58,6 +58,10 @@ run `pip-compile` in a docker container to ensure the file is compiled for a
 lambda compatible environment.
 
 ```bash
+# Touch all the files, so lock thinks there's a change:
+touch requirements/*.in
+# Build the tea-dependency-builder container for lambda:
+make tea-dependency-builder
 # Update the pinned requirements files
 make lock
 ```

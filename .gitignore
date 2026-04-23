@@ -10,7 +10,7 @@
 .DS_Store
 
 # Tools
-.terraform
+.terraform*
 terraform.tfstate*
 *.tfvars
 /src/thin_egress_app/.chalice

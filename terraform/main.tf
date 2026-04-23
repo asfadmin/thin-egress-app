@@ -24,34 +24,47 @@ resource "aws_s3_bucket" "lambda_source" {
 
 resource "aws_s3_object" "lambda_source" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.lambda_source_filename)}.zip"
+  key         = "lambda-${filemd5(local.lambda_source_filename)}.zip"
   source      = local.lambda_source_filename
   source_hash = filemd5(local.lambda_source_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_s3_object" "lambda_code_dependency_archive" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.dependency_layer_filename)}.zip"
+  key         = "dependency-${filemd5(local.dependency_layer_filename)}.zip"
   source      = local.dependency_layer_filename
   source_hash = filemd5(local.dependency_layer_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_s3_object" "cloudformation_template" {
   bucket      = aws_s3_bucket.lambda_source.bucket
-  key         = "${filemd5(local.cloudformation_template_filename)}.yaml"
+  key         = "cloudformation-${filemd5(local.cloudformation_template_filename)}.yaml"
   source      = local.cloudformation_template_filename
   source_hash = filemd5(local.cloudformation_template_filename)
   tags        = var.tags
+
+  lifecycle {
+    # Ensure the old object still exists in case the CloudFormation stack update
+    # fails and needs to roll back
+    create_before_destroy = true
+  }
 }
 
 resource "aws_cloudformation_stack" "thin_egress_app" {
-  depends_on = [
-    aws_s3_object.lambda_source,
-    aws_s3_object.lambda_code_dependency_archive,
-    aws_s3_object.cloudformation_template
-  ]
   name         = substr(var.stack_name, 0, 36)
   template_url = "https://s3.amazonaws.com/${aws_s3_object.lambda_source.bucket}/${aws_s3_object.cloudformation_template.key}"
   capabilities = ["CAPABILITY_NAMED_IAM"]
@@ -90,11 +103,4 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     UseCorsCookieDomain             = var.use_cors ? "True" : "False"
   }
   tags = var.tags
-}
-
-data "aws_cloudformation_stack" "thin_egress_stack" {
-  name = aws_cloudformation_stack.thin_egress_app.name
-  depends_on = [
-    aws_cloudformation_stack.thin_egress_app
-  ]
 }

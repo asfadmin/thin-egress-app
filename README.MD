@@ -156,8 +156,8 @@ REQUIREMENTS_DEPS := $(shell find /host/path/to/rain-api-core/rain_api_core/ -na
 Now when you run `make build`, the dependency layer should be correctly rebuilt if any of the
 source files in your local version of the dependency have changed.
 
-
 ## Running Tests
+
 TEA has two types of automated tests. End-to-End tests and unit tests. The End-to-End tests rely on a lot of ASF specific resources to exist in the test environment, so they may be harder to adapt for custom builds.
 
 ### Unit Tests
@@ -173,3 +173,7 @@ source .venv/bin/activate
 # Run the tests
 make test
 ```
+
+### End-to-End Tests
+
+The [End-to-End Tests](./.github/workflows/test-e2e.yml) is an GitHub Action you can deploy with a workflow_dispatch against your stack. It'll deploy your code to `test`, and run the e2e suite against it. More info in the [workflows README](./.github/workflows/README.md).

@@ -493,7 +493,7 @@ class CloudFormationStep(Step):
                     "Loglevel": "INFO",
                     "Maturity": maturity,
                     "PermissionsBoundaryName": "NGAPShRoleBoundary",
-                    "SessionTTL": "168",
+                    "SessionTTL": "24",
                     "StageName": "API",
                     "URSAuthCredsSecretName": urs_secret_name,
                     "UseReverseBucketMap": "False",

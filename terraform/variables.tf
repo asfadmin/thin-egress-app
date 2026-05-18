@@ -149,7 +149,7 @@ variable "private_vpc" {
 variable "session_ttl" {
   type        = number
   default     = null
-  description = "Time to live for auth session, in hours. 168 is a week."
+  description = "Time to live for auth session, in hours."
 }
 
 variable "stack_name" {

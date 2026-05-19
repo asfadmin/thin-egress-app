@@ -53,7 +53,7 @@ module "thin_egress_app" {
 * **maturity** (string) - maturity of deployment. Defaults to "DEV".
 * **permissions_boundary_name** (string) - PermissionsBoundary Policy name to be used when creating IAM roles
 * **private_vpc** (string) - internal VPC to deploy to
-* **session_ttl** (number) - time to live for auth session, in hours. Defaults to 168.
+* **session_ttl** (number) - time to live for auth session, in hours. Defaults to 24.
 * **stage_name** (string) - this value will show up as the base of the url path as so: `https://xxxxxxxx.execute-api.us-east-1.amazonaws.com/<StageName>/and/so/on`. Defaults to "API".
 * **use_reverse_bucket_map** (bool) - standard bucketmaps are not reverse. Defaults to false.
 * **vpc_security_group_ids** (list(string)) - list of security groups for the Lambda function

@@ -14,7 +14,7 @@ markupsafe==3.0.3
     # via jinja2
 pygments==2.20.0
     # via -r requirements/requirements-make.in
-pymdown-extensions==10.21.2
+pymdown-extensions==10.21.3
     # via -r requirements/requirements-make.in
 pyyaml==6.0.3
     # via pymdown-extensions

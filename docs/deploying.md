@@ -236,15 +236,15 @@ aws cloudformation deploy --profile=${AWS_PROFILE} --region=${AWS_REGION} \
         Maturity=DEV \
         PermissionsBoundaryName=NGAPShRoleBoundary \
         PrivateVPC=$VPCID \
-        SessionTTL=168 \
+        SessionTTL=24 \
         StageName=API \
         URSAuthCredsSecretName="urs_creds_for_tea" \
         UseReverseBucketMap="False" \
         UseCorsCookieDomain="False" \
         VPCSecurityGroupIDs=$SECURITYGROUP \
         VPCSubnetIDs=$SUBNETID
-
 ```
+
 ### From Terraform
 
 Why would you want to deploy it from Terraform? Just use

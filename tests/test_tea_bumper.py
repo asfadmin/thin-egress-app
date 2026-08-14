@@ -35,7 +35,7 @@ def test_lambda(client_iam, client_lambda, test_lambda_code_zip):
 
     client_lambda.create_function(
         FunctionName="test-lambda",
-        Runtime="python3.10",
+        Runtime="python3.12",
         Role=role["Arn"],
         Code={
             "ZipFile": b64encode(test_lambda_code_zip)

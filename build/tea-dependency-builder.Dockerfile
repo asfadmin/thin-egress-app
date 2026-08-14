@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.10
+FROM public.ecr.aws/lambda/python:3.12
 
-RUN yum install -y git zip
+RUN dnf install -y git zip
 RUN pip install pip-tools

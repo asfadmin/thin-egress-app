@@ -620,7 +620,7 @@ Resources:
           JWT_ALGO: !Ref JwtAlgo
           ENABLE_S3_CREDENTIALS_ENDPOINT: !Ref EnableS3CredentialsEndpoint
           AWS_LAMBDA_EXEC_WRAPPER: !Ref OtLambdaExecWrapper
-          OPENTELEMETRY_COLLECTOR_CONFIG_FILE: !Ref OtCollectorConfigFile
+          OPENTELEMETRY_COLLECTOR_CONFIG_URI: !Ref OtCollectorConfigFile
           OTEL_LOG_LEVEL: !Ref OtLogLevel
           OTEL_SERVICE_NAME: !Ref OtServiceName
           OTEL_TRACES_SAMPLER: !Ref OtTracesSampler
@@ -631,7 +631,7 @@ Resources:
       Runtime: 'python3.12'
       Layers:
         - !Ref EgressLambdaDependencyLayer
-        - !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python-amd64-ver-1-25-0:1"
+        - !Sub "arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python-amd64-ver-1-32-0:3"
       MemorySize: !Ref LambdaMemory
 
   ExtDomainName:

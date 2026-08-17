@@ -22,7 +22,7 @@ cffi==2.1.1
     # via
     #   -c requirements/requirements.txt
     #   cryptography
-charset-normalizer==3.5.0
+charset-normalizer==3.5.1
     # via requests
 click==8.4.2
     # via
@@ -42,7 +42,7 @@ docker==7.2.0
     # via moto
 idna==3.18
     # via requests
-importlib-metadata==7.1.0
+importlib-metadata==8.6.1
     # via opentelemetry-api
 iniconfig==2.3.0
     # via pytest
@@ -57,12 +57,15 @@ markupsafe==3.0.3
     #   werkzeug
 moto[awslambda]==5.2.2
     # via -r requirements/requirements-dev.in
-opentelemetry-api==1.25.0
+opentelemetry-api==1.32.0
     # via
     #   -c requirements/constraints.txt
     #   opentelemetry-instrumentation
-opentelemetry-instrumentation==0.48b0
+    #   opentelemetry-semantic-conventions
+opentelemetry-instrumentation==0.53b0
     # via -r requirements/requirements-dev.in
+opentelemetry-semantic-conventions==0.53b0
+    # via opentelemetry-instrumentation
 packaging==26.3
     # via
     #   -c requirements/requirements.txt
@@ -80,7 +83,7 @@ pycparser==3.0
     # via
     #   -c requirements/requirements.txt
     #   cffi
-pygments==2.20.0
+pygments==2.21.0
     # via pytest
 pyproject-hooks==1.2.0
     # via

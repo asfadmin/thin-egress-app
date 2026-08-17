@@ -5,8 +5,8 @@ receivers:
       http:
 
 exporters:
-  logging:
-    loglevel: debug
+  debug:
+    verbosity: basic
 
   otlphttp/otelcollector:
     endpoint: "${OTEL_COLLECTOR_URL}"
@@ -17,4 +17,4 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [otlphttp/otelcollector,logging]
+      exporters: [otlphttp/otelcollector,debug]

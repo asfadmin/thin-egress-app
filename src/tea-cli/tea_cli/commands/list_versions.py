@@ -4,13 +4,14 @@ import re
 import urllib.parse
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List
 
 import boto3
 
 log = logging.getLogger(__name__)
 
-VERSION_PATTERN = re.compile(r"tea-(code|cloudformation|dependencylayer|terraform|)-(build\..+)\.(zip|yaml)")
+VERSION_PATTERN = re.compile(
+    r"tea-(code|cloudformation|dependencylayer|terraform|)-(build\..+)\.(zip|yaml)",
+)
 
 
 @dataclass
@@ -42,7 +43,7 @@ class TeaVersionResolver:
     def __init__(self, session: boto3.Session):
         self.session = session
 
-    def get_versions(self) -> List[TeaVersion]:
+    def get_versions(self) -> list[TeaVersion]:
         client = self.session.client("s3")
 
         paginator = client.get_paginator("list_objects_v2")
@@ -51,7 +52,7 @@ class TeaVersionResolver:
 
         for result in paginator.paginate(
             Bucket="asf.public.code",
-            Prefix="thin-egress-app/tea-"
+            Prefix="thin-egress-app/tea-",
         ):
             bucket = result["Name"]
 
@@ -71,7 +72,7 @@ class TeaVersionResolver:
                 entry["code"],
                 entry["dependencylayer"],
                 entry["cloudformation"],
-                entry["terraform"]
+                entry["terraform"],
             )
             for name, entry in versions.items()
             if set(entry.keys()) == {"code", "cloudformation", "dependencylayer", "terraform"}
@@ -101,7 +102,7 @@ def configure_parser(parser: argparse.ArgumentParser):
 
 def handle_args(args: argparse.Namespace):
     list_versions(
-        profile_name=args.profile
+        profile_name=args.profile,
     )
 
 

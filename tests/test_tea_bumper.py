@@ -21,7 +21,7 @@ def test_lambda_code_zip():
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr(
             "lambda_handler.py",
-            "lambda_handler = lambda event, context: None"
+            "lambda_handler = lambda event, context: None",
         )
     return buf.getvalue()
 
@@ -30,7 +30,7 @@ def test_lambda_code_zip():
 def test_lambda(client_iam, client_lambda, test_lambda_code_zip):
     role = client_iam.create_role(
         RoleName="lambda-role",
-        AssumeRolePolicyDocument="{}"
+        AssumeRolePolicyDocument="{}",
     )["Role"]
 
     client_lambda.create_function(
@@ -38,8 +38,8 @@ def test_lambda(client_iam, client_lambda, test_lambda_code_zip):
         Runtime="python3.12",
         Role=role["Arn"],
         Code={
-            "ZipFile": b64encode(test_lambda_code_zip)
-        }
+            "ZipFile": b64encode(test_lambda_code_zip),
+        },
     )
     print(client_lambda.list_functions())
 
@@ -55,9 +55,9 @@ def test_lambda_handler(mock_datetime, client_lambda, test_lambda, context):
     tea_bumper.lambda_handler(None, context)
 
     assert client_lambda.get_function_configuration(
-        FunctionName="test-lambda"
+        FunctionName="test-lambda",
     )["Environment"] == {
         "Variables": {
-            "BUMP": "0, request_1234"
+            "BUMP": "0, request_1234",
         }
     }

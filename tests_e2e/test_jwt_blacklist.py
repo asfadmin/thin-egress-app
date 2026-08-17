@@ -24,7 +24,7 @@ def endpoint_patcher(aws_lambda_client, aws_function_name):
 
 # TODO(reweeden): Instead of patching the blacklist which requires that we have proper AWS credentials,
 # lets just use two different accounts instead
-class EndpointPatcher():
+class EndpointPatcher:
     def __init__(self, aws_lambda_client, aws_function_name):
         self.aws_lambda_client = aws_lambda_client
         self.aws_function_name = aws_function_name
@@ -33,7 +33,7 @@ class EndpointPatcher():
     def __call__(self, endpoint):
         endpoint_dict = {"BLACKLIST_ENDPOINT": endpoint}
         lambda_configuration = self.aws_lambda_client.get_function_configuration(
-            FunctionName=self.aws_function_name
+            FunctionName=self.aws_function_name,
         )
 
         new_env_vars = lambda_configuration["Environment"]
@@ -42,7 +42,7 @@ class EndpointPatcher():
 
         self.aws_lambda_client.update_function_configuration(
             FunctionName=self.aws_function_name,
-            Environment=new_env_vars
+            Environment=new_env_vars,
         )
 
         time.sleep(3)
@@ -52,7 +52,7 @@ class EndpointPatcher():
         finally:
             self.aws_lambda_client.update_function_configuration(
                 FunctionName=self.aws_function_name,
-                Environment=old_env_vars
+                Environment=old_env_vars,
             )
             time.sleep(3)
 

@@ -15,7 +15,10 @@ def test_auth_process(urls, api_host, creds):
 
     url_earthdata = resp1.url
     urs_username, urs_password = creds.get(url_earthdata)
-    resp2 = session.get(url_earthdata, auth=HTTPBasicAuth(urs_username, str(urs_password)))
+    resp2 = session.get(
+        url_earthdata,
+        auth=HTTPBasicAuth(urs_username, str(urs_password)),
+    )
 
     assert resp2.status_code == 200
     cookiejar = session.cookies
@@ -23,11 +26,13 @@ def test_auth_process(urls, api_host, creds):
     # Copy .asf.alaska.edu cookies to match API Address
     for z in cookiejar:
         if "asf.alaska.edu" in z.domain:
-            cookiejar.set_cookie(requests.cookies.create_cookie(
-                domain=api_host,
-                name=z.name,
-                value=z.value
-            ))
+            cookiejar.set_cookie(
+                requests.cookies.create_cookie(
+                    domain=api_host,
+                    name=z.name,
+                    value=z.value,
+                )
+            )
 
     final_request = session.get(url, cookies=cookiejar)
 

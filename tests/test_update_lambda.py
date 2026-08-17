@@ -16,13 +16,16 @@ def context():
 
 @pytest.fixture
 def test_role_policy_document():
-    return json.dumps({
-        "Version": "2012-10-17",
-        "Statement": {
-            "Effect": "Allow",
-            "Action": "s3:*", "Resource": "*"
+    return json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": {
+                "Effect": "Allow",
+                "Action": "s3:*",
+                "Resource": "*",
+            },
         }
-    })
+    )
 
 
 @pytest.fixture
@@ -30,7 +33,7 @@ def test_role_blank(client_iam):
     role_name = "test_role"
     client_iam.create_role(
         RoleName=role_name,
-        AssumeRolePolicyDocument="{}"
+        AssumeRolePolicyDocument="{}",
     )
     return role_name
 
@@ -40,12 +43,12 @@ def test_role(test_role_blank, client_iam, test_role_policy_document):
     client_iam.put_role_policy(
         RoleName=test_role_blank,
         PolicyName="foo",
-        PolicyDocument=test_role_policy_document
+        PolicyDocument=test_role_policy_document,
     )
     client_iam.put_role_policy(
         RoleName=test_role_blank,
         PolicyName="bar",
-        PolicyDocument=test_role_policy_document
+        PolicyDocument=test_role_policy_document,
     )
     return test_role_blank
 
@@ -58,7 +61,7 @@ def test_lambda_handler(
     test_role,
     client_iam,
     context,
-    monkeypatch
+    monkeypatch,
 ):
     monkeypatch.setenv("iam_role_name", test_role)
     monkeypatch.setenv("policy_name", "test_policy")
@@ -69,14 +72,14 @@ def test_lambda_handler(
     update_lambda.lambda_handler(event, context)
 
     assert client_iam.list_role_policies(
-        RoleName=test_role
+        RoleName=test_role,
     )["PolicyNames"] == ["test_policy"]
 
     mock_cfnresponse.send.assert_called_once_with(
         event,
         context,
         mock_cfnresponse.SUCCESS,
-        {"Data": mock.ANY}
+        {"Data": mock.ANY},
     )
 
 
@@ -88,7 +91,7 @@ def test_lambda_handler_no_response(
     test_role,
     client_iam,
     context,
-    monkeypatch
+    monkeypatch,
 ):
     monkeypatch.setenv("iam_role_name", test_role)
     monkeypatch.setenv("policy_name", "test_policy")
@@ -99,7 +102,7 @@ def test_lambda_handler_no_response(
     update_lambda.lambda_handler(event, context)
 
     assert client_iam.list_role_policies(
-        RoleName=test_role
+        RoleName=test_role,
     )["PolicyNames"] == ["test_policy"]
 
     mock_cfnresponse.send.assert_not_called()
@@ -113,7 +116,7 @@ def test_lambda_handler_no_policy_names(
     test_role_blank,
     client_iam,
     context,
-    monkeypatch
+    monkeypatch,
 ):
     monkeypatch.setenv("iam_role_name", test_role_blank)
     monkeypatch.setenv("policy_name", "test_policy")
@@ -124,7 +127,7 @@ def test_lambda_handler_no_policy_names(
     update_lambda.lambda_handler(event, context)
 
     assert client_iam.list_role_policies(
-        RoleName=test_role_blank
+        RoleName=test_role_blank,
     )["PolicyNames"] == ["test_policy"]
 
     mock_cfnresponse.send.assert_not_called()
@@ -138,12 +141,21 @@ def test_lambda_handler_error(mock_cfnresponse, mock_get_region_cidrs, context):
 
     update_lambda.lambda_handler(event, context)
 
-    mock_cfnresponse.send.assert_called_once_with(event, context, mock_cfnresponse.FAILED, {"Data": mock.ANY})
+    mock_cfnresponse.send.assert_called_once_with(
+        event,
+        context,
+        mock_cfnresponse.FAILED,
+        {"Data": mock.ANY},
+    )
 
 
 @mock.patch(f"{MODULE}.get_region_cidrs")
 @mock.patch(f"{MODULE}.cfnresponse")
-def test_lambda_handler_error_no_response(mock_cfnresponse, mock_get_region_cidrs, context):
+def test_lambda_handler_error_no_response(
+    mock_cfnresponse,
+    mock_get_region_cidrs,
+    context,
+):
     mock_get_region_cidrs.side_effect = Exception("mock exception")
     event = {}
 
@@ -154,46 +166,48 @@ def test_lambda_handler_error_no_response(mock_cfnresponse, mock_get_region_cidr
 
 @mock.patch(f"{MODULE}.urllib.request")
 def test_get_region_cidrs(mock_request):
-    data = json.dumps({
-        "prefixes": [
-            # Correct service and region
-            {
-                "ip_prefix": "10.10.0.0/24",
-                "service": "AMAZON",
-                "region": "us-east-1"
-            },
-            # Wrong service
-            {
-                "ip_prefix": "10.20.0.0/24",
-                "service": "SOMETHING_ELSE",
-                "region": "us-east-1"
-            },
-            # Wrong region
-            {
-                "ip_prefix": "10.30.0.0/24",
-                "service": "AMAZON",
-                "region": "us-west-2"
-            },
-            # Two prefixes that should be merged
-            {
-                "ip_prefix": "10.40.0.0/24",
-                "service": "AMAZON",
-                "region": "us-east-1"
-            },
-            {
-                "ip_prefix": "10.40.0.0/16",
-                "service": "AMAZON",
-                "region": "us-east-1"
-            },
-        ]
-    }).encode()
+    data = json.dumps(
+        {
+            "prefixes": [
+                # Correct service and region
+                {
+                    "ip_prefix": "10.10.0.0/24",
+                    "service": "AMAZON",
+                    "region": "us-east-1",
+                },
+                # Wrong service
+                {
+                    "ip_prefix": "10.20.0.0/24",
+                    "service": "SOMETHING_ELSE",
+                    "region": "us-east-1",
+                },
+                # Wrong region
+                {
+                    "ip_prefix": "10.30.0.0/24",
+                    "service": "AMAZON",
+                    "region": "us-west-2",
+                },
+                # Two prefixes that should be merged
+                {
+                    "ip_prefix": "10.40.0.0/24",
+                    "service": "AMAZON",
+                    "region": "us-east-1",
+                },
+                {
+                    "ip_prefix": "10.40.0.0/16",
+                    "service": "AMAZON",
+                    "region": "us-east-1",
+                },
+            ]
+        }
+    ).encode()
     mock_request.urlopen.return_value = io.BytesIO(data)
     ips = update_lambda.get_region_cidrs("us-east-1")
 
     assert ips == [
         "10.10.0.0/24",
         "10.40.0.0/16",
-        "10.0.0.0/8"
+        "10.0.0.0/8",
     ]
 
 

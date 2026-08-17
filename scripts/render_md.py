@@ -14,7 +14,7 @@ def render_markdown(inpath: Path, outpath: Optional[Path] = None):
             "pymdownx.betterem",
             "pymdownx.highlight",
             "pymdownx.superfences",
-        ]
+        ],
     )
     outpath = outpath or inpath.with_suffix(".html")
     outpath.write_text(rendered)

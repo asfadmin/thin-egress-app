@@ -39,7 +39,7 @@ def test_cors_preflight_options(urls, auth_cookies):
     url = urls.join(urls.METADATA_FILE_CH)
     request_headers = {
         "Origin": origin_host,
-        "Access-Control-Request-Method": "GET"
+        "Access-Control-Request-Method": "GET",
     }
 
     r = requests.options(
@@ -52,15 +52,22 @@ def test_cors_preflight_options(urls, auth_cookies):
 
     assert r.status_code == 204
     assert headers["Access-Control-Allow-Origin"] == origin_host
-    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {"GET", "HEAD", "OPTIONS"}
-    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {"Authorization", "Origin"}
+    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {
+        "GET",
+        "HEAD",
+        "OPTIONS",
+    }
+    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {
+        "Authorization",
+        "Origin",
+    }
 
 
 def test_cors_preflight_options_origin_null(urls, auth_cookies):
     url = urls.join(urls.METADATA_FILE_CH)
     request_headers = {
         "Origin": "null",
-        "Access-Control-Request-Method": "GET"
+        "Access-Control-Request-Method": "GET",
     }
 
     r = requests.options(
@@ -73,5 +80,12 @@ def test_cors_preflight_options_origin_null(urls, auth_cookies):
 
     assert r.status_code == 204
     assert headers["Access-Control-Allow-Origin"] == "null"
-    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {"GET", "HEAD", "OPTIONS"}
-    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {"Authorization", "Origin"}
+    assert set(headers["Access-Control-Allow-Methods"].split(", ")) >= {
+        "GET",
+        "HEAD",
+        "OPTIONS",
+    }
+    assert set(headers["Access-Control-Allow-Headers"].split(", ")) >= {
+        "Authorization",
+        "Origin",
+    }

@@ -18,7 +18,7 @@ def test_urs_auth_redirect_for_auth_downloads(urls, auth_cookies, urs_username):
     assert r.is_redirect is True
     assert r.headers["Location"] is not None
     query_params = urllib.parse.parse_qs(
-        urllib.parse.urlparse(r.headers["Location"]).query
+        urllib.parse.urlparse(r.headers["Location"]).query,
     )
     assert query_params["A-userid"] == [urs_username]
     assert "oauth/authorize" not in r.headers["Location"]

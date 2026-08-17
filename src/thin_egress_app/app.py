@@ -27,6 +27,7 @@ except ImportError:
     def inject(obj):
         return obj
 
+
 from rain_api_core.auth import JwtManager, UserProfile
 from rain_api_core.aws_util import (
     check_in_region_request,
@@ -120,7 +121,9 @@ def initialize(event, get_response):
     JWT_MANAGER.black_list = get_black_list()
     jwt_keys = retrieve_secret(os.getenv("JWT_KEY_SECRET_NAME"))
     JWT_MANAGER.public_key = base64.b64decode(jwt_keys.get("rsa_pub_key", "")).decode()
-    JWT_MANAGER.private_key = base64.b64decode(jwt_keys.get("rsa_priv_key", "")).decode()
+    JWT_MANAGER.private_key = base64.b64decode(
+        jwt_keys.get("rsa_priv_key", ""),
+    ).decode()
 
     return get_response(event)
 
@@ -132,7 +135,7 @@ def set_log_context(event: chalice.app.Request, get_response):
     log_context(
         route=event.path,
         request_id=event.lambda_context.aws_request_id,
-        origin_request_id=origin_request_id
+        origin_request_id=origin_request_id,
     )
     # JWT_MANAGER.get_profile_from_headers() below generates log messages, so the above log_context() sets the
     # vars for it to use while it's doing the username lookup
@@ -161,7 +164,7 @@ def forward_origin_request_id(event: chalice.app.Request, get_response):
 
 
 class TeaException(Exception):
-    """ base exception for TEA """
+    """base exception for TEA"""
 
 
 class RequestAuthorizer:
@@ -190,17 +193,23 @@ class RequestAuthorizer:
             token, *_ = args
             # we will deal with "bearer" auth here. "Basic" auth will be handled by do_auth_and_return()
             log.debug("we got an Authorization header. %s", authorization)
-            user_profile, self._response = self._get_profile_and_response_from_bearer(token)
+            user_profile, self._response = self._get_profile_and_response_from_bearer(
+                token,
+            )
 
             if user_profile is None:
                 # Not a successful event.
                 return None
 
             log_context(user_id=user_profile.user_id)
-            log.debug("User %s has user profile: %s", user_profile.user_id, user_profile.to_jwt_payload())
+            log.debug(
+                "User %s has user profile: %s",
+                user_profile.user_id,
+                user_profile.to_jwt_payload(),
+            )
             self._headers = JWT_MANAGER.get_header_to_set_auth_cookie(
                 user_profile,
-                os.getenv("COOKIE_DOMAIN", "")
+                os.getenv("COOKIE_DOMAIN", ""),
             )
             return user_profile
 
@@ -222,7 +231,12 @@ class RequestAuthorizer:
                     "requestid": get_request_id(),
                 }
 
-                self._response = make_html_response(template_vars, {}, status_code, "error.html")
+                self._response = make_html_response(
+                    template_vars,
+                    {},
+                    status_code,
+                    "error.html",
+                )
             else:
                 self._response = Response(
                     body={
@@ -267,7 +281,12 @@ class RequestAuthorizer:
                     "requestid": get_request_id(),
                 }
 
-                response = make_html_response(template_vars, {}, status_code, "error.html")
+                response = make_html_response(
+                    template_vars,
+                    {},
+                    status_code,
+                    "error.html",
+                )
             else:
                 response = Response(
                     body={
@@ -287,13 +306,18 @@ class RequestAuthorizer:
                     "title": description,
                     "status_code": status_code,
                     "contentstring": (
-                        f'Could not fetch data because "{description}".'
+                        f'Could not fetch data because "{description}".'  # ruff hint
                         f"Full error: {e.msg}"
                     ),
                     "requestid": get_request_id(),
                 }
 
-                response = make_html_response(template_vars, {}, status_code, "error.html")
+                response = make_html_response(
+                    template_vars,
+                    {},
+                    status_code,
+                    "error.html",
+                )
             else:
                 response = Response(body=e.msg, status_code=status_code, headers={})
             return None, response
@@ -393,12 +417,14 @@ def get_api_request_uuid(query_params):
 
 @with_trace()
 def cumulus_log_message(outcome: str, code: int, http_method: str, k_v: dict):
-    k_v.update({
-        "code": code,
-        "http_method": http_method,
-        "status": outcome,
-        "requestid": get_request_id(),
-    })
+    k_v.update(
+        {
+            "code": code,
+            "http_method": http_method,
+            "status": outcome,
+            "requestid": get_request_id(),
+        }
+    )
     print(json.dumps(k_v))
 
 
@@ -424,7 +450,7 @@ def restore_bucket_vars():
                 b_map_dict,
                 bucket_name_prefix=get_bucket_name_prefix(),
                 reverse=reverse,
-                iam_compatible=iam_compatible
+                iam_compatible=iam_compatible,
             )
         except ValueError:
             log.error("Invalid bucket map, please consult the TEA documentation")
@@ -432,7 +458,7 @@ def restore_bucket_vars():
                 log.info(
                     "Your bucket map permissions are configured in such a way "
                     "that they cannot be converted to an IAM policy. Either "
-                    "fix your bucket map, or disable S3 credentials."
+                    "fix your bucket map, or disable S3 credentials.",
                 )
             raise
     else:
@@ -445,10 +471,7 @@ def do_auth_and_return(ctxt):
     here = ctxt["path"]
     if os.getenv("DOMAIN_NAME"):
         # Pop STAGE value off the request if we have a custom domain
-        # TODO(reweeden): python3.9 use `str.removeprefix`
-        prefix = f"/{STAGE}"
-        if here.startswith(prefix):
-            here = here[len(prefix):]
+        here = here.removeprefix(f"/{STAGE}")
 
     log.info("here will be %s", here)
     redirect_here = quote_plus(here)
@@ -484,12 +507,7 @@ def is_cors_allowed():
 
     log.debug("origin_header: %r, cors_origin: %r", origin_header, cors_origin)
     return bool(
-        origin_header
-        and cors_origin
-        and (
-            origin_header.endswith(cors_origin)
-            or origin_header.lower() == "null"
-        )
+        origin_header and cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == "null"),
     )
 
 
@@ -511,11 +529,16 @@ def make_redirect(to_url, headers=None, status_code=301):
 
 
 @with_trace()
-def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, template_file: str = "root.html"):
+def make_html_response(
+    t_vars: dict,
+    headers: dict,
+    status_code: int = 200,
+    template_file: str = "root.html",
+):
     template_vars = {
         "STAGE": STAGE if not os.getenv("DOMAIN_NAME") else None,
         "status_code": status_code,
-        **t_vars
+        **t_vars,
     }
 
     return Response(
@@ -523,8 +546,8 @@ def make_html_response(t_vars: dict, headers: dict, status_code: int = 200, temp
         status_code=status_code,
         headers={
             **headers,
-            "Content-Type": "text/html"
-        }
+            "Content-Type": "text/html",
+        },
     )
 
 
@@ -549,19 +572,24 @@ def get_bcconfig(user_id: str) -> dict:
 @cachetools.cached(
     cachetools.LRUCache(maxsize=128),
     # Cache by bucketname only
-    key=lambda _, bucketname: hashkey(bucketname)
+    key=lambda _, bucketname: hashkey(bucketname),
 )
 def get_bucket_region(session, bucketname) -> str:
     try:
         _time = time.time()
-        bucket_region = session.client("s3").get_bucket_location(
-            Bucket=bucketname,
-        )["LocationConstraint"] or "us-east-1"
-        log.info(return_timing_object(
-            service="s3",
-            endpoint=f"client().get_bucket_location({bucketname})",
-            duration=duration(_time)
-        ))
+        bucket_region = (
+            session.client("s3").get_bucket_location(
+                Bucket=bucketname,
+            )["LocationConstraint"]
+            or "us-east-1"
+        )
+        log.info(
+            return_timing_object(
+                service="s3",
+                endpoint=f"client().get_bucket_location({bucketname})",
+                duration=duration(_time),
+            )
+        )
         log.debug("bucket %s is in region %s", bucketname, bucket_region)
 
         return bucket_region
@@ -587,7 +615,13 @@ def get_user_ip():
 
 
 @with_trace()
-def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_request_uuid):
+def try_download_from_bucket(
+    bucket,
+    filename,
+    user_profile,
+    headers: dict,
+    api_request_uuid,
+):
     timer = Timer()
     timer.mark()
     user_id = None
@@ -638,7 +672,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_
     log.debug("this region: %s", os.getenv("AWS_DEFAULT_REGION"))
     if bucket_region != os.getenv("AWS_DEFAULT_REGION"):
         log.warning(
-            "bucket %s is in region %s, we are in region %s! "
+            "bucket %s is in region %s, we are in region %s! "  # ruff hint
             "This is double egress in Proxy mode!",
             bucket,
             bucket_region,
@@ -660,8 +694,18 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_
 
         if not os.getenv("SUPPRESS_HEAD"):
             _time = time.time()
-            head_check = client.head_object(Bucket=bucket, Key=filename, Range=(range_header or ""))
-            log.info(return_timing_object(service="s3", endpoint="client.head_object()", duration=duration(_time)))
+            head_check = client.head_object(
+                Bucket=bucket,
+                Key=filename,
+                Range=(range_header or ""),
+            )
+            log.info(
+                return_timing_object(
+                    service="s3",
+                    endpoint="client.head_object()",
+                    duration=duration(_time),
+                )
+            )
 
         redirheaders = {"Range": range_header} if range_header else {}
 
@@ -680,7 +724,7 @@ def try_download_from_bucket(bucket, filename, user_profile, headers: dict, api_
             expires_in,
             user_id,
             "GET",
-            api_request_uuid
+            api_request_uuid,
         )
         s3_host = urlparse(presigned_url).netloc
         log.debug("Presigned URL host was %s", s3_host)
@@ -757,7 +801,10 @@ def root():
 @with_trace(context={})
 def logout():
     user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
-    template_vars = {"title": "Logged Out", "URS_URL": get_urs_url(app.current_request.context)}
+    template_vars = {
+        "title": "Logged Out",
+        "URS_URL": get_urs_url(app.current_request.context),
+    }
 
     if user_profile is not None:
         template_vars["contentstring"] = "You are logged out."
@@ -768,7 +815,12 @@ def logout():
         "Content-Type": "text/html",
     }
 
-    headers.update(JWT_MANAGER.get_header_to_set_auth_cookie(None, os.getenv("COOKIE_DOMAIN", "")))
+    headers.update(
+        JWT_MANAGER.get_header_to_set_auth_cookie(
+            None,
+            os.getenv("COOKIE_DOMAIN", ""),
+        )
+    )
     return make_html_response(template_vars, headers, 200, "root.html")
 
 
@@ -783,7 +835,7 @@ def login():
             app.current_request.context,
             JWT_MANAGER,
             os.getenv("COOKIE_DOMAIN", ""),
-            aux_headers=aux_headers
+            aux_headers=aux_headers,
         )
     except ClientError as e:
         log.error("%s", e)
@@ -831,6 +883,7 @@ def locate():
 
     bucket_name = query_params.get("bucket_name")
     matching_paths = [
+        # ruff hint
         entry.bucket_path
         for entry in b_map.entries()
         if entry.bucket == bucket_name
@@ -870,7 +923,13 @@ def get_new_session_client(user_id):
 
     _time = time.time()
     new_bc_client = session.client("s3", **params)
-    log.info(return_timing_object(service="s3", endpoint="session.client()", duration=duration(_time)))
+    log.info(
+        return_timing_object(
+            service="s3",
+            endpoint="session.client()",
+            duration=duration(_time),
+        )
+    )
     return new_bc_client
 
 
@@ -907,7 +966,13 @@ def try_download_head(bucket, filename):
             # TODO: Should both `client.get_object()` be `client.head_object()` ?!?!?!
             log.info("Downloading range %s", range_header)
             client.get_object(Bucket=bucket, Key=filename, Range=range_header)
-        log.info(return_timing_object(service="s3", endpoint="client.get_object()", duration=duration(_time)))
+        log.info(
+            return_timing_object(
+                service="s3",
+                endpoint="client.get_object()",
+                duration=duration(_time),
+            )
+        )
         timer.mark()
     except ClientError as e:
         log.warning("Could not get head for s3://%s/%s: %s", bucket, filename, e)
@@ -987,7 +1052,10 @@ def dynamic_url_options():
     log.info("Received CORS preflight request for method: %r", request_method)
 
     log.debug("is_cors_allowed: %s", is_cors_allowed())
-    log.debug("request_method in allowed_methods: %s", request_method in allowed_methods)
+    log.debug(
+        "request_method in allowed_methods: %s",
+        request_method in allowed_methods,
+    )
     if is_cors_allowed() and request_method in allowed_methods:
         headers = {
             "Access-Control-Allow-Methods": ", ".join(allowed_methods),
@@ -1032,7 +1100,7 @@ def dynamic_url_head():
         template_vars = {
             "contentstring": "Bucket not available",
             "title": "Bucket not available",
-            "requestid": get_request_id()
+            "requestid": get_request_id(),
         }
         headers = {}
         return make_html_response(template_vars, headers, 404, "error.html")
@@ -1081,7 +1149,7 @@ def dynamic_url():
         template_vars = {
             "contentstring": "Request does not appear to be valid.",
             "title": "Request Not Serviceable",
-            "requestid": get_request_id()
+            "requestid": get_request_id(),
         }
         headers = {}
         return make_html_response(template_vars, headers, 404, "error.html")
@@ -1106,7 +1174,12 @@ def dynamic_url():
 
     timer.mark("user_in_group()")
     aux_headers = get_aux_request_headers()
-    u_in_g, new_user_profile = user_in_group(required_groups, user_profile, False, aux_headers=aux_headers)
+    u_in_g, new_user_profile = user_in_group(
+        required_groups,
+        user_profile,
+        False,
+        aux_headers=aux_headers,
+    )
     timer.mark()
 
     new_jwt_cookie_headers = {}
@@ -1114,7 +1187,11 @@ def dynamic_url():
         log.debug("We got new profile from user_in_group() %s", new_user_profile)
         user_profile = new_user_profile
         new_jwt_cookie_headers.update(
-            JWT_MANAGER.get_header_to_set_auth_cookie(user_profile, os.getenv("COOKIE_DOMAIN", "")))
+            JWT_MANAGER.get_header_to_set_auth_cookie(
+                user_profile,
+                os.getenv("COOKIE_DOMAIN", ""),
+            )
+        )
 
     log.debug("user_in_group: %s", u_in_g)
 
@@ -1123,9 +1200,14 @@ def dynamic_url():
         template_vars = {
             "contentstring": "This data is not currently available.",
             "title": "Could not access data",
-            "requestid": get_request_id()
+            "requestid": get_request_id(),
         }
-        return make_html_response(template_vars, new_jwt_cookie_headers, 403, "error.html")
+        return make_html_response(
+            template_vars,
+            new_jwt_cookie_headers,
+            403,
+            "error.html",
+        )
 
     custom_headers.update(new_jwt_cookie_headers)
     log.debug("custom headers before try download from bucket: %s", custom_headers)
@@ -1136,7 +1218,13 @@ def dynamic_url():
 
     api_request_uuid = get_api_request_uuid(app.current_request.query_params)
 
-    return try_download_from_bucket(entry.bucket, entry.object_key, user_profile, custom_headers, api_request_uuid)
+    return try_download_from_bucket(
+        entry.bucket,
+        entry.object_key,
+        user_profile,
+        custom_headers,
+        api_request_uuid,
+    )
 
 
 @app.route("/s3credentials", methods=["GET"])
@@ -1159,6 +1247,7 @@ def s3credentials():
     log.debug("user_profile: %s", user_profile)
     client_id = get_urs_creds()["UrsId"]
     groups = {
+        # ruff hint
         group["name"]
         for group in user_profile.groups
         if group["client_id"] == client_id
@@ -1171,13 +1260,13 @@ def s3credentials():
         template_vars = {
             "contentstring": "You do not have permission to access any data.",
             "title": "Could not access data",
-            "requestid": get_request_id()
+            "requestid": get_request_id(),
         }
         return make_html_response(
             template_vars,
             authorizer.get_success_response_headers(),
             403,
-            "error.html"
+            "error.html",
         )
 
     app_name = app.current_request.headers.get("app-name", "")
@@ -1191,7 +1280,7 @@ def s3credentials():
         "accessKeyId": creds["AccessKeyId"],
         "secretAccessKey": creds["SecretAccessKey"],
         "sessionToken": creds["SessionToken"],
-        "expiration": creds["Expiration"]
+        "expiration": creds["Expiration"],
     }
 
     log.debug("timing for s3credentials()")
@@ -1200,7 +1289,7 @@ def s3credentials():
     return Response(
         body=json.dumps(creds, default=str),
         status_code=200,
-        headers=authorizer.get_success_response_headers()
+        headers=authorizer.get_success_response_headers(),
     )
 
 
@@ -1223,9 +1312,9 @@ def get_s3_credentials(user_id: str, role_session_name: str, policy: dict):
         ExternalId=user_id,
         DurationSeconds=3600,
         # NOTE: Policy max size is 2048 characters which is quite limiting.
-        # TODO(reweeden): We'll need to figure out how to accomodate large
+        # TODO(reweeden): We'll need to figure out how to accommodate large
         # bucket maps that will push us over this limit.
-        Policy=json.dumps(policy, separators=(",", ":"))
+        Policy=json.dumps(policy, separators=(",", ":")),
     )
     return response["Credentials"]
 
@@ -1249,10 +1338,12 @@ def profile():
 @app.route("/pubkey", methods=["GET"])
 @with_trace(context={})
 def pubkey():
-    body = json.dumps({
-        "rsa_pub_key": JWT_MANAGER.public_key,
-        "algorithm": JWT_MANAGER.algorithm,
-    })
+    body = json.dumps(
+        {
+            "rsa_pub_key": JWT_MANAGER.public_key,
+            "algorithm": JWT_MANAGER.algorithm,
+        }
+    )
     return Response(
         body=body,
         status_code=200,

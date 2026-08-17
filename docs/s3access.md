@@ -33,7 +33,7 @@ import requests
 resp = requests.get(
     "https://your-tea-host/s3credentials",
     headers={"app-name": "my-application"},
-    cookies={"asf-urs": "<your jwt token>"}
+    cookies={"asf-urs": "<your jwt token>"},
 )
 print(resp.json())
 ```
@@ -84,7 +84,7 @@ def lambda_handler(event, context):
     bearer_token = event["BearerToken"]
     req = urllib.request.Request(
         url=tea_url,
-        headers={"Authorization": f"Bearer {bearer_token}"}
+        headers={"Authorization": f"Bearer {bearer_token}"},
     )
     with urllib.request.urlopen(req) as f:
         creds = json.loads(f.read().decode())
@@ -94,7 +94,7 @@ def lambda_handler(event, context):
         "s3",
         aws_access_key_id=creds["accessKeyId"],
         aws_secret_access_key=creds["secretAccessKey"],
-        aws_session_token=creds["sessionToken"]
+        aws_session_token=creds["sessionToken"],
     )
     # Lambda needs to have permission to upload to destination bucket
     upload_client = boto3.client("s3")

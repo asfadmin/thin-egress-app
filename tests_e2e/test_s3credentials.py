@@ -20,5 +20,5 @@ def test_authenticated_user_can_get_creds(urls, auth_cookies):
         "accessKeyId",
         "secretAccessKey",
         "sessionToken",
-        "expiration"
+        "expiration",
     ]

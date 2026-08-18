@@ -20,13 +20,13 @@ def lambda_handler(event, context):
         FunctionName=TEA_LAMBDA_NAME,
     ).get("Environment") or {"Variables": {}}
 
-    egress_env["Variables"].update({
-        "BUMP": f"{str(datetime.utcnow())}, {context.aws_request_id}"
-    })
+    egress_env["Variables"].update(
+        {"BUMP": f"{str(datetime.utcnow())}, {context.aws_request_id}"},
+    )
 
     log.debug("envvar for %s: %s", TEA_LAMBDA_NAME, egress_env["Variables"])
     response = client.update_function_configuration(
         FunctionName=TEA_LAMBDA_NAME,
-        Environment=egress_env
+        Environment=egress_env,
     )
     log.debug(response)

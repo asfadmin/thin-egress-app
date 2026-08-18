@@ -43,7 +43,7 @@ jobs:
       YAML_NAME: tea-cloudformation-run.${{ github.run_id }}.yaml
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Load environment defaults
         run: cat .github/workflows/config-public/${{ inputs.environment }}.env >> $GITHUB_ENV
@@ -177,9 +177,9 @@ jobs:
                   VPCSecurityGroupIDs= \
                   VPCSubnetIDs=
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install GDAL library
         run: |

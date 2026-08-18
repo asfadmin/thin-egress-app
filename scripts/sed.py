@@ -27,17 +27,23 @@ def pattern(arg):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("pattern", help="Regular expression to search for", type=pattern)
+    parser.add_argument(
+        "pattern",
+        help="Regular expression to search for",
+        type=pattern,
+    )
     parser.add_argument("replacement", help="Text to substitute")
     parser.add_argument(
-        "-i", "--infile",
+        "-i",
+        "--infile",
         help="Input file to read from",
-        required=True
+        required=True,
     )
     parser.add_argument(
-        "-o", "--outfile",
+        "-o",
+        "--outfile",
         help="Input file to read from",
-        default=None
+        default=None,
     )
 
     args = parser.parse_args()

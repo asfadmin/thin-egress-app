@@ -19,14 +19,16 @@ def lambda_handler(event, context):
 
         # Get the base policy and add IP list as a condition
         new_policy = get_base_policy(os.getenv("prefix"))
-        new_policy["Statement"][0]["Condition"] = {"IpAddress": {"aws:SourceIp": cidr_list}}
+        new_policy["Statement"][0]["Condition"] = {
+            "IpAddress": {"aws:SourceIp": cidr_list},
+        }
 
         # Clear out any pre-existing roles:
         RoleName = os.getenv("iam_role_name")
         response = client.list_role_policies(RoleName=RoleName)
         for PolicyName in response.get("PolicyNames", ()):
             print(f"Removing old Policy {PolicyName} from Role {RoleName}")
-            response = client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
+            client.delete_role_policy(RoleName=RoleName, PolicyName=PolicyName)
 
         # Put the new policy
         response = client.put_role_policy(
@@ -59,11 +61,10 @@ def lambda_handler(event, context):
 
 def get_region_cidrs(current_region):
     # Bandit complains with B310 on the line below. We know the URL, this is safe!
-    output = urllib.request.urlopen(
-        "https://ip-ranges.amazonaws.com/ip-ranges.json"
-    ).read().decode()  # nosec
+    output = urllib.request.urlopen("https://ip-ranges.amazonaws.com/ip-ranges.json").read().decode()  # nosec
     ip_ranges = json.loads(output)["prefixes"]
     in_region_amazon_ips = [
+        # ruff hint
         item["ip_prefix"]
         for item in ip_ranges
         if item["service"] == "AMAZON" and item["region"] == current_region
@@ -85,47 +86,47 @@ def get_base_policy(prefix):
                 "Action": [
                     "s3:GetObject",
                     "s3:ListBucket",
-                    "s3:GetBucketLocation"
+                    "s3:GetBucketLocation",
                 ],
                 "Resource": [
                     f"arn:aws:s3:::{prefix}*/*",
-                    f"arn:aws:s3:::{prefix}*"
+                    f"arn:aws:s3:::{prefix}*",
                 ],
-                "Effect": "Allow"
+                "Effect": "Allow",
             },
             {
                 "Action": [
                     "s3:GetObject",
                     "s3:ListBucket",
-                    "s3:GetBucketLocation"
+                    "s3:GetBucketLocation",
                 ],
                 "Resource": [
                     f"arn:aws:s3:::{prefix}*/*",
-                    f"arn:aws:s3:::{prefix}*"
+                    f"arn:aws:s3:::{prefix}*",
                 ],
                 "Effect": "Allow",
                 "Condition": {
                     "StringEquals": {
-                        "aws:SourceVpc": f"{vpcid}"
-                    }
-                }
+                        "aws:SourceVpc": f"{vpcid}",
+                    },
+                },
             },
             {
                 "Action": [
                     "s3:GetObject",
                     "s3:ListBucket",
-                    "s3:GetBucketLocation"
+                    "s3:GetBucketLocation",
                 ],
                 "Resource": [
                     f"arn:aws:s3:::{prefix}*/*",
-                    f"arn:aws:s3:::{prefix}*"
+                    f"arn:aws:s3:::{prefix}*",
                 ],
                 "Effect": "Allow",
                 "Condition": {
                     "StringLike": {
-                        "aws:SourceVpc": "vpc-*"
-                    }
-                }
-            }
-        ]
+                        "aws:SourceVpc": "vpc-*",
+                    },
+                },
+            },
+        ],
     }

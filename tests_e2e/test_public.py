@@ -53,7 +53,7 @@ def test_public_images_authenticated(urls, auth_cookies, urs_username, method):
     assert r.is_redirect is True
     assert r.headers["Location"] is not None
     query_params = urllib.parse.parse_qs(
-        urllib.parse.urlparse(r.headers["Location"]).query
+        urllib.parse.urlparse(r.headers["Location"]).query,
     )
     assert query_params["A-userid"] == [urs_username]
     assert "oauth/authorize" not in r.headers["Location"]
@@ -86,7 +86,7 @@ def test_bad_cookie_value_cause_URS_redirect(urls):
     url = urls.join(urls.METADATA_FILE)
     cookies = {
         "urs_user_id": "badusername",
-        "urs_access_token": "blah"
+        "urs_access_token": "blah",
     }
 
     r = requests.get(url, cookies=cookies, allow_redirects=False)

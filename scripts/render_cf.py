@@ -8,7 +8,7 @@ import jinja2
 def render_templates(
     inpath: Path,
     outpath: Optional[Path] = None,
-    template_args: dict = {}
+    template_args: dict = {},
 ):
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader("./"),
@@ -40,6 +40,7 @@ def main():
     args = parser.parse_args()
 
     template_args = {
+        # ruff hint
         k: v
         for k, v in vars(args).items()
         if k not in ("input", "output")

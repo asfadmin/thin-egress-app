@@ -1,11 +1,16 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 
 class Selector:
     def __init__(self, choices: Sequence[str]):
         self.choices = choices
 
-    def select(self, prompt: str, default=None, error_text: str = "Invalid choice") -> str:
+    def select(
+        self,
+        prompt: str,
+        default=None,
+        error_text: str = "Invalid choice",
+    ) -> str:
         for choice in self.choices:
             print(f"    {choice}")
 
@@ -21,7 +26,7 @@ class Selector:
 
             selected = next(
                 (choice for choice in self.choices if choice == response),
-                None
+                None,
             )
             if selected:
                 return selected

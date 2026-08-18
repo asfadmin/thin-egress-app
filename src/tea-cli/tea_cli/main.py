@@ -50,10 +50,7 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser_policy_sandbox = subparsers.add_parser(
         "policy-sandbox",
-        help=(
-            "run a tkinter UI for exploring S3 session policies generated from "
-            "a bucket map"
-        ),
+        help="run a tkinter UI for exploring S3 session policies generated from a bucket map",
     )
     configure_subparser(parser_policy_sandbox, policy_sandbox)
 

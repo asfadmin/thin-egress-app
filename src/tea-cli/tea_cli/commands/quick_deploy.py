@@ -4,7 +4,7 @@ import json
 import logging
 import textwrap
 import urllib.parse
-from typing import List, Optional
+from typing import Optional
 
 import boto3
 from cryptography.hazmat.primitives import serialization
@@ -45,13 +45,17 @@ def configure_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--stack-name",
         help="CloudFormation stack name",
-        type=_validate_stack_name
+        type=_validate_stack_name,
     )
     parser.add_argument("--profile", help="AWS profile")
     parser.add_argument("--region", help="AWS region override")
     parser.add_argument("--edl-uid", help="EDL app uid", dest="edl_uid")
     parser.add_argument("--edl-pass", help="EDL app password", dest="edl_password")
-    parser.add_argument("--edl-client-id", help="EDL app client ID", dest="edl_client_id")
+    parser.add_argument(
+        "--edl-client-id",
+        help="EDL app client ID",
+        dest="edl_client_id",
+    )
 
 
 def handle_args(args: argparse.Namespace):
@@ -61,7 +65,7 @@ def handle_args(args: argparse.Namespace):
         region=args.region,
         edl_uid=args.edl_uid,
         edl_password=args.edl_password,
-        edl_client_id=args.edl_client_id
+        edl_client_id=args.edl_client_id,
     )
 
 
@@ -75,13 +79,13 @@ def quick_deploy(
 ):
     session = boto3.Session(
         profile_name=profile,
-        region_name=region
+        region_name=region,
     )
     inputs = {
         "stack_name": stack_name,
         "edl_uid": edl_uid,
         "edl_password": edl_password,
-        "edl_client_id": edl_client_id
+        "edl_client_id": edl_client_id,
     }
     deployer = Deployer(session, inputs)
 
@@ -110,17 +114,17 @@ def quick_deploy(
 def _validate_stack_name(value: str):
     if not value[:1].isalpha():
         raise argparse.ArgumentTypeError(
-            f"must start with an alphabetic character: '{value}'"
+            f"must start with an alphabetic character: '{value}'",
         )
 
     if len(value) > 127:
         raise argparse.ArgumentTypeError(
-            f"must be 128 characters or less: '{value}'"
+            f"must be 128 characters or less: '{value}'",
         )
 
     if not value.replace("-", "").isalnum():
         raise argparse.ArgumentTypeError(
-            f"must contain only alphanumeric characters and hyphens: '{value}'"
+            f"must contain only alphanumeric characters and hyphens: '{value}'",
         )
 
     return value
@@ -143,7 +147,7 @@ def get_tea_version(session: boto3.Session) -> Optional[TeaVersion]:
     selected = selector.select(
         "Version to deploy",
         default=default_version.id,
-        error_text="Invalid version specified"
+        error_text="Invalid version specified",
     )
 
     return next(version for version in versions if version.id == selected)
@@ -157,7 +161,7 @@ class UrsSecretStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         stack_name = inputs.get_argument("stack_name", "Stack Name")
         secret_name = f"urs_creds_for_{stack_name}"
 
@@ -167,7 +171,7 @@ class UrsSecretStep(Step):
             Secret(
                 secret_name,
                 f"URS creds for TEA {stack_name} app",
-                self.get_secret_string(inputs)
+                self.get_secret_string(inputs),
             )
         ]
 
@@ -181,9 +185,9 @@ class UrsSecretStep(Step):
         return json.dumps(
             {
                 "UrsAuth": urs_auth.decode(),
-                "UrsId": edl_client_id
+                "UrsId": edl_client_id,
             },
-            indent=2
+            indent=2,
         )
 
 
@@ -195,7 +199,7 @@ class JwtSecretStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         stack_name = inputs.get_argument("stack_name", "Stack Name")
         secret_name = f"jwt_creds_for_{stack_name}"
 
@@ -205,7 +209,7 @@ class JwtSecretStep(Step):
             Secret(
                 secret_name,
                 f"RS256 keys for TEA {stack_name} app JWT cookies",
-                self.get_secret_string()
+                self.get_secret_string(),
             )
         ]
 
@@ -216,26 +220,26 @@ class JwtSecretStep(Step):
         # Write to files /tmp/${STACKNAME}-jwt.key and /tmp/${STACKNAME}-jwt.key.pub
         private_key = rsa.generate_private_key(
             public_exponent=65537,
-            key_size=4096
+            key_size=4096,
         )
         public_key = private_key.public_key()
 
         private_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         )
         public_pem = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
         return json.dumps(
             {
                 "rsa_priv_key": base64.b64encode(private_pem).decode(),
-                "rsa_pub_key": base64.b64encode(public_pem).decode()
+                "rsa_pub_key": base64.b64encode(public_pem).decode(),
             },
-            indent=2
+            indent=2,
         )
 
 
@@ -247,7 +251,7 @@ class BucketsStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         stack_name = inputs.get_argument("stack_name", "Stack Name")
 
         buckets = []
@@ -267,10 +271,10 @@ class SourceCodeStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         tea_version = get_tea_version(session)
         if tea_version is None:
-            return
+            return []
 
         inputs.set_state("tea_version", tea_version)
 
@@ -278,13 +282,13 @@ class SourceCodeStep(Step):
         code_bucket = inputs.get_argument(
             "code_bucket",
             "Code Bucket",
-            f"{stack_name}-code"
+            f"{stack_name}-code",
         )
 
         resources = []
         for output_name, uri in (
             ("code_key", tea_version.code_uri),
-            ("depedency_layer_key", tea_version.depedency_layer_uri)
+            ("depedency_layer_key", tea_version.depedency_layer_uri),
         ):
             parse_result = urllib.parse.urlparse(uri)
             source_bucket = parse_result.netloc
@@ -297,7 +301,7 @@ class SourceCodeStep(Step):
                     source_bucket,
                     key,
                     code_bucket,
-                    key
+                    key,
                 )
             )
 
@@ -311,13 +315,13 @@ class BucketMapStep(Step):
     def get_resources(
         self,
         session: boto3.Session,
-        inputs: Inputs
-    ) -> List[Resource]:
+        inputs: Inputs,
+    ) -> list[Resource]:
         stack_name = inputs.get_argument("stack_name", "Stack Name")
         config_bucket = inputs.get_argument(
             "config_bucket",
             "Config Bucket",
-            f"{stack_name}-config"
+            f"{stack_name}-config",
         )
 
         return [
@@ -332,7 +336,9 @@ class BucketMapStep(Step):
                     PUBLIC_BUCKETS:
                       public: "Public, no EDL"
                     """
-                ).strip().encode()
+                )
+                .strip()
+                .encode(),
             )
         ]
 
@@ -345,30 +351,30 @@ class TestFilesStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         stack_name = inputs.get_argument("stack_name", "Stack Name")
         public_bucket = inputs.get_argument(
             "public_bucket",
             "Public Bucket",
-            f"{stack_name}-public"
+            f"{stack_name}-public",
         )
         restricted_bucket = inputs.get_argument(
             "restricted_bucket",
             "Restricted Bucket",
-            f"{stack_name}-restricted"
+            f"{stack_name}-restricted",
         )
 
         return [
             BucketObject(
                 public_bucket,
                 "test.txt",
-                b"this is a public file"
+                b"this is a public file",
             ),
             BucketObject(
                 restricted_bucket,
                 "test.txt",
-                b"this is a restricted file"
-            )
+                b"this is a restricted file",
+            ),
         ]
 
 
@@ -380,7 +386,7 @@ class CloudFormationStep(Step):
         self,
         session: boto3.Session,
         inputs: Inputs,
-    ) -> List[Resource]:
+    ) -> list[Resource]:
         tea_version: Optional[TeaVersion] = inputs.get_state("tea_version")
         if tea_version is None:
             tea_version = get_tea_version(session)
@@ -392,48 +398,53 @@ class CloudFormationStep(Step):
         config_bucket = inputs.get_argument(
             "config_bucket",
             "Config Bucket",
-            f"{stack_name}-config"
+            f"{stack_name}-config",
         )
         code_bucket = inputs.get_argument(
             "code_bucket",
             "Code Bucket",
-            f"{stack_name}-code"
+            f"{stack_name}-code",
         )
         urs_secret_name = inputs.get_argument(
             "urs_secret_name",
             "URS Secret Name",
-            f"urs_creds_for_{stack_name}"
+            f"urs_creds_for_{stack_name}",
         )
         jwt_secret_name = inputs.get_argument(
             "jwt_secret_name",
             "JWT Secret Name",
-            f"jwt_creds_for_{stack_name}"
+            f"jwt_creds_for_{stack_name}",
         )
         depedency_layer_key = inputs.get_argument(
             "depedency_layer_key",
             "Dependency Layer S3 Key",
-            urllib.parse.urlparse(tea_version.depedency_layer_uri).path[1:]
+            urllib.parse.urlparse(tea_version.depedency_layer_uri).path[1:],
         )
         code_key = inputs.get_argument(
             "code_key",
             "Lambda Code S3 Key",
-            urllib.parse.urlparse(tea_version.code_uri).path[1:]
+            urllib.parse.urlparse(tea_version.code_uri).path[1:],
         )
         auth_base_url = inputs.get_argument(
             "auth_base_url",
             "EDL Base URL",
-            "https://uat.urs.earthdata.nasa.gov"
+            "https://uat.urs.earthdata.nasa.gov",
         )
 
         client = session.client("ec2")
 
         vpc_parameters = {}
-        vpcs = client.describe_vpcs(
-            Filters=[{
-                "Name": "tag:Name",
-                "Values": ["Application VPC"]
-            }]
-        ).get("Vpcs") or []
+        vpcs = (
+            client.describe_vpcs(
+                Filters=[
+                    {
+                        "Name": "tag:Name",
+                        "Values": ["Application VPC"],
+                    }
+                ]
+            ).get("Vpcs")
+            or []
+        )
 
         if vpcs:
             if len(vpcs) > 1:
@@ -443,30 +454,37 @@ class CloudFormationStep(Step):
             else:
                 vpc_id = vpcs[0]["VpcId"]
 
-            subnets = client.describe_subnets(
-                Filters=[
-                    {
-                        "Name": "tag:Name",
-                        "Values": ["Private*"]
-                    },
-                    {
-                        "Name": "vpc-id",
-                        "Values": [vpc_id]
-                    }
-                ]
-            ).get("Subnets") or []
-            security_groups = client.describe_security_groups(
-                Filters=[
-                    {
-                        "Name": "tag:Name",
-                        "Values": ["Application Default*"]
-                    },
-                    {
-                        "Name": "vpc-id",
-                        "Values": [vpc_id]
-                    }
-                ]
-            ).get("SecurityGroups") or []
+            subnets = (
+                client.describe_subnets(
+                    Filters=[
+                        {
+                            "Name": "tag:Name",
+                            "Values": ["Private*"],
+                        },
+                        {
+                            "Name": "vpc-id",
+                            "Values": [vpc_id],
+                        },
+                    ]
+                ).get("Subnets")
+                or []
+            )
+
+            security_groups = (
+                client.describe_security_groups(
+                    Filters=[
+                        {
+                            "Name": "tag:Name",
+                            "Values": ["Application Default*"],
+                        },
+                        {
+                            "Name": "vpc-id",
+                            "Values": [vpc_id],
+                        },
+                    ]
+                ).get("SecurityGroups")
+                or []
+            )
 
             vpc_parameters = {
                 "PrivateVPC": vpc_id,
@@ -497,8 +515,8 @@ class CloudFormationStep(Step):
                     "StageName": "API",
                     "URSAuthCredsSecretName": urs_secret_name,
                     "UseReverseBucketMap": "False",
-                    **vpc_parameters
+                    **vpc_parameters,
                 },
-                capabilities=["CAPABILITY_NAMED_IAM"]
+                capabilities=["CAPABILITY_NAMED_IAM"],
             )
         ]

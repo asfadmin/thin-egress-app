@@ -34,7 +34,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--url",
         help=(
-            "The base URL of the API to test. "
+            "The base URL of the API to test. "  # ruff hint
             "If it is omitted then boto3 will be used to get the execute api URL"
         ),
         action="store",
@@ -95,7 +95,7 @@ def creds(_netrc):
     return CredsHelper(_netrc)
 
 
-class Secret():
+class Secret:
     def __init__(self, val):
         self.val = val
 
@@ -106,7 +106,7 @@ class Secret():
         return self.val
 
 
-class CredsHelper():
+class CredsHelper:
     def __init__(self, netrc_file):
         self.netrc_file = netrc_file
 
@@ -173,7 +173,7 @@ def urls(api_url):
     return UrlsConfig(api_url)
 
 
-class UrlsConfig():
+class UrlsConfig:
     _METADATA_FILE_NAME = "S1A_EW_GRDM_1SDH_20190206T190846_20190206T190951_025813_02DF0B_781A.iso.xml"
     METADATA_FILE = f"SA/METADATA_GRD_HS/{_METADATA_FILE_NAME}"
     METADATA_FILE_CH = f"SA/METADATA_GRD_HS_CH/{_METADATA_FILE_NAME}"
@@ -220,22 +220,30 @@ def urs_password(urs_creds):
 
 
 @pytest.fixture(scope="module")
-def auth_cookies(earthdata_auth_session, url_earthdata, api_host, urs_username, urs_password):
+def auth_cookies(
+    earthdata_auth_session,
+    url_earthdata,
+    api_host,
+    urs_username,
+    urs_password,
+):
     earthdata_auth_session.get(
         url_earthdata,
-        auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password))
+        auth=requests.auth.HTTPBasicAuth(urs_username, str(urs_password)),
     )
     cookiejar = earthdata_auth_session.cookies
 
     # Copy .asf.alaska.edu cookies to match API Address
     for z in cookiejar:
         if "asf.alaska.edu" in z.domain:
-            cookiejar.set_cookie(requests.cookies.create_cookie(
-                domain=api_host,
-                name=z.name,
-                value=z.value,
-                expires=z.expires,
-            ))
+            cookiejar.set_cookie(
+                requests.cookies.create_cookie(
+                    domain=api_host,
+                    name=z.name,
+                    value=z.value,
+                    expires=z.expires,
+                )
+            )
 
     return cookiejar
 
@@ -305,19 +313,21 @@ def pytest_sessionfinish(session, exitstatus):
         color = "critical"
 
     # Write out the string
-    testresults = json.dumps({
-        "schemaVersion": 1,
-        "label": "Tests",
-        "message": message,
-        "color": color
-    })
+    testresults = json.dumps(
+        {
+            "schemaVersion": 1,
+            "label": "Tests",
+            "message": message,
+            "color": color,
+        }
+    )
 
     # Required to make the file public and usable as input for the badge.
     put_args = {
         "CacheControl": "no-cache",
         "Expires": datetime(2015, 1, 1),
         "ContentType": "application/json",
-        "ACL": "public-read"
+        "ACL": "public-read",
     }
 
     # Dump results to S3.

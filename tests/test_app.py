@@ -35,12 +35,12 @@ def user_profile():
                 "shared_user_group": False,
                 "created_by": "egress_download_app",
                 "app_uid": "egress_download_app",
-                "client_id": "client_id"
+                "client_id": "client_id",
             }
         ],
         token="test_token",
         iat=0,
-        exp=0
+        exp=0,
     )
 
 
@@ -53,6 +53,7 @@ def jwt_encoder(private_key):
             headers=headers,
             algorithm="RS256",
         )
+
     return encode
 
 
@@ -107,7 +108,7 @@ def mock_retrieve_secret():
     with mock.patch(f"{MODULE}.retrieve_secret", autospec=True) as m:
         m.return_value = {
             "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
-            "rsa_priv_key": base64.b64encode(b"priv-key").decode()
+            "rsa_priv_key": base64.b64encode(b"priv-key").decode(),
         }
         yield m
 
@@ -117,7 +118,7 @@ def mock_get_urs_creds():
     with mock.patch(f"{MODULE}.get_urs_creds", autospec=True) as m:
         m.return_value = {
             "UrsId": "stringofseeminglyrandomcharacters",
-            "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters"
+            "UrsAuth": "verymuchlongerstringofseeminglyrandomcharacters",
         }
         yield m
 
@@ -190,7 +191,7 @@ def test_request_authorizer_bearer_header(
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
-        "x-origin-request-id": "origin_request_id"
+        "x-origin-request-id": "origin_request_id",
     }
     mock_user_profile = mock.Mock()
     mock_get_profile_with_jwt_bearer.return_value = mock_user_profile
@@ -209,7 +210,7 @@ def test_request_authorizer_basic_header(
 ):
     current_request.headers = {
         "Authorization": "Basic token",
-        "x-origin-request-id": "origin_request_id"
+        "x-origin-request-id": "origin_request_id",
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
@@ -256,7 +257,7 @@ def test_request_authorizer_bearer_header_eula_error_browser(
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     }
     msg = {
         "status_code": 403,
@@ -286,7 +287,7 @@ def test_request_authorizer_bearer_header_eula_error_browser(
         },
         {},
         403,
-        "error.html"
+        "error.html",
     )
     assert response.status_code == 403
     assert response.headers == {"Content-Type": "text/html"}
@@ -302,7 +303,7 @@ def test_request_authorizer_bearer_header_other_error(
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
-        "x-origin-request-id": "origin_request_id"
+        "x-origin-request-id": "origin_request_id",
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
@@ -351,7 +352,7 @@ def test_request_authorizer_bearer_header_no_user_id(
     )
     current_request.headers = {
         "Authorization": f"Bearer {token}",
-        "x-origin-request-id": "origin_request_id"
+        "x-origin-request-id": "origin_request_id",
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
@@ -371,7 +372,7 @@ def test_request_authorizer_bearer_header_invalid_token(
 ):
     current_request.headers = {
         "Authorization": "Bearer token",
-        "x-origin-request-id": "origin_request_id"
+        "x-origin-request-id": "origin_request_id",
     }
     mock_response = mock.Mock()
     mock_do_auth_and_return.return_value = mock_response
@@ -401,7 +402,10 @@ def test_get_aux_request_headers(current_request):
     assert app.get_aux_request_headers() == {"x-request-id": "request_1234"}
 
     current_request.headers = {"x-origin-request-id": "1234"}
-    assert app.get_aux_request_headers() == {"x-request-id": "request_1234", "x-origin-request-id": "1234"}
+    assert app.get_aux_request_headers() == {
+        "x-request-id": "request_1234",
+        "x-origin-request-id": "1234",
+    }
 
 
 def test_check_for_browser():
@@ -426,13 +430,15 @@ def test_get_profile_with_jwt_bearer(
 ):
     del current_request
 
-    payload = json.dumps({
-        "uid": "test_user",
-        "user_groups": [],
-        "first_name": "John",
-        "last_name": "Smith",
-        "email_address": "j.smith@email.com",
-    })
+    payload = json.dumps(
+        {
+            "uid": "test_user",
+            "user_groups": [],
+            "first_name": "John",
+            "last_name": "Smith",
+            "email_address": "j.smith@email.com",
+        }
+    )
     mock_response = mock.MagicMock()
     with mock_response as mock_f:
         mock_f.read.return_value = payload
@@ -551,13 +557,13 @@ def test_restore_bucket_vars(mock_get_yaml_file, data_path):
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 def test_restore_bucket_vars_iam_compatibility_error(
     mock_get_yaml_file,
-    monkeypatch
+    monkeypatch,
 ):
     mock_get_yaml_file.return_value = {
         "PATH": "bucket",
         "PRIVATE_BUCKETS": {
-            "bucket/prefix/": ["group"]
-        }
+            "bucket/prefix/": ["group"],
+        },
     }
 
     app.b_map = None
@@ -606,7 +612,7 @@ def test_add_cors_headers(current_request, monkeypatch):
     assert headers == {
         "foo": "bar",
         "Access-Control-Allow-Origin": "NULL",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
     }
 
     current_request.headers = {"origin": "foo.example.com"}
@@ -615,7 +621,7 @@ def test_add_cors_headers(current_request, monkeypatch):
     assert headers == {
         "foo": "bar",
         "Access-Control-Allow-Origin": "foo.example.com",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
     }
 
     current_request.headers = {"origin": "foo.bar.com"}
@@ -646,7 +652,14 @@ def test_make_html_response(monkeypatch):
     assert response.body == "<html></html>"
     assert response.status_code == 200
     assert response.headers == {"Content-Type": "text/html", "baz": "qux"}
-    mock_render.assert_called_once_with("root.html", {"STAGE": "DEV", "status_code": 200, "foo": "bar"})
+    mock_render.assert_called_once_with(
+        "root.html",
+        {
+            "STAGE": "DEV",
+            "status_code": 200,
+            "foo": "bar",
+        },
+    )
     mock_render.reset_mock()
 
     monkeypatch.setenv("DOMAIN_NAME", "example.com")
@@ -654,7 +667,13 @@ def test_make_html_response(monkeypatch):
     assert response.body == "<html></html>"
     assert response.status_code == 301
     assert response.headers == {"Content-Type": "text/html"}
-    mock_render.assert_called_once_with("redirect.html", {"STAGE": None, "status_code": 301})
+    mock_render.assert_called_once_with(
+        "redirect.html",
+        {
+            "STAGE": None,
+            "status_code": 301,
+        },
+    )
 
 
 def test_get_bcconfig(monkeypatch):
@@ -663,7 +682,7 @@ def test_get_bcconfig(monkeypatch):
         "s3": {"addressing_style": "path"},
         "connect_timeout": 600,
         "read_timeout": 600,
-        "retries": {"max_attempts": 10}
+        "retries": {"max_attempts": 10},
     }
 
     monkeypatch.setenv("S3_SIGNATURE_VERSION", "some_s3_signature")
@@ -673,7 +692,7 @@ def test_get_bcconfig(monkeypatch):
         "connect_timeout": 600,
         "read_timeout": 600,
         "retries": {"max_attempts": 10},
-        "signature_version": "some_s3_signature"
+        "signature_version": "some_s3_signature",
     }
 
     monkeypatch.setenv("S3_SIGNATURE_VERSION", "")
@@ -682,13 +701,15 @@ def test_get_bcconfig(monkeypatch):
         "s3": {"addressing_style": "path"},
         "connect_timeout": 600,
         "read_timeout": 600,
-        "retries": {"max_attempts": 10}
+        "retries": {"max_attempts": 10},
     }
 
 
 def test_get_bucket_region():
     session = mock.Mock()
-    session.client().get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
+    session.client().get_bucket_location.return_value = {
+        "LocationConstraint": "us-west-2",
+    }
     assert app.get_bucket_region(session, "bucketname") == "us-west-2"
 
     session.client.side_effect = ClientError({}, "bar")
@@ -698,7 +719,9 @@ def test_get_bucket_region():
 
 def test_get_bucket_region_cached(_clear_caches):
     session = mock.Mock()
-    session.client().get_bucket_location.return_value = {"LocationConstraint": "us-west-2"}
+    session.client().get_bucket_location.return_value = {
+        "LocationConstraint": "us-west-2",
+    }
     assert app.get_bucket_region(session, "bucketname") == "us-west-2"
     assert app.get_bucket_region(session, "bucketname") == "us-west-2"
     assert app.get_bucket_region(session, "bucketname") == "us-west-2"
@@ -732,7 +755,7 @@ def test_try_download_from_bucket(
     mock_check_in_region_request,
     current_request,
     monkeypatch,
-    user_profile
+    user_profile,
 ):
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
@@ -744,7 +767,13 @@ def test_try_download_from_bucket(
     client.get_bucket_location.return_value = {"LocationConstraint": "us-east-1"}
     client.head_object.return_value = {"ContentLength": 2048}
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, api_request_uuid=None)
+    response = app.try_download_from_bucket(
+        "somebucket",
+        "somefile",
+        user_profile,
+        {},
+        api_request_uuid=None,
+    )
     client.head_object.assert_called_once()
     assert response.body == ""
     assert response.status_code == 303
@@ -752,7 +781,7 @@ def test_try_download_from_bucket(
         "Location": presigned_url,
         "Cache-Control": "private, max-age=2540",
         "Access-Control-Allow-Origin": "example.com",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
     }
     mock_check_in_region_request.assert_called_once()
 
@@ -761,7 +790,13 @@ def test_try_download_from_bucket(
     monkeypatch.setenv("AWS_DEFAULT_REGION", "us-west-2")
     client.head_object.reset_mock()
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, "not a dict", api_request_uuid=None)
+    response = app.try_download_from_bucket(
+        "somebucket",
+        "somefile",
+        user_profile,
+        "not a dict",
+        api_request_uuid=None,
+    )
     client.head_object.assert_not_called()
     assert response.body == ""
     assert response.status_code == 303
@@ -769,7 +804,7 @@ def test_try_download_from_bucket(
         "Location": presigned_url,
         "Cache-Control": "private, max-age=2540",
         "Access-Control-Allow-Origin": "example.com",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
     }
 
 
@@ -783,7 +818,7 @@ def test_try_download_from_bucket_client_error(
     mock_make_html_response,
     current_request,
     _clear_caches,
-    user_profile
+    user_profile,
 ):
     del current_request
 
@@ -799,7 +834,7 @@ def test_try_download_from_bucket_client_error(
         },
         {},
         400,
-        "error.html"
+        "error.html",
     )
     mock_check_in_region_request.assert_called_once()
 
@@ -816,7 +851,7 @@ def test_try_download_from_bucket_not_found(
     mock_make_html_response,
     current_request,
     monkeypatch,
-    user_profile
+    user_profile,
 ):
     del current_request
 
@@ -824,7 +859,7 @@ def test_try_download_from_bucket_not_found(
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
     mock_get_bc_config_client(None).head_object.side_effect = ClientError(
         {"ResponseMetadata": {"HTTPStatusCode": 404}},
-        "bar"
+        "bar",
     )
 
     app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, None)
@@ -836,7 +871,7 @@ def test_try_download_from_bucket_not_found(
         },
         {},
         404,
-        "error.html"
+        "error.html",
     )
     mock_get_role_creds.assert_called_once()
     mock_get_role_session.assert_called_once()
@@ -854,7 +889,7 @@ def test_try_download_from_bucket_invalid_range(
     mock_check_in_region_request,
     current_request,
     monkeypatch,
-    user_profile
+    user_profile,
 ):
     del current_request
 
@@ -862,10 +897,16 @@ def test_try_download_from_bucket_invalid_range(
     mock_get_role_creds.return_value = (mock.Mock(), 1000)
     mock_get_bc_config_client(None).head_object.side_effect = ClientError(
         {"ResponseMetadata": {"HTTPStatusCode": 416}},
-        "bar"
+        "bar",
     )
 
-    response = app.try_download_from_bucket("somebucket", "somefile", user_profile, {}, None)
+    response = app.try_download_from_bucket(
+        "somebucket",
+        "somefile",
+        user_profile,
+        {},
+        None,
+    )
     assert response.body == "Invalid Range"
     assert response.status_code == 416
     assert response.headers == {}
@@ -886,11 +927,11 @@ def test_root(mock_get_urs_url, mock_retrieve_secret, mock_make_html_response, c
     mock_make_html_response.assert_called_once_with(
         {
             "title": "Welcome",
-            "URS_URL": "urs.example.com"
+            "URS_URL": "urs.example.com",
         },
         {"Content-Type": "text/html"},
         200,
-        "root.html"
+        "root.html",
     )
 
 
@@ -903,7 +944,7 @@ def test_root_with_login(
     mock_make_html_response,
     monkeypatch,
     client,
-    user_profile
+    user_profile,
 ):
     del mock_retrieve_secret
 
@@ -927,19 +968,19 @@ def test_root_with_login(
                         "shared_user_group": False,
                         "created_by": "egress_download_app",
                         "app_uid": "egress_download_app",
-                        "client_id": "client_id"
+                        "client_id": "client_id",
                     }
                 ],
                 "first_name": "John",
                 "last_name": "Smith",
                 "email": "j.smith@email.com",
                 "iat": 0,
-                "exp": 0
-            }
+                "exp": 0,
+            },
         },
         {"Content-Type": "text/html"},
         200,
-        "root.html"
+        "root.html",
     )
 
     # There is no profile
@@ -954,7 +995,7 @@ def test_root_with_login(
         {"title": "Welcome", "URS_URL": "urs_url"},
         {"Content-Type": "text/html"},
         200,
-        "root.html"
+        "root.html",
     )
 
 
@@ -969,7 +1010,7 @@ def test_logout(
     mock_retrieve_secret,
     mock_make_html_response,
     user_profile,
-    client
+    client,
 ):
     del mock_retrieve_secret
 
@@ -983,11 +1024,11 @@ def test_logout(
         {
             "title": "Logged Out",
             "URS_URL": "urs_url",
-            "contentstring": "You are logged out."
+            "contentstring": "You are logged out.",
         },
         {"Content-Type": "text/html", "asf-cookie": {}},
         200,
-        "root.html"
+        "root.html",
     )
 
 
@@ -1003,7 +1044,7 @@ def test_login(mock_do_login, mock_retrieve_secret, client):
     assert response.status_code == 301
     assert response.headers == {
         "x-request-id": app.app.lambda_context.aws_request_id,
-        "baz": "qux"
+        "baz": "qux",
     }
 
 
@@ -1012,7 +1053,7 @@ def test_login_error(
     mock_do_login,
     mock_retrieve_secret,
     mock_make_html_response,
-    client
+    client,
 ):
     del mock_retrieve_secret
 
@@ -1025,11 +1066,11 @@ def test_login_error(
         {
             "contentstring": "Client Error occurred. ",
             "title": "Client Error",
-            "requestid": app.app.lambda_context.aws_request_id
+            "requestid": app.app.lambda_context.aws_request_id,
         },
         {},
         500,
-        "error.html"
+        "error.html",
     )
 
 
@@ -1044,7 +1085,10 @@ def test_version(mock_retrieve_secret, monkeypatch, client):
     monkeypatch.setenv("BUMP", "bump_version")
     response = client.http.get("/version")
 
-    assert response.json_body == {"version_id": "<BUILD_ID>", "last_flush": "bump_version"}
+    assert response.json_body == {
+        "version_id": "<BUILD_ID>",
+        "last_flush": "bump_version",
+    }
     assert response.status_code == 200
 
 
@@ -1137,7 +1181,7 @@ def test_locate_missing_bucket(mock_retrieve_secret, client, req):
     assert response.status_code == 400
     assert response.headers == {
         "x-request-id": app.app.lambda_context.aws_request_id,
-        "Content-Type": "text/plain"
+        "Content-Type": "text/plain",
     }
 
 
@@ -1176,7 +1220,12 @@ def test_get_bc_config_client_cached(mock_get_new_session_client):
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.get_bc_config_client", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
-def test_get_data_dl_s3_client(mock_get_bc_config_client, mock_get_profile, user_profile, current_request):
+def test_get_data_dl_s3_client(
+    mock_get_bc_config_client,
+    mock_get_profile,
+    user_profile,
+    current_request,
+):
     mock_get_profile.return_value = user_profile
     user_profile.user_id = "username"
 
@@ -1194,7 +1243,7 @@ def test_try_download_head(
     mock_get_role_creds,
     mock_get_data_dl_s3_client,
     current_request,
-    monkeypatch
+    monkeypatch,
 ):
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
     current_request.headers = {"origin": "example.com"}
@@ -1209,7 +1258,7 @@ def test_try_download_head(
     assert response.headers == {
         "Location": presigned_url,
         "Access-Control-Allow-Origin": "example.com",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
     }
     mock_get_data_dl_s3_client.assert_called_once()
     mock_get_role_creds.assert_called_once()
@@ -1221,7 +1270,7 @@ def test_try_download_head_error(
     mock_get_data_dl_s3_client,
     current_request,
     monkeypatch,
-    mock_make_html_response
+    mock_make_html_response,
 ):
     monkeypatch.setenv("CORS_ORIGIN", "example.com")
     current_request.headers = {"origin": "example.com"}
@@ -1233,11 +1282,11 @@ def test_try_download_head_error(
         {
             "contentstring": "File not found",
             "title": "File not found",
-            "requestid": "request_1234"
+            "requestid": "request_1234",
         },
         {},
         404,
-        "error.html"
+        "error.html",
     )
 
 
@@ -1283,9 +1332,13 @@ def test_dynamic_url_head(
     mock_try_download_head,
     mock_get_yaml_file,
     data_path,
-    current_request
+    current_request,
 ):
-    mock_try_download_head.return_value = chalice.Response(body="Mock response", headers={}, status_code=200)
+    mock_try_download_head.return_value = chalice.Response(
+        body="Mock response",
+        headers={},
+        status_code=200,
+    )
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
@@ -1306,7 +1359,7 @@ def test_dynamic_url_head_bad_bucket(
     mock_get_yaml_file,
     mock_make_html_response,
     data_path,
-    current_request
+    current_request,
 ):
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1320,11 +1373,11 @@ def test_dynamic_url_head_bad_bucket(
         {
             "contentstring": "Bucket not available",
             "title": "Bucket not available",
-            "requestid": "request_1234"
+            "requestid": "request_1234",
         },
         {},
         404,
-        "error.html"
+        "error.html",
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
@@ -1357,7 +1410,7 @@ def test_dynamic_url(
     mock_get_yaml_file,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1376,7 +1429,7 @@ def test_dynamic_url(
         "OBJECT_1",
         user_profile,
         {},
-        None
+        None,
     )
     assert response is MOCK_RESPONSE
 
@@ -1393,7 +1446,7 @@ def test_dynamic_url_public_unauthenticated(
     mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1407,7 +1460,13 @@ def test_dynamic_url_public_unauthenticated(
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", None, {}, None)
+    mock_try_download_from_bucket.assert_called_once_with(
+        "gsfc-ngap-d-pa-bro",
+        "OBJECT_2",
+        None,
+        {},
+        None,
+    )
     assert response is MOCK_RESPONSE
 
 
@@ -1424,7 +1483,7 @@ def test_dynamic_url_public_authenticated(
     mock_get_yaml_file,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1438,7 +1497,13 @@ def test_dynamic_url_public_authenticated(
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-pa-bro", "OBJECT_2", user_profile, {}, None)
+    mock_try_download_from_bucket.assert_called_once_with(
+        "gsfc-ngap-d-pa-bro",
+        "OBJECT_2",
+        user_profile,
+        {},
+        None,
+    )
     assert response is MOCK_RESPONSE
 
 
@@ -1454,7 +1519,7 @@ def test_dynamic_url_public_custom_headers(
     mock_get_api_request_uuid,
     mock_get_yaml_file,
     data_path,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1474,9 +1539,9 @@ def test_dynamic_url_public_custom_headers(
         None,
         {
             "custom-header-1": "custom-header-1-value",
-            "custom-header-2": "custom-header-2-value"
+            "custom-header-2": "custom-header-2-value",
         },
-        None
+        None,
     )
     assert response is MOCK_RESPONSE
 
@@ -1498,7 +1563,7 @@ def test_dynamic_url_private(
     mock_get_yaml_file,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1519,7 +1584,7 @@ def test_dynamic_url_private(
         "OBJECT_2",
         user_profile,
         {"SET-COOKIE": "cookie"},
-        None
+        None,
     )
     assert response is MOCK_RESPONSE
 
@@ -1541,7 +1606,7 @@ def test_dynamic_url_private_custom_headers(
     mock_get_yaml_file,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
@@ -1565,9 +1630,9 @@ def test_dynamic_url_private_custom_headers(
         {
             "custom-header-3": "custom-header-3-value",
             "custom-header-4": "custom-header-4-value",
-            "SET-COOKIE": "cookie"
+            "SET-COOKIE": "cookie",
         },
-        None
+        None,
     )
     assert response is MOCK_RESPONSE
 
@@ -1583,19 +1648,19 @@ def test_dynamic_url_public_within_private(
     mock_try_download_from_bucket,
     mock_get_api_request_uuid,
     mock_get_yaml_file,
-    current_request
+    current_request,
 ):
     # TODO(reweeden): Make an end-to-end version of this test as well
     MOCK_RESPONSE = mock.Mock()
     mock_try_download_from_bucket.return_value = MOCK_RESPONSE
     mock_get_yaml_file.return_value = {
         "MAP": {
-            "FOO": "bucket"
+            "FOO": "bucket",
         },
         "PUBLIC_BUCKETS": ["bucket/BROWSE"],
         "PRIVATE_BUCKETS": {
-            "bucket": ["PERMISSION"]
-        }
+            "bucket": ["PERMISSION"],
+        },
     }
 
     mock_get_profile_from_headers.return_value = None
@@ -1605,7 +1670,13 @@ def test_dynamic_url_public_within_private(
     # Can't use the chalice test client here as it doesn't seem to understand the `{proxy+}` route
     response = app.dynamic_url()
 
-    mock_try_download_from_bucket.assert_called_once_with("gsfc-ngap-d-bucket", "BROWSE/OBJECT_1", None, {}, None)
+    mock_try_download_from_bucket.assert_called_once_with(
+        "gsfc-ngap-d-bucket",
+        "BROWSE/OBJECT_1",
+        None,
+        {},
+        None,
+    )
     assert response is MOCK_RESPONSE
 
 
@@ -1614,7 +1685,7 @@ def test_dynamic_url_bad_bucket(
     mock_get_yaml_file,
     mock_make_html_response,
     data_path,
-    current_request
+    current_request,
 ):
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1629,11 +1700,11 @@ def test_dynamic_url_bad_bucket(
         {
             "contentstring": "File not found",
             "title": "File not found",
-            "requestid": "request_1234"
+            "requestid": "request_1234",
         },
         {},
         404,
-        "error.html"
+        "error.html",
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
@@ -1649,7 +1720,7 @@ def test_dynamic_url_directory(
     mock_make_html_response,
     data_path,
     user_profile,
-    current_request
+    current_request,
 ):
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1664,11 +1735,11 @@ def test_dynamic_url_directory(
         {
             "contentstring": "Request does not appear to be valid.",
             "title": "Request Not Serviceable",
-            "requestid": "request_1234"
+            "requestid": "request_1234",
         },
         {},
         404,
-        "error.html"
+        "error.html",
     )
     assert response.body == "Mock response"
     assert response.status_code == 404
@@ -1717,7 +1788,7 @@ def test_dynamic_url_bearer_auth(
         "OBJECT_1",
         user_profile,
         {"SET-COOKIE": "cookie"},
-        None
+        None,
     )
     assert response.body == "Mock response"
     assert response.status_code == 200
@@ -1736,7 +1807,7 @@ def test_s3credentials(
     mock_get_urs_creds,
     data_path,
     user_profile,
-    client
+    client,
 ):
     del mock_retrieve_secret
     del mock_get_urs_creds
@@ -1745,7 +1816,7 @@ def test_s3credentials(
         "AccessKeyId": "access_key",
         "SecretAccessKey": "secret_access_key",
         "SessionToken": "session_token",
-        "Expiration": "expiration"
+        "Expiration": "expiration",
     }
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
@@ -1757,7 +1828,7 @@ def test_s3credentials(
         "accessKeyId": "access_key",
         "secretAccessKey": "secret_access_key",
         "sessionToken": "session_token",
-        "expiration": "expiration"
+        "expiration": "expiration",
     }
     assert response.status_code == 200
 
@@ -1772,7 +1843,7 @@ def test_s3credentials_unauthenticated(
     mock_get_yaml_file,
     mock_retrieve_secret,
     data_path,
-    client
+    client,
 ):
     del mock_retrieve_secret
 
@@ -1798,7 +1869,7 @@ def test_s3credentials_no_permissions(
     mock_get_urs_creds,
     mock_make_html_response,
     user_profile,
-    client
+    client,
 ):
     del mock_retrieve_secret
     del mock_get_urs_creds
@@ -1812,11 +1883,11 @@ def test_s3credentials_no_permissions(
         {
             "contentstring": "You do not have permission to access any data.",
             "title": "Could not access data",
-            "requestid": app.app.lambda_context.aws_request_id
+            "requestid": app.app.lambda_context.aws_request_id,
         },
         {},
         403,
-        "error.html"
+        "error.html",
     )
 
 
@@ -1832,7 +1903,7 @@ def test_get_s3_credentials(mock_boto3, monkeypatch):
         RoleSessionName="role-session-name",
         ExternalId="user",
         DurationSeconds=3600,
-        Policy="{}"
+        Policy="{}",
     )
 
 
@@ -1849,7 +1920,7 @@ def test_profile(mock_retrieve_secret, client):
 def test_pubkey(mock_retrieve_secret, monkeypatch, client):
     mock_retrieve_secret.return_value = {
         "rsa_pub_key": base64.b64encode(b"pub-key").decode(),
-        "rsa_priv_key": base64.b64encode(b"priv-key").decode()
+        "rsa_priv_key": base64.b64encode(b"priv-key").decode(),
     }
     monkeypatch.setattr(app.JWT_MANAGER, "algorithm", "algo")
     response = client.http.get("/pubkey")
@@ -1862,7 +1933,10 @@ def test_x_origin_request_id_forwarded(mock_retrieve_secret, client):
     del mock_retrieve_secret
 
     # Could be any endpoint, but profile is the simplest
-    response = client.http.get("/profile", headers={"x-origin-request-id": "x_origin_request_1234"})
+    response = client.http.get(
+        "/profile",
+        headers={"x-origin-request-id": "x_origin_request_1234"},
+    )
 
     assert response.headers["x-origin-request-id"] == "x_origin_request_1234"
 

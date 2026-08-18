@@ -1,7 +1,6 @@
 import getpass
 import logging
 from abc import ABC, abstractmethod
-from typing import List
 
 import boto3
 
@@ -32,8 +31,8 @@ class Bucket(Resource):
             client.create_bucket(
                 Bucket=self.name,
                 CreateBucketConfiguration={
-                    "LocationConstraint": session.region_name
-                }
+                    "LocationConstraint": session.region_name,
+                },
             )
 
 
@@ -49,7 +48,7 @@ class BucketObject(Resource):
         try:
             client.head_object(
                 Bucket=self.bucket,
-                Key=self.key
+                Key=self.key,
             )
             log.info("Object exists s3://%s/%s", self.bucket, self.key)
         except client.exceptions.ClientError:
@@ -57,7 +56,7 @@ class BucketObject(Resource):
             client.put_object(
                 Bucket=self.bucket,
                 Key=self.key,
-                Body=self.body
+                Body=self.body,
             )
 
 
@@ -67,7 +66,7 @@ class BucketObjectCopy(Resource):
         src_bucket: str,
         src_key: str,
         dst_bucket: str,
-        dst_key: str
+        dst_key: str,
     ):
         self.src_bucket = src_bucket
         self.src_key = src_key
@@ -80,7 +79,7 @@ class BucketObjectCopy(Resource):
         try:
             client.head_object(
                 Bucket=self.dst_bucket,
-                Key=self.dst_key
+                Key=self.dst_key,
             )
             log.info("Object exists s3://%s/%s", self.dst_bucket, self.dst_key)
         except client.exceptions.ClientError:
@@ -90,7 +89,7 @@ class BucketObjectCopy(Resource):
                 self.src_bucket,
                 self.src_key,
                 self.dst_bucket,
-                self.dst_key
+                self.dst_key,
             )
 
             client.copy(
@@ -99,7 +98,7 @@ class BucketObjectCopy(Resource):
                     "Key": self.src_key,
                 },
                 self.dst_bucket,
-                self.dst_key
+                self.dst_key,
             )
 
 
@@ -115,18 +114,18 @@ class CloudFormationStack(Resource):
         self.stack_name = stack_name
         if (template_body is None) is (template_url is None):
             raise ValueError(
-                "Must provide exactly one of 'template_body' or 'template_url'"
+                "Must provide exactly one of 'template_body' or 'template_url'",
             )
         self.template_body = template_body
         self.template_url = template_url
         self.parameters = parameters
         self.capabilities = capabilities
 
-    def _get_parameter_list(self) -> List[dict]:
+    def _get_parameter_list(self) -> list[dict]:
         return [
             {
                 "ParameterKey": k,
-                "ParameterValue": v
+                "ParameterValue": v,
             }
             for k, v in self.parameters.items()
         ]
@@ -173,7 +172,7 @@ class CloudFormationStack(Resource):
                 return False
             else:
                 log.debug("Unable to get stack details.", exc_info=e)
-                raise e
+                raise
 
 
 class Secret(Resource):
@@ -199,7 +198,7 @@ class Secret(Resource):
             client.update_secret(
                 SecretId=self.name,
                 Description=self.description,
-                SecretString=self.secret_string
+                SecretString=self.secret_string,
             )
 
 
@@ -249,8 +248,8 @@ class Step(ABC):
     def get_resources(
         self,
         session: boto3.Session,
-        inputs: Inputs
-    ) -> List[Resource]:
+        inputs: Inputs,
+    ) -> list[Resource]:
         pass
 
     def get_name(self) -> str:
@@ -264,11 +263,11 @@ class Deployer:
         self.state_dict = {}
         self.inputs = Inputs(self.inputs_dict, self.state_dict)
 
-    def deploy_step(self, step: Step) -> List[Resource]:
+    def deploy_step(self, step: Step) -> list[Resource]:
         if self.confirm_step(step):
             resources = step.get_resources(
                 self.session,
-                self.inputs
+                self.inputs,
             )
             for resource in resources:
                 resource.deploy(self.session)

@@ -74,6 +74,11 @@ Parameters:
       - "True"
     Description: 'Use cookie domain for CORS header support'
 
+  CorsOrigins:
+    Type: String
+    Default: ""
+    Description: "Comma-separated origins allowed for CORS. A leading '*.' on the host matches subdomains (eg 'https://example.com,https://*.asf.alaska.edu')"
+
   DomainName:
     Type: String
     Default: ""
@@ -589,6 +594,7 @@ Resources:
         Variables:
           CORS_ORIGIN:
             !If [CheckIfCorsHeadersNeedConfigured, !Ref CookieDomain, !Ref "AWS::NoValue"]
+          CORS_ORIGINS: !Ref CorsOrigins
           DOMAIN_NAME:
             !If
               - DomainNameIsSet

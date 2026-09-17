@@ -101,6 +101,7 @@ resource "aws_cloudformation_stack" "thin_egress_app" {
     VPCSecurityGroupIDs             = local.vpc_security_group_ids_set ? join(",", var.vpc_security_group_ids) : aws_security_group.egress_lambda[0].id
     VPCSubnetIDs                    = join(",", var.vpc_subnet_ids)
     UseCorsCookieDomain             = var.use_cors ? "True" : "False"
+    CorsOrigins                     = join(",", var.cors_origins)
   }
   tags = var.tags
 }

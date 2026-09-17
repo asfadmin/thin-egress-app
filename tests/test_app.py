@@ -630,6 +630,24 @@ def test_add_cors_headers(current_request, monkeypatch):
     assert headers == {"foo": "bar"}
 
 
+def test_add_cors_headers_cors_origins(current_request, monkeypatch):
+    # Trailing comma catches a potential empty element after the split:
+    monkeypatch.setenv("CORS_ORIGINS", "https://search.asf.alaska.edu, https://other.example.com,")
+
+    current_request.headers = {"origin": "https://search.asf.alaska.edu"}
+    headers = {}
+    app.add_cors_headers(headers)
+    assert headers == {
+        "Access-Control-Allow-Origin": "https://search.asf.alaska.edu",
+        "Access-Control-Allow-Credentials": "true",
+    }
+
+    current_request.headers = {"origin": "https://evil.asf.alaska.edu"}
+    headers = {}
+    app.add_cors_headers(headers)
+    assert headers == {}
+
+
 def test_make_redirect(current_request):
     current_request.headers = {}
 

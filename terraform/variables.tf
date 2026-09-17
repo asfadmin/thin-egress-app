@@ -198,3 +198,9 @@ variable "use_cors" {
   default     = false
   description = "Enable cross origin resource sharing"
 }
+
+variable "cors_origins" {
+  type        = list(string)
+  default     = []
+  description = "Exact origins allowed for CORS, in addition to cookie_domain when use_cors is true"
+}

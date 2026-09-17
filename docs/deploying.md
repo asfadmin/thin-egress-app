@@ -151,6 +151,7 @@ aws $AWSENV secretsmanager create-secret --name jwt_secret_for_tea \
    * `CookieDomain` - (OPTIONAL) domain name value for minting cookies
    * `DomainCertArn` - (OPTIONAL) Arn to a AWS ACM SSL Cert for HTTPS access
    * `UseCorsCookieDomain` - If `True`, and `CookieDomain` is set, this enables CORS Response Headers
+   * `CorsOrigins` - (OPTIONAL) Comma-separated list of exact origins that receive CORS Response Headers (i.e `https://search.asf.alaska.edu`)
 * **Lambda Code**:
    * `LambdaCodeS3Bucket` - S3 bucket where Lambda code zip files are kept
    * `LambdaCodeS3Key` - Object name of Lambda code zip

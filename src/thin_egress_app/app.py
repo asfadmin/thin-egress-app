@@ -503,11 +503,18 @@ def is_cors_allowed():
 
     # send CORS headers if we're configured to use them
     origin_header = app.current_request.headers.get("origin")
+    # This one is the CookieDomain CORS origin, set when UseCorsCookieDomain is True
     cors_origin = os.getenv("CORS_ORIGIN")
+    # The ACTUAL CORS origin list, specified via the CFN param.
+    cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 
-    log.debug("origin_header: %r, cors_origin: %r", origin_header, cors_origin)
+    log.debug("origin_header: %r, cors_origin: %r, cors_origins: %r", origin_header, cors_origin, cors_origins)
     return bool(
-        origin_header and cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == "null"),
+        origin_header
+        and (
+            origin_header in cors_origins
+            or (cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == "null"))
+        ),
     )
 
 

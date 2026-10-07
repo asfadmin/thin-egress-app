@@ -35,7 +35,7 @@ jobs:
     steps:
       - id: step1
         run: |
-          VERSION=${GITHUB_REF_NAME#*.}
+          VERSION=${GITHUB_REF_NAME#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "code-zip=tea-code-build.$VERSION.zip" >> $GITHUB_OUTPUT
           echo "dependency-zip=tea-dependencylayer-build.$VERSION.zip" >> $GITHUB_OUTPUT

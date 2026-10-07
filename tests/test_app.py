@@ -630,6 +630,62 @@ def test_add_cors_headers(current_request, monkeypatch):
     assert headers == {"foo": "bar"}
 
 
+def test_add_cors_headers_cors_origins(current_request, monkeypatch):
+    # Trailing comma catches a potential empty element after the split:
+    monkeypatch.setenv("CORS_ORIGINS", "https://search.asf.alaska.edu, https://other.example.com,")
+
+    current_request.headers = {"origin": "https://search.asf.alaska.edu"}
+    headers = {}
+    app.add_cors_headers(headers)
+    assert headers == {
+        "Access-Control-Allow-Origin": "https://search.asf.alaska.edu",
+        "Access-Control-Allow-Credentials": "true",
+    }
+
+    current_request.headers = {"origin": "https://evil.asf.alaska.edu"}
+    headers = {}
+    app.add_cors_headers(headers)
+    assert headers == {}
+
+
+@pytest.mark.parametrize(
+    ("origin", "expected"),
+    (
+        ("https://search.asf.alaska.edu", True),
+        ("https://search-test.asf.alaska.edu", True),
+        ("https://deeply.nested.asf.alaska.edu", True),
+        # The wildcard covers subdomains only, not the domain itself
+        ("https://asf.alaska.edu", False),
+        # A lookalike domain anyone could register
+        ("https://evilasf.alaska.edu", False),
+        ("https://asf.alaska.edu.example.com", False),
+        # Scheme and port must match exactly
+        ("http://search.asf.alaska.edu", False),
+        ("https://search.asf.alaska.edu:8443", False),
+        ("null", False),
+    ),
+)
+def test_origin_matches_wildcard(origin, expected):
+    assert app.origin_matches(origin, "https://*.asf.alaska.edu") is expected
+
+
+def test_origin_matches_exact():
+    assert app.origin_matches("https://search.asf.alaska.edu", "https://search.asf.alaska.edu") is True
+    assert app.origin_matches("https://other.asf.alaska.edu", "https://search.asf.alaska.edu") is False
+
+
+def test_add_cors_headers_wildcard_origin(current_request, monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "https://*.asf.alaska.edu")
+
+    current_request.headers = {"origin": "https://search.asf.alaska.edu"}
+    headers = {}
+    app.add_cors_headers(headers)
+    assert headers == {
+        "Access-Control-Allow-Origin": "https://search.asf.alaska.edu",
+        "Access-Control-Allow-Credentials": "true",
+    }
+
+
 def test_make_redirect(current_request):
     current_request.headers = {}
 

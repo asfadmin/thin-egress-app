@@ -490,25 +490,50 @@ def add_cors_headers(headers):
         headers["Access-Control-Allow-Origin"] = origin_header
         headers["Access-Control-Allow-Credentials"] = "true"
     else:
-        cors_origin = os.getenv("CORS_ORIGIN")
         log.warning(
-            "Origin %s is not an approved CORS host: %s",
+            "Origin %s is not an approved CORS host. CORS_ORIGIN: %s, CORS_ORIGINS: %s",
             origin_header,
-            cors_origin,
+            os.getenv("CORS_ORIGIN"),
+            os.getenv("CORS_ORIGINS"),
         )
+
+
+def origin_matches(origin: str, allowed: str) -> bool:
+    """Match an Origin header against a single allowed origin.
+
+    `allowed` is a whole origin, which may replace the leftmost labels of its host with a
+    `*.` wildcard. The wildcard covers subdomains only, so `https://*.asf.alaska.edu`
+    matches `https://search.asf.alaska.edu` but not `https://asf.alaska.edu`.
+    """
+    if "://*." not in allowed:
+        return origin == allowed
+
+    pattern = urlparse(allowed.replace("*.", "", 1))
+    actual = urlparse(origin)
+    return (
+        actual.scheme == pattern.scheme
+        and actual.port == pattern.port
+        and (actual.hostname or "").endswith(f".{pattern.hostname}")
+    )
 
 
 def is_cors_allowed():
     assert app.current_request is not None
 
-    # send CORS headers if we're configured to use them
-    origin_header = app.current_request.headers.get("origin")
-    cors_origin = os.getenv("CORS_ORIGIN")
+    origin = app.current_request.headers.get("origin")
+    if not origin:
+        return False
 
-    log.debug("origin_header: %r, cors_origin: %r", origin_header, cors_origin)
-    return bool(
-        origin_header and cors_origin and (origin_header.endswith(cors_origin) or origin_header.lower() == "null"),
-    )
+    # CORS_ORIGIN is the CookieDomain CORS origin, set when UseCorsCookieDomain is True
+    cookie_domain = os.getenv("CORS_ORIGIN")
+    # CORS_ORIGINS is the ACTUAL CORS origin list, specified via the CFN param.
+    allowed_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+
+    log.debug("origin: %r, cookie_domain: %r, allowed_origins: %r", origin, cookie_domain, allowed_origins)
+    if any(origin_matches(origin, allowed) for allowed in allowed_origins):
+        return True
+
+    return bool(cookie_domain and (origin.endswith(cookie_domain) or origin.lower() == "null"))
 
 
 @with_trace()

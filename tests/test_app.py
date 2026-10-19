@@ -178,6 +178,7 @@ def test_request_authorizer_malformed_header(current_request):
 
     assert authorizer.get_profile() is None
     response = authorizer.get_error_response()
+    assert response is not None
     assert response.status_code == 400
     assert response.body == {
         "status_code": 400,

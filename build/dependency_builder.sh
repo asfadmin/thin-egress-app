@@ -22,7 +22,6 @@ python3 -m pip install \
 rm -rf ./*.dist-info
 rm -rf docutils
 rm -rf click chalice/cli # cli in lambda? No way!
-rm -rf botocore # included with lambda, just takes up space here
 rm -rf pip setuptools wheel easy_install.py
 rm -rf tests
 

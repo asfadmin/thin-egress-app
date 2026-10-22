@@ -463,6 +463,11 @@ Resources:
                 Resource: '*'
               - Effect: Allow
                 Action:
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                Resource: !GetAtt RevokedSessionTable.Arn
+              - Effect: Allow
+                Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
@@ -559,6 +564,20 @@ Resources:
         Protocol: lambda
         Region: !Sub 'us-east-1'
 
+  RevokedSessionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TimeToLiveSpecification:
+        AttributeName: ExpiresAt
+        Enabled: true
+
   EgressLambdaDependencyLayer:
     Type: AWS::Lambda::LayerVersion
     Properties:
@@ -624,6 +643,7 @@ Resources:
           HTML_TEMPLATE_DIR: !Ref HtmlTemplateDir
           JWT_KEY_SECRET_NAME: !Ref JwtKeySecretName
           JWT_ALGO: !Ref JwtAlgo
+          REVOKED_SESSION_TABLE: !Ref RevokedSessionTable
           ENABLE_S3_CREDENTIALS_ENDPOINT: !Ref EnableS3CredentialsEndpoint
           AWS_LAMBDA_EXEC_WRAPPER: !Ref OtLambdaExecWrapper
           OPENTELEMETRY_COLLECTOR_CONFIG_URI: !Ref OtCollectorConfigFile

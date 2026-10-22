@@ -28,7 +28,7 @@ except ImportError:
         return obj
 
 
-from rain_api_core.auth import JwtManager, UserProfile
+from rain_api_core.auth import JwtManager, SessionManager, UserProfile
 from rain_api_core.aws_util import (
     check_in_region_request,
     get_role_creds,
@@ -101,6 +101,7 @@ JWT_MANAGER = JwtManager(
     cookie_name=os.getenv("JWT_COOKIENAME", JWT_COOKIE_NAME),
     session_ttl_in_hours=float(os.getenv("SESSION_TTL_HRS", 24)),
 )
+SESSION_MANAGER = SessionManager(table_name=os.getenv("REVOKED_SESSION_TABLE"))
 TEMPLATE_MANAGER = TemplateManager(conf_bucket, template_dir)
 
 
@@ -173,8 +174,16 @@ class RequestAuthorizer:
         self._headers = {}
 
     @with_trace()
-    def get_profile(self) -> Optional[UserProfile]:
+    def get_profile_if_exists(self) -> Optional[UserProfile]:
         user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+        if user_profile is not None and not SESSION_MANAGER.is_session_revoked(user_profile):
+            return user_profile
+
+        return None
+
+    @with_trace()
+    def get_profile(self) -> Optional[UserProfile]:
+        user_profile = self.get_profile_if_exists()
         if user_profile is not None:
             return user_profile
 
@@ -811,7 +820,7 @@ def try_download_from_bucket(
 @with_trace(context={})
 def root():
     template_vars = {"title": "Welcome"}
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = RequestAuthorizer().get_profile_if_exists()
     if user_profile is not None:
         log_context(user_id=user_profile.user_id)
         if os.getenv("MATURITY") == "DEV":
@@ -825,13 +834,14 @@ def root():
 @app.route("/logout")
 @with_trace(context={})
 def logout():
-    user_profile = JWT_MANAGER.get_profile_from_headers(app.current_request.headers)
+    user_profile = RequestAuthorizer().get_profile_if_exists()
     template_vars = {
         "title": "Logged Out",
         "URS_URL": get_urs_url(app.current_request.context),
     }
 
     if user_profile is not None:
+        SESSION_MANAGER.revoke_session(user_profile)
         template_vars["contentstring"] = "You are logged out."
     else:
         template_vars["contentstring"] = "No active login found."

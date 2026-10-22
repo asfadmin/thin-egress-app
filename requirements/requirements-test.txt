@@ -4,19 +4,19 @@
 #
 #    pip-compile --no-strip-extras --output-file=requirements/requirements-test.txt requirements/requirements-test.in
 #
-boto3==1.43.72
+boto3==1.43.117
     # via -r requirements/requirements-test.in
-botocore==1.43.72
+botocore==1.43.117
     # via
     #   boto3
     #   s3transfer
-certifi==2026.7.22
+certifi==2026.10.19
     # via requests
-charset-normalizer==3.5.0
+charset-normalizer==3.5.2
     # via requests
-idna==3.18
+idna==3.20
     # via requests
-iniconfig==2.3.0
+iniconfig==2.3.1
     # via pytest
 jmespath==1.1.0
     # via
@@ -24,9 +24,9 @@ jmespath==1.1.0
     #   botocore
 packaging==26.3
     # via pytest
-pluggy==1.6.0
+pluggy==1.7.0
     # via pytest
-pygments==2.20.0
+pygments==2.21.0
     # via pytest
 pytest==9.1.1
     # via -r requirements/requirements-test.in
@@ -36,11 +36,11 @@ pyyaml==6.0.3
     # via -r requirements/requirements-test.in
 requests==2.34.2
     # via -r requirements/requirements-test.in
-s3transfer==0.19.2
+s3transfer==0.19.3
     # via boto3
 six==1.17.0
     # via python-dateutil
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   botocore
     #   requests

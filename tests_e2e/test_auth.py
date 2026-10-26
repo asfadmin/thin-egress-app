@@ -37,3 +37,29 @@ def test_auth_process(urls, api_host, creds):
     final_request = session.get(url, cookies=cookiejar)
 
     assert final_request.status_code == 200
+
+
+def test_logout(urls, auth_cookies, url_earthdata):
+    url = urls.join("logout")
+
+    session = requests.Session()
+    session.cookies.update(auth_cookies)
+
+    r = session.get(url)
+    assert "expired" in r.headers["Set-Cookie"]
+
+    # After logout, the session can't access the file anymore
+    r = session.get(urls.join(urls.METADATA_FILE), allow_redirects=False)
+    assert r.status_code == 302
+    assert r.is_redirect is True
+    assert r.headers["Location"] == url_earthdata
+
+    # A fresh session using the revoked creds also can't access the file anymore
+    r = requests.get(
+        urls.join(urls.METADATA_FILE),
+        cookies=auth_cookies,
+        allow_redirects=False,
+    )
+    assert r.status_code == 302
+    assert r.is_redirect is True
+    assert r.headers["Location"] == url_earthdata

@@ -15,7 +15,9 @@ from chalice.test import Client
 from rain_api_core.auth import UserProfile
 from rain_api_core.edl import EdlException, EulaException
 
-from thin_egress_app import app
+with mock.patch("rain_api_core.auth.botoclient", autospec=True):
+    from thin_egress_app import app
+
 
 MODULE = "thin_egress_app.app"
 
@@ -176,6 +178,7 @@ def test_request_authorizer_malformed_header(current_request):
 
     assert authorizer.get_profile() is None
     response = authorizer.get_error_response()
+    assert response is not None
     assert response.status_code == 400
     assert response.body == {
         "status_code": 400,
@@ -993,7 +996,9 @@ def test_root(mock_get_urs_url, mock_retrieve_secret, mock_make_html_response, c
 
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 def test_root_with_login(
+    mock_is_session_revoked,
     mock_get_profile,
     mock_get_urs_url,
     mock_retrieve_secret,
@@ -1006,6 +1011,7 @@ def test_root_with_login(
 
     monkeypatch.setenv("MATURITY", "DEV")
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
 
     client.http.get("/")
 
@@ -1058,8 +1064,12 @@ def test_root_with_login(
 @mock.patch(f"{MODULE}.get_urs_url", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.revoke_session", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 def test_logout(
+    mock_revoke_session,
+    mock_is_session_revoked,
     mock_get_profile,
     mock_get_header_to_set_auth_cookie,
     mock_get_urs_url,
@@ -1072,6 +1082,7 @@ def test_logout(
 
     mock_get_urs_url.return_value = "urs_url"
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
     mock_get_header_to_set_auth_cookie.return_value = {"asf-cookie": {}}
 
     client.http.get("/logout")
@@ -1086,6 +1097,7 @@ def test_logout(
         200,
         "root.html",
     )
+    mock_revoke_session.assert_called_once_with(user_profile)
 
 
 @mock.patch(f"{MODULE}.do_login", autospec=True)
@@ -1457,9 +1469,11 @@ def test_dynamic_url_head_missing_proxy(mock_get_yaml_file, current_request):
 @mock.patch(f"{MODULE}.get_api_request_uuid", autospec=True)
 @mock.patch(f"{MODULE}.try_download_from_bucket", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 @mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url(
+    mock_is_session_revoked,
     mock_get_profile,
     mock_try_download_from_bucket,
     mock_get_api_request_uuid,
@@ -1474,6 +1488,7 @@ def test_dynamic_url(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
     mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "DATA-TYPE-1/PLATFORM-A/OBJECT_1"}
 
@@ -1608,9 +1623,11 @@ def test_dynamic_url_public_custom_headers(
 @mock.patch(f"{MODULE}.user_in_group", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 @mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_private(
+    mock_is_session_revoked,
     mock_get_header_to_set_auth_cookie,
     mock_get_profile,
     mock_user_in_group,
@@ -1629,6 +1646,7 @@ def test_dynamic_url_private(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
     mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "PRIVATE/PLATFORM-A/OBJECT_2"}
 
@@ -1651,9 +1669,11 @@ def test_dynamic_url_private(
 @mock.patch(f"{MODULE}.user_in_group", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_header_to_set_auth_cookie", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 @mock.patch(f"{MODULE}.JWT_COOKIE_NAME", "asf-cookie")
 @mock.patch(f"{MODULE}.b_map", None)
 def test_dynamic_url_private_custom_headers(
+    mock_is_session_revoked,
     mock_get_header_to_set_auth_cookie,
     mock_get_profile,
     mock_user_in_group,
@@ -1673,6 +1693,7 @@ def test_dynamic_url_private_custom_headers(
         mock_get_yaml_file.return_value = yaml.full_load(f)
 
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
     mock_get_api_request_uuid.return_value = None
     current_request.uri_params = {"proxy": "HEADERS/PRIVATE/OBJECT_1"}
 
@@ -1854,8 +1875,10 @@ def test_dynamic_url_bearer_auth(
 @mock.patch(f"{MODULE}.get_s3_credentials", autospec=True)
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 @mock.patch(f"{MODULE}.b_map", None)
 def test_s3credentials(
+    mock_is_session_revoked,
     mock_get_profile,
     mock_get_yaml_file,
     mock_get_s3_credentials,
@@ -1877,6 +1900,7 @@ def test_s3credentials(
     with open(data_path / "bucket_map_example.yaml") as f:
         mock_get_yaml_file.return_value = yaml.full_load(f)
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
 
     response = client.http.get("/s3credentials")
 
@@ -1917,8 +1941,10 @@ def test_s3credentials_unauthenticated(
 
 @mock.patch(f"{MODULE}.get_yaml_file", autospec=True)
 @mock.patch(f"{MODULE}.JwtManager.get_profile_from_headers", autospec=True)
+@mock.patch(f"{MODULE}.SESSION_MANAGER.is_session_revoked", autospec=True)
 @mock.patch(f"{MODULE}.b_map", None)
 def test_s3credentials_no_permissions(
+    mock_is_session_revoked,
     mock_get_profile,
     mock_get_yaml_file,
     mock_retrieve_secret,
@@ -1932,6 +1958,7 @@ def test_s3credentials_no_permissions(
 
     mock_get_yaml_file.return_value = {}
     mock_get_profile.return_value = user_profile
+    mock_is_session_revoked.return_value = False
 
     client.http.get("/s3credentials")
 
